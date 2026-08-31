@@ -1,3 +1,35 @@
+# Legacy source code (read-only reference, sourced from external repos)
+initial-source/
+
+# Telemetry data (engagement-specific, generated database — scripts are committed)
+telemetry/data/raw/
+telemetry/data/*.duckdb
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Node
+node_modules/
+
+# Java build artifacts
+target/
+*.class
+*.jar
+
+# Docker
+.docker/
+
+# Environment and secrets
+.env
+.env.*
+
 # Compiled class file
 *.class
 
