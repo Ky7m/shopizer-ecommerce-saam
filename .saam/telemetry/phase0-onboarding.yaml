@@ -1,0 +1,58 @@
+schema_version: "1.0"
+phase: "P0"
+started_at: "2026-08-31T20:57:47.159+04:00"
+completed_at: "2026-08-31T21:43:09.958+04:00"
+duration_hours: 0.7563
+timing_source: "machine_recorded"
+actor: "mixed"
+analysis_mode: "hybrid"
+
+metrics:
+  total_loc: 308769
+  total_source_files_analyzed: 2345
+  main_java_files: 1167
+  test_java_files: 37
+  frontend_admin_files: 721
+  frontend_storefront_files: 420
+  modules_identified: 8
+  applications_identified: 3
+  segments_identified: 8
+  mapped_entity_classes: 85
+  controller_files: 57
+  service_classes: 63
+  repository_dao_classes: 71
+  api_mapping_annotations: 370
+  drools_rule_files: 4
+  email_templates: 20
+  report_templates: 3
+  integrations_found: 10
+  data_stores_identified: 5
+
+interventions:
+  - origin: "unsolicited-intervention"
+    at: "2026-08-31T21:32:53.807+04:00"
+    summary: "operator added Shopizer admin and React storefront source to initial-source"
+    led_to: "expanded Phase 0 scope from backend-only to three applications and added two frontend analysis segments"
+
+cast:
+  endpoint_reachable: true
+  mcp_tools_discoverable: true
+  application_verified: true
+  application_reference: "Shopizer-Backend, Shopizer-WebAdmin, Shopizer-WebFrontEnd"
+  deliveries:
+    - application: "Shopizer-Backend"
+      delivery: "Onboarding-202511171247"
+      cast_loc: 94528
+      elements: 16269
+      interactions: 72033
+    - application: "Shopizer-WebAdmin"
+      cast_loc: 82284
+      elements: 3107
+      interactions: 4972
+    - application: "Shopizer-WebFrontEnd"
+      cast_loc: 29251
+      elements: 592
+      interactions: 927
+  incoming_dependencies: 2
+  outgoing_dependencies: 0
+  verification_status: "verified"

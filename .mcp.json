@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "CASTImaging": {
+      "type": "http",
+      "url": "https://demo-imaging-v3.castsoftware.com/mcp",
+      "headers": {
+        "x-api-key": "41iSzZ4X.i1B1qtrWZxC3WeweOxC1iFSJL5TQeDKz"
+      }
+    }
+  }
+}

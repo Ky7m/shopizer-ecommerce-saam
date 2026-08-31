@@ -1,0 +1,25 @@
+schema_version: "1.0"
+engagement_id: "ENG-2026-0831-01"
+industry: "e-commerce"
+legacy_stack:
+  - "java"
+  - "maven"
+  - "spring-boot"
+  - "spring-security"
+  - "hibernate-jpa"
+  - "drools"
+target_stack:
+  - "dotnet-10"
+total_services_in_scope: null
+total_applications_in_scope: 3
+total_analysis_segments_in_scope: 8
+applications:
+  - "Shopizer-Backend"
+  - "Shopizer-WebAdmin"
+  - "Shopizer-WebFrontEnd"
+total_br_count: null
+analysis_mode: "hybrid"
+start_date: "2026-08-31"
+team_size: 1
+team_size_basis: "known operator count; update when additional stakeholders are identified"
+scope_unit: "three applications and eight analysis segments pending Phase 2 service-boundary decisions"
