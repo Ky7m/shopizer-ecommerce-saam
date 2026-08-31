@@ -1,0 +1,40 @@
+schema_version: "1.0"
+phase: "P2"
+status: "completed"
+started_at: "2026-08-31T23:38:02.756+04:00"
+exit_gate_presented_at: "2026-08-31T23:50:41+04:00"
+completed_at: "2026-08-31T23:53:08+04:00"
+duration_hours: 0.251
+actor: "mixed"
+timing_source: "graph_phase_events"
+timing_caveat: "Wall-clock duration includes human review time at the architecture approval gate."
+
+metrics:
+  bounded_contexts_identified: 12
+  services_designed: 12
+  shared_kernel_entities: 0
+  integration_patterns_count: 4
+  data_stores_planned: 13
+  adrs_produced: 7
+  mermaid_erd_services: 12
+  mermaid_sequence_processes: 12
+  risks_registered: 10
+
+technology_stack:
+  language: "C# (.NET 10+)"
+  framework: "ASP.NET Core"
+  database: "PostgreSQL"
+  messaging: "RabbitMQ"
+  cache: "Redis"
+  container: "Docker + Azure Container Apps"
+  cicd: "GitHub Actions"
+  status: "human_confirmed_preliminary"
+
+graph:
+  service_nodes: 12
+  calls_edges: 14
+  transitive_dependency_edges: 13
+  phase_event_start_recorded: true
+  phase_event_completion_recorded: true
+  exit_gate_approval: "approve_with_notes"
+  approval_notes: "Preliminary architecture approved; Phase 3 and Phase 4b should validate saga/data-ownership assumptions and reconcile the confirmed stack against evidence."

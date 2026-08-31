@@ -18,7 +18,7 @@
 |-------|--------|-----------|
 | Phase 0: Onboarding | ✅ Complete | 2026-08-31 |
 | Phase 1: Bottom-Up | ✅ Complete | 2026-08-31 |
-| Phase 2: Top-Down | Approved to start | — |
+| Phase 2: Top-Down | ✅ Complete | 2026-08-31 |
 | Phase 3: Convergence | — | — |
 | Phase 4: Specification | — | — |
 | Phase 4a: Rule Validation | — | — |
@@ -33,6 +33,19 @@ inventory plus direct source extraction. The phase produced 180 business rules, 
 integration points, and recorded graph effective-confidence results of 49 high and 131 medium
 rules. The full graph inventory contains 1,138 source components, including 473 business-layer
 components; 61 business components currently have extracted-rule coverage.
+
+## Phase 2 Completion Summary
+
+The top-down architecture defined 12 target services across the confirmed nine business
+capabilities. The human-approved preliminary stack is C# (.NET 10+), ASP.NET Core, PostgreSQL,
+RabbitMQ, Redis, Docker with Azure Container Apps, and GitHub Actions. Architecture decisions
+cover REST plus RabbitMQ event integration, database ownership per service, OIDC authentication,
+OpenTelemetry observability, tenant propagation, and saga-based checkout/order/payment
+coordination. Phase 4b remains responsible for evidence-based reconciliation.
+
+Phase 2 artifacts are under `modernization/`: target architecture, service composition, Mermaid
+ERDs, Mermaid process flows, implementation roadmap, and risk analysis. The graph now contains
+12 service nodes, 14 direct `CALLS` edges, and 13 transitive dependency edges.
 
 ## Analysis Scope
 
