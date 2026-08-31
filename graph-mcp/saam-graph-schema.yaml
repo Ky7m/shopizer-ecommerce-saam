@@ -1,0 +1,1000 @@
+# SAAM Knowledge Graph Schema v1.0
+# Defines node types, edge types, constraints, inference rules, and confidence model
+# Used by: MCP server (validation), Neo4j init script (constraints), agents (context)
+
+version: "1.0"
+
+# =============================================================================
+# NODE TYPES
+# =============================================================================
+
+nodeTypes:
+
+  # --- Phase 0/1: Source System ---
+
+  SourceComponent:
+    description: "A component in the legacy system (program, module, class, stored procedure). In CAST/Hybrid mode, a SourceComponent node is created for EVERY business-layer CAST component — NOT only the ones that got a BR extracted. This is what makes the reconciliation denominator the full legacy inventory rather than the ingested subset (see saam-graph-validation.md). A never-extracted component still exists as a node with extracted=false, so the zero-unaccounted-loss guarantee can actually see it."
+    properties:
+      castId:        { type: string, required: true, unique: true, description: "CAST Imaging object ID" }
+      name:          { type: string, required: true }
+      type:          { type: enum, values: [Program, Module, Class, StoredProcedure, Service, Form, Report, Job], required: true }
+      complexity:    { type: integer, required: false, description: "Cyclomatic complexity from CAST" }
+      loc:           { type: integer, required: false }
+      module:        { type: string, required: false, description: "Parent module/package in CAST" }
+      isDeadCode:    { type: boolean, required: false, default: false }
+      # --- Full-inventory reconciliation (denominator = CAST inventory, not the ingested subset) ---
+      businessLayer: { type: boolean, required: false, default: true, description: "Is this component part of the business layer (counts toward the coverage denominator)? false = infra/utility/getter/report/framework — excluded from unaccounted-loss so the guarantee doesn't cry wolf on non-business code. Classified from CAST metadata + name/type heuristics at ingestion." }
+      intentCategory: { type: enum, values: [post, entry, validate, derive, distribute, util, report, unknown], required: false, description: "CURRENT/latest business-intent class of the component (the live value downstream reads — equals the most recent of the three snapshots below). post=batch post/commit; entry=create/insert/init that produces records; validate=validation; derive=calculation/defaulting (tax, rate, deduction); distribute=cross-module fan-out (PostGL/JC/EM/IN); util/report=non-business. Used to expose the COVERAGE SHAPE (posting captured vs entry/derive/distribute missed). Classified from BOTH observed data-access behavior (which tables the component INSERTs/UPDATEs/DELETEs/SELECTs — authoritative) AND naming patterns (a disambiguating prior); behavior wins on conflict. CRITICAL: absence of signal maps to 'unknown', NEVER to util/report — util/report are EXCLUDING categories (drop the component from the coverage denominator) and require POSITIVE evidence of non-business; 'no data-access record' is not such evidence (it usually means CAST couldn't resolve the access). Defaulting no-signal to util silently removes real business logic from the denominator. The 'unknown' residual is resolved by P4 source reads (p4Intent). See saam-phase1-bottom-up.md Step 0/0b." }
+      # --- Intent provenance lineage (three stamped snapshots — deltas are telemetry, not live instrumentation) ---
+      castIntent:      { type: enum, values: [post, entry, validate, derive, distribute, util, report, unknown], required: false, description: "SNAPSHOT 1 — what CAST itself reports at ingestion, BEFORE SAAM classifies. 'unknown' = CAST had no classification/no data-access accessors for this component. The count of castIntent='unknown' among businessLayer components is the empirical size of 'CAST fails classification'. Stamped at Step 0." }
+      firstPassIntent: { type: enum, values: [post, entry, validate, derive, distribute, util, report, unknown], required: false, description: "SNAPSHOT 2 — SAAM's Step 0b classification from behavior+name combined. The delta castIntent -> firstPassIntent is a 'SAAM corrected CAST' flip (behavior/name overrode CAST). Stamped at Step 0b." }
+      p4Intent:        { type: enum, values: [post, entry, validate, derive, distribute, util, report, unknown], required: false, description: "SNAPSHOT 3 — intent after P4 deep extraction (human/agent source read). Stamped ONLY for components P4 actually reads (the extracted set) — the un-extracted majority keeps firstPassIntent as its last word. firstPassIntent = p4Intent means the source read CONFIRMED the first pass; a difference is a 'human corrected the first pass' flip (second-order signal — even behavior+name missed). Stamped during P4 extraction." }
+      extracted:     { type: boolean, required: false, default: false, description: "Has at least one BusinessRule been extracted from this component? Initialized false at full-inventory ingestion; flipped true when an EXTRACTED_FROM edge is created. A businessLayer component with extracted=false and no explicit exclusion is UNACCOUNTED LOSS. (Kept in sync with the presence of EXTRACTED_FROM by the reconciliation queries; the flag is a convenience denormalization.)" }
+    provenance:
+      createdBy: "phase-1-cast-query"
+      confidenceSource: "cast-imaging"
+
+  SourceTable:
+    description: "A database table in the legacy system (from CAST or direct analysis)"
+    properties:
+      name:          { type: string, required: true, unique: true }
+      schema:        { type: string, required: false }
+      columns:       { type: string[], required: false, description: "Column names" }
+      castId:        { type: string, required: false }
+    provenance:
+      createdBy: "phase-1-extraction"
+      confidenceSource: "source-analysis"
+
+  # --- Phase 1/4: Business Rules ---
+
+  BusinessRule:
+    description: "An extracted business rule with semantic statement, source evidence, lifecycle state, and multi-dimensional confidence"
+    properties:
+      brId:          { type: string, required: true, unique: true, pattern: "^BR-[A-Z]{2}-[A-Z]{3}-\\d{3}$" }
+      statement:     { type: string, required: true, description: "Semantic business statement" }
+      intent:        { type: enum, values: [Validation, Calculation, Authorization, StateTransition, Routing, Compliance], required: true }
+      confidence:    { type: float, required: true, min: 0.0, max: 1.0, description: "Legacy field — effective confidence (min of all dimensions)" }
+      discoveryMethod: { type: enum, values: [DirectSourceRead, CastImaging, Hybrid], required: true }
+      sourceRef:     { type: string, required: true, description: "File:function:lines" }
+      castRef:       { type: string, required: false, description: "CAST object/transaction path" }
+      phase:         { type: enum, values: [phase-1, phase-4], required: true, description: "When extracted" }
+      # --- Lifecycle State ---
+      lifecycleState: { type: enum, values: [Extracted, Assigned, Declared, Tested, Passing], required: true, default: Extracted, description: "Current lifecycle state of the rule" }
+      # --- Multi-Dimensional Confidence ---
+      provenanceConfidence:      { type: float, required: false, min: 0.0, max: 1.0, description: "How sure are we the rule was extracted correctly? Source: extraction confidence, CAST traceability, BA validation" }
+      implementationConfidence:  { type: float, required: false, min: 0.0, max: 1.0, description: "How sure is the code correct? Declared=0.5, Tested=0.6, Passing=0.9" }
+      testQualityConfidence:     { type: float, required: false, min: 0.0, max: 1.0, description: "Does the test actually validate the right behavior? Contract-aligned=0.9, DEV-TEST adapted=0.6, no test=0.0" }
+      effectiveConfidence:       { type: float, required: false, min: 0.0, max: 1.0, description: "Min of active dimensions (provenance, implementation, testQuality). Computed by inference." }
+      # --- State History (stored as JSON string in Neo4j) ---
+      stateHistory:  { type: string, required: false, description: "JSON array of {state, at, by, confidence} transitions" }
+      # --- Semantic Preservation Vector (Condensation Detection) ---
+      # Source vector dimensions (counted from legacy source code):
+      srcControlFlow:      { type: integer, required: false, description: "IF/ELSE/CASE/LOOP/AND/OR — ALL branches including infrastructure (retries, reconnects, error handling)" }
+      srcDataFlow:         { type: integer, required: false, description: "Distinct tables/columns READ or WRITTEN (including audit, logging)" }
+      srcConstants:        { type: integer, required: false, description: "Hardcoded rates, thresholds, magic numbers, config values" }
+      srcStateTransitions: { type: integer, required: false, description: "Status field changes, workflow state assignments (including technical states)" }
+      srcOutcomes:         { type: integer, required: false, description: "Distinct return values, response shapes, output paths" }
+      srcDataWrites:       { type: integer, required: false, description: "INSERT/UPDATE operations (including audit trail)" }
+      srcIntegrations:     { type: integer, required: false, description: "External HTTP calls, queue publishes, service invocations" }
+      srcErrorPaths:       { type: integer, required: false, description: "Distinct error/exception handling branches (business + infrastructure)" }
+      # Spec vector dimensions (counted from the extracted rule's fields):
+      specControlFlow:     { type: integer, required: false, description: "Decision points in Logic section (IF/WHEN/CASE/ELSE paths)" }
+      specDataFlow:        { type: integer, required: false, description: "Entries in Data Dependencies section (tables.columns listed)" }
+      specConstants:       { type: integer, required: false, description: "Named constants/rates/thresholds in Logic or Statement" }
+      specStateTransitions: { type: integer, required: false, description: "States enumerated in Logic (state machine transitions)" }
+      specOutcomes:        { type: integer, required: false, description: "Distinct outputs in Concrete Examples (success + error responses)" }
+      specDataWrites:      { type: integer, required: false, description: "Entries in Side Effects section (writes, publishes)" }
+      specIntegrations:    { type: integer, required: false, description: "Integration calls referenced (from 05-dependencies.md linkage)" }
+      specErrorPaths:      { type: integer, required: false, description: "Error cases in Concrete Examples (distinct rejection reasons)" }
+      # Preservation assessment:
+      preservationFlag:    { type: enum, values: [ok, flagged, unresolved], required: false, default: ok, description: "ok=all dimensions acceptable, flagged=gaps detected (needs re-extraction), unresolved=still gaps after max passes (goes to Phase 4a)" }
+      flaggedDimensions:   { type: string, required: false, description: "Comma-separated list of dimensions with gaps (e.g., 'constants,errorPaths')" }
+      extractionPasses:    { type: integer, required: false, default: 1, description: "Number of extraction attempts for this rule" }
+      # --- Spec Drift Detection ---
+      specHash:            { type: string, required: false, description: "SHA256 hash (first 16 chars) of the BR-ID section in 01-business-rules.md. Used for drift detection." }
+      _specHashUpdatedAt:  { type: datetime, required: false, description: "When specHash was last computed/updated" }
+      # --- Signal Status (Computed by inference — single source of 'can this proceed?') ---
+      signalStatus:        { type: enum, values: [CLEAR, BLOCKED, FLAGGED], required: false, description: "Computed: BLOCKED=gates unsatisfied, FLAGGED=flags exist, CLEAR=all good" }
+      signalBlockers:      { type: string[], required: false, description: "List of unsatisfied gate codes (e.g., TEST_FAILING, MUTATION_SURVIVED)" }
+      signalFlags:         { type: string[], required: false, description: "List of active flag codes (e.g., SPEC_DRIFT, LOW_CONFIDENCE, WEAK_TEST)" }
+      _signalUpdatedAt:    { type: datetime, required: false, description: "When signalStatus was last recomputed" }
+      mutationKillRate:    { type: float, required: false, min: 0.0, max: 1.0, description: "Ratio of mutations killed by tests (1.0 = all caught). Set by mutation testing in Phase 5." }
+      # --- Fidelity: Behavioral Status (anti-skeleton truth — actionable for egress) ---
+      # Distinguishes 'not implemented' from 'stubbed' from 'real'. TEST_RESULTS.json cannot
+      # express this — an endpoint that returns 200 with amount=0 looks like a pass at the shape
+      # level. Set from behavioral-assertion results (state changed / computed non-zero / event emitted).
+      behavioralStatus:    { type: enum, values: [unimplemented, stub, partial, real], required: false, description: "unimplemented=no reachable code; stub=reachable but behavioral assertions fail (returns shape, does nothing); partial=some effects present; real=all behavioral assertions pass. FIX action differs per state." }
+      behavioralCheckedAt: { type: datetime, required: false }
+      # --- Fidelity: Dead-Code Flag ---
+      deadCode:            { type: boolean, required: false, default: false, description: "BR-ID is annotated in code but the annotated method is NOT reachable from any route. A false implementation claim. Set by the fidelity audit." }
+    provenance:
+      createdBy: "phase-1-extraction | phase-4-deep-extraction"
+      confidenceSource: "extraction-confidence"
+
+    # Lifecycle State Semantics:
+    #   Extracted  — Rule exists in spec with source reference (Phase 1/4)
+    #   Assigned   — Rule is assigned to a target service (Phase 3)
+    #   Declared   — Code claims to implement it via BR-ID annotation (Phase 5)
+    #   Tested     — A test assertion exists targeting this rule (Phase 4c)
+    #   Passing    — The test assertion passes against running service (Phase 5 validation)
+    #
+    # FUTURE STATE (not active — would make effective confidence always 0):
+    #   Verified   — Production telemetry confirms the rule fires correctly
+    #              — Source: structured logging, feature flags, observability metrics
+    #              — Confidence dimension: runtimeConfidence (0.0-1.0)
+    #              — NOT included in effectiveConfidence calculation until runtime telemetry is integrated
+    #              — When implemented: add runtimeConfidence property + include in min() calculation
+
+  # --- Phase 2/3: Target Architecture ---
+
+  Service:
+    description: "A target microservice in the modernized architecture"
+    properties:
+      serviceId:     { type: string, required: true, unique: true, pattern: "^MS-\\d{2}$" }
+      name:          { type: string, required: true }
+      port:          { type: integer, required: true }
+      priority:      { type: enum, values: [1, 2, 3], required: true, description: "1=Core, 2=Business, 3=Supporting" }
+      schema:        { type: string, required: false, description: "Database schema name" }
+      automScore:    { type: float, required: false, min: 0.0, max: 1.0, description: "Automatibility score from Phase 4b" }
+      # --- Signal Status (Computed — rollup from assigned BusinessRules) ---
+      signalStatus:        { type: enum, values: [CLEAR, BLOCKED, FLAGGED], required: false, description: "BLOCKED if any assigned rule is BLOCKED, FLAGGED if any is FLAGGED, CLEAR if all CLEAR" }
+      signalBlockedCount:  { type: integer, required: false, description: "Number of assigned rules with signalStatus=BLOCKED (+ implicit-layer structural blockers)" }
+      signalFlaggedCount:  { type: integer, required: false, description: "Number of assigned rules with signalStatus=FLAGGED" }
+      implicitBlockers:    { type: string[], required: false, description: "Service-level structural gate codes for implicit-system layers A/C (STATE_MACHINE_NOT_CLOSED, MANDATORY_DB_OBJECT_MISSING). Set by the implicit_layer_gates inference; folded into signalStatus by service_signal_rollup." }
+      _signalUpdatedAt:    { type: datetime, required: false }
+    provenance:
+      createdBy: "phase-2-design"
+      confidenceSource: "architecture-decision"
+
+  # --- Phase 4: Specifications ---
+
+  Table:
+    description: "A table in the target domain model (from DDL in 02-domain-model.md)"
+    properties:
+      name:          { type: string, required: true }
+      service:       { type: string, required: true, description: "Owning service ID" }
+      columns:       { type: string[], required: true }
+      primaryKey:    { type: string, required: true }
+      hasIndexes:    { type: boolean, required: false, default: false }
+    provenance:
+      createdBy: "phase-4-domain-model"
+      confidenceSource: "spec-generation"
+
+  Endpoint:
+    description: "An API endpoint from 04-api-contract.yaml"
+    properties:
+      path:          { type: string, required: true, description: "Full path (e.g., /api/v1/orders)" }
+      method:        { type: enum, values: [GET, POST, PUT, PATCH, DELETE], required: true }
+      service:       { type: string, required: true }
+      operationId:   { type: string, required: false }
+      successStatus: { type: integer, required: true, description: "Expected success HTTP status" }
+    provenance:
+      createdBy: "phase-4-api-contract"
+      confidenceSource: "api-contract"
+
+  Field:
+    description: "A field in an API contract schema"
+    properties:
+      name:          { type: string, required: true, description: "JSON field name (camelCase)" }
+      type:          { type: string, required: true }
+      schema:        { type: string, required: true, description: "Parent schema name" }
+      endpoint:      { type: string, required: false, description: "Associated endpoint path" }
+      required:      { type: boolean, required: false, default: false }
+      mapsFromColumn: { type: string, required: false, description: "DDL column this maps from" }
+    provenance:
+      createdBy: "phase-4-api-contract"
+      confidenceSource: "api-contract"
+
+  # --- Phase 4a: Decisions ---
+
+  Decision:
+    description: "A BA/human decision about a business rule (Phase 4a)"
+    properties:
+      brId:          { type: string, required: true }
+      classification: { type: enum, values: [Core, Active, Simplify, Obsolete, Deferred, Merge], required: true }
+      weight:        { type: enum, values: [Critical, High, Medium, Low], required: false }
+      rationale:     { type: string, required: false }
+      decidedBy:     { type: string, required: false, description: "BA name or 'agent-defaults'" }
+      mode:          { type: enum, values: [ModeA, ModeB], required: true }
+    provenance:
+      createdBy: "phase-4a-validation"
+      confidenceSource: "human-decision | agent-heuristic"
+
+  # --- Phase 4c: Tests ---
+
+  TestAssertion:
+    description: "A test assertion in a comprehensive test suite"
+    properties:
+      testNum:       { type: integer, required: true }
+      testName:      { type: string, required: true }
+      brId:          { type: string, required: true, description: "BR-ID this tests" }
+      endpoint:      { type: string, required: true, description: "Endpoint path tested" }
+      method:        { type: string, required: true }
+      expectedStatus: { type: integer, required: true }
+      assertionType: { type: enum, values: [status, json_field, json_regex, status_and_capture], required: true }
+      service:       { type: string, required: true }
+      status:        { type: enum, values: [PASS, FAIL, NOT_RUN], required: false, default: NOT_RUN }
+    provenance:
+      createdBy: "phase-4c-test-generation"
+      confidenceSource: "test-suite"
+
+  # --- Phase 5: Implementation ---
+
+  Implementation:
+    description: "A code implementation of business rule(s)"
+    properties:
+      className:     { type: string, required: true }
+      methodName:    { type: string, required: true }
+      service:       { type: string, required: true }
+      filePath:      { type: string, required: false }
+      brIds:         { type: string[], required: true, description: "BR-IDs implemented in this method" }
+      isInferred:    { type: boolean, required: false, default: false, description: "Phase 4b Mode A inference" }
+      # --- Placement Tier (Layer C — where this logic runs) ---
+      tier:          { type: enum, values: [app, db-view, db-function, db-proc, db-trigger], required: false, default: app, description: "Execution tier for this logic. Default 'app'. A 'db-*' value means the effective logic lives in a DbObject (see BOUND_TO edge) and the app method is only the binding/caller. Set from the Phase 4b placement decision (or 'db-*' for a mandatory-DB integrity invariant). A fix agent MUST NOT reimplement db-tier logic as app code — that rebuilds the bottleneck the placement decision rejected." }
+      # --- Fidelity: Reachability (dead-code truth — actionable for egress) ---
+      reachable:     { type: boolean, required: false, description: "Is this BR-ID-annotated method reachable from a registered route/entry point? Set by the fidelity audit. false = dead code (annotated but no endpoint reaches it) → FIX is 'wire it', not 're-implement'." }
+      reachabilityCheckedAt: { type: datetime, required: false }
+    provenance:
+      createdBy: "phase-5-implementation"
+      confidenceSource: "code-generation"
+
+  Deviation:
+    description: "A spec deviation discovered during validation"
+    properties:
+      deviationId:   { type: string, required: true, unique: true }
+      type:          { type: enum, values: [DEV_TEST, DEV_CODE, SPEC_DRIFT], required: true }
+      service:       { type: string, required: true }
+      description:   { type: string, required: true }
+      specSays:      { type: string, required: false }
+      serviceDoes:   { type: string, required: false }
+      fixRecommendation: { type: string, required: false }
+      status:        { type: enum, values: [OPEN, RESOLVED, ACCEPTED], required: true, default: OPEN }
+      resolvedIn:    { type: string, required: false, description: "Phase 6 iteration number" }
+      # --- History (loop-stop truth — actionable for egress) ---
+      # This is what TEST_RESULTS.json structurally CANNOT hold: memory across passes.
+      # Lets a fix agent avoid re-trying an approach that already failed/regressed.
+      occurrences:   { type: integer, required: false, default: 1, description: "How many validation runs have seen this deviation" }
+      regressedCount: { type: integer, required: false, default: 0, description: "Times this was marked RESOLVED then reappeared (a regression). High count = root cause is elsewhere; stop retrying the same fix." }
+      attemptLog:    { type: string, required: false, description: "JSON array of {at, pass, approach, outcome} — prior fix attempts and their result. The fix agent reads this to NOT repeat a failed approach." }
+      lastSeenAt:    { type: datetime, required: false }
+    provenance:
+      createdBy: "phase-5-validation | phase-6-evolution"
+      confidenceSource: "test-execution"
+
+  # --- Phase Timing (cross-phase utility) ---
+
+  PhaseEvent:
+    description: "Records when a phase (or, in P1/P4/P5, a STEP within a phase) starts and completes — objective machine timestamps for duration computation. A StepEvent is simply a PhaseEvent carrying a `step` label (no separate node type). Interventions are captured as `origin`+summary properties ON the plan-deviation event they caused (NOT a separate user-input log) — see saam-telemetry.md."
+    properties:
+      phase:         { type: string, required: true, description: "Phase identifier: P0, P1, P2, P3, P4, P4A, P4B, P4C, P5, P6" }
+      event:         { type: enum, values: [started, completed], required: true }
+      timestamp:     { type: datetime, required: true, description: "Machine-recorded timestamp (not estimated)" }
+      service:       { type: string, required: false, description: "For per-service events in P5 (serviceId)" }
+      step:          { type: string, required: false, description: "STEP label within a phase (P1/P4/P5 only) — e.g. 'reclassification', '<segment>', '<service>-extraction', 'first-compile'. Its presence makes this a StepEvent; Σ of step (start->end) intervals = active_work_minutes (calibration-primary). Boundaries piggyback on checkpoints the phase already hits — do NOT invent new mid-step callbacks." }
+      origin:        { type: enum, values: [planned, solicited-intervention, unsolicited-intervention], required: false, description: "For an event caused by a human redirect: solicited=answered a 🔴 prompt; unsolicited=unprompted human instruction that changed the plan (the framework-gap signal). 'planned'/absent = normal flow. The intervention is a property of the plan-deviation event it caused, not a separate log." }
+      interventionSummary: { type: string, required: false, description: "One line: what the human asked/decided (only when origin is an intervention)" }
+      interventionLedTo:   { type: string, required: false, description: "What the intervention changed (new/re-scoped step, plan change) — e.g. 'pulled reclassification forward from P4 to P1'. This is the framework's self-improvement trail." }
+    provenance:
+      createdBy: "phase-tracking-protocol"
+      confidenceSource: "machine-timestamp"
+
+  # --- Phase 4 Stage 1.6: Workflows ---
+
+  Workflow:
+    description: "A multi-step business operation that chains multiple BR-IDs in sequence"
+    properties:
+      workflowId:    { type: string, required: true, unique: true, pattern: "^WF-[A-Z]{2,4}-\\d{3}$" }
+      name:          { type: string, required: true, description: "Workflow name (e.g., Invoice Posting)" }
+      service:       { type: string, required: true, description: "Owning/orchestrating service ID" }
+      trigger:       { type: string, required: true, description: "What initiates: API call, event, schedule" }
+      stateTransitions: { type: string, required: false, description: "Entity state changes (e.g., Draft→Validated→Posted)" }
+      isCrossService: { type: boolean, required: false, default: false, description: "Spans multiple services" }
+      participants:  { type: string[], required: false, description: "Service IDs involved (for cross-service)" }
+      errorHandling: { type: string, required: false, description: "Summary of error/rollback strategy" }
+    provenance:
+      createdBy: "phase-4-stage-1.6-workflow"
+      confidenceSource: "workflow-compilation"
+
+  # --- Phase 4 Stage 1.5: Events ---
+
+  Event:
+    description: "A domain event published asynchronously between services"
+    properties:
+      eventName:     { type: string, required: true, unique: true, description: "Event type name (e.g., invoice.posted)" }
+      version:       { type: integer, required: false, default: 1 }
+      publisher:     { type: string, required: true, description: "Service ID that publishes this event" }
+      consumers:     { type: string[], required: false, description: "Service IDs that consume this event" }
+      payloadSchema: { type: string, required: false, description: "Reference to spec/shared/event-schemas/<event>.yaml" }
+      triggerBrId:   { type: string, required: false, description: "BR-ID whose side effect publishes this event" }
+    provenance:
+      createdBy: "phase-4-stage-1.5-events"
+      confidenceSource: "dependency-compilation"
+
+  # --- Layer A: Invariant / State / Lifecycle ---
+
+  EntityState:
+    description: "A legal state of a domain entity's lifecycle (from the Entity State Model in 02-domain-model.md). The set of an entity's states + transitions forms a closed state machine."
+    properties:
+      stateId:       { type: string, required: true, unique: true, description: "Composite id: <service>.<entity>.<state> (e.g., 'ledger.batch.Posted')" }
+      entity:        { type: string, required: true, description: "Owning entity/table name" }
+      state:         { type: string, required: true, description: "State name in domain terms (e.g., Draft, Validated, Posted)" }
+      service:       { type: string, required: true }
+      isInitial:     { type: boolean, required: false, default: false, description: "Entry state when the entity is created" }
+      isTerminal:    { type: boolean, required: false, default: false, description: "No outgoing transitions (end of lifecycle)" }
+    provenance:
+      createdBy: "phase-4-domain-model"
+      confidenceSource: "spec-generation"
+
+  Invariant:
+    description: "A data invariant that must hold for an entity regardless of which code path runs (constraint, computed-column relationship, or cross-field rule). Tagged with the tier at which it is enforced. Integrity invariants are mandatory-DB."
+    properties:
+      invariantId:   { type: string, required: true, unique: true, pattern: "^INV-[A-Z]{2,4}-\\d{3}$" }
+      statement:     { type: string, required: true, description: "Semantic statement of what must always hold (domain terms)" }
+      entity:        { type: string, required: false, description: "Primary entity/table the invariant constrains" }
+      service:       { type: string, required: true }
+      kind:          { type: enum, values: [constraint, computed, cross-field, cross-entity], required: false, description: "constraint=single-column/table rule; computed=derived value relationship; cross-field=multi-column; cross-entity=spans entities (also appears in entity-lifecycle.md)" }
+      tier:          { type: enum, values: [app, db, both], required: true, default: both, description: "Enforcement tier. INTEGRITY invariants MUST be db or both (data integrity cannot depend on the app being the sole writer) — this is decided by the invariant's nature, NOT by a 4b placement decision. Non-integrity business invariants may be app." }
+      isLoadBearing: { type: boolean, required: false, description: "4a decision: is this invariant essential business truth (true) or a legacy artifact (false)? Load-bearing invariants get exhaustive test coverage." }
+    provenance:
+      createdBy: "phase-4-domain-model"
+      confidenceSource: "spec-generation | human-decision"
+
+  # --- Layer B: Extensibility / Customization Engine ---
+
+  ExtensionPoint:
+    description: "A point where the product's behavior is configurable per instance via the common-code extensibility engine (user-defined fields, metadata-driven behavior, config/parameter surface). The engine is SINGULAR (one common code base); data POWERS a customization, code DEFINES the mechanism. This models the mechanism, NOT per-instance data."
+    properties:
+      extPointId:    { type: string, required: true, unique: true, pattern: "^EXT-[A-Z]{2,4}-\\d{3}$" }
+      name:          { type: string, required: true, description: "Domain-meaningful name of the extension point (e.g., 'user-defined line fields', 'approval-threshold parameter')" }
+      service:       { type: string, required: true }
+      mechanism:     { type: enum, values: [udf, metadata, config, parameter], required: true, description: "udf=user-defined fields; metadata=metadata-driven behavior; config=configuration surface; parameter=behavior parameter/toggle" }
+      resolution:    { type: string, required: false, description: "Summary (or ref to spec/shared/extensibility-model.md) of the code path that consumes the config/metadata to produce instance-specific behavior" }
+      decision:      { type: enum, values: [Reproduce, Unify, Drop], required: false, description: "4a decision: Reproduce=keep the point, engine resolves it; Unify=collapse to one behavior, instances converge; Drop=obsolete customization" }
+      decidedBy:     { type: string, required: false }
+    provenance:
+      createdBy: "phase-4-extensibility | phase-4a-validation"
+      confidenceSource: "spec-generation | human-decision"
+
+  # --- Layer C: DB-Tier Logic + Placement ---
+
+  DbObject:
+    description: "A unit of business logic that runs in the database tier (view, function, procedure, or trigger) rather than the application. Generated as an ordered migration. Implements a BusinessRule and/or enforces an Invariant whose placement was decided db-tier (Phase 4b) or is a mandatory-DB integrity invariant (Layer A)."
+    properties:
+      dbObjectId:    { type: string, required: true, unique: true, description: "Stable id: <service>.<kind>.<name> (e.g., 'ledger.function.compute_batch_total')" }
+      name:          { type: string, required: true, description: "Database object name (domain-appropriate, not a legacy proc name)" }
+      kind:          { type: enum, values: [view, function, procedure, trigger], required: true }
+      service:       { type: string, required: true, description: "Owning service ID (DB objects belong to the owning service's schema)" }
+      migrationOrder: { type: integer, required: true, description: "Deterministic apply order within the service. Convention: tables=0, functions=10, views=20, triggers=30, procedures=40 (+offset for intra-kind deps). Ensures dependency-correct migration." }
+      implementsBrId: { type: string, required: false, description: "BR-ID whose logic this object implements (if it implements a rule)" }
+      enforcesInvariantId: { type: string, required: false, description: "invariantId this object enforces (if it enforces a mandatory-DB invariant)" }
+      binding:       { type: string, required: false, description: "How the app invokes it: e.g. 'repository method OrderRepository.computeTotal -> SELECT compute_batch_total(:id)', or 'read model backed by view v_open_orders', or 'trigger — no app call'" }
+      placementProvenance: { type: string, required: false, description: "Why this is db-tier: 'P4b:PLACE-<id>' (a placement decision) or 'mandatory-db-integrity' (Layer A integrity invariant — not a 4b decision)" }
+      inputs:        { type: string, required: false, description: "Input parameters summary (for functions/procs)" }
+      outputs:       { type: string, required: false, description: "Return/result shape summary" }
+    provenance:
+      createdBy: "phase-4-domain-model | phase-5-implementation"
+      confidenceSource: "spec-generation"
+
+  PlacementDecision:
+    description: "A Phase 4b architecture/performance decision about which tier a unit of logic runs in. Surfaced as a PLACEMENT_REVIEW candidate (default app-tier), decided by the architect with performance evidence. Kept separate from the Phase 4a BR-classification Decision node — this is an architecture decision, not a business-intent one."
+    properties:
+      placementId:   { type: string, required: true, unique: true, pattern: "^PLACE-\\d{3}$" }
+      targetKind:    { type: enum, values: [BusinessRule, Invariant, ReadPath, WorkflowStep], required: true, description: "What kind of unit this placement applies to" }
+      targetId:      { type: string, required: true, description: "The brId / invariantId / read-path id / workflow-step id this decision governs" }
+      service:       { type: string, required: true }
+      candidateReason: { type: enum, values: [set-based, high-volume, high-frequency, was-db-proc, report-aggregation, batch-sweep], required: false, description: "Why app-tier was flagged risky (the reason it became a PLACEMENT_REVIEW candidate)" }
+      decision:      { type: enum, values: [app-tier, db-view, db-function, db-proc, db-trigger, app-with-strategy], required: true, description: "Confirmed tier. 'app-with-strategy' = stays app-tier but with an explicit approach (batch/stream/read-model) to avoid the naive-loop cliff." }
+      appStrategy:   { type: string, required: false, description: "If decision=app-with-strategy: the approach (e.g., 'batch in pages of 500', 'stream via cursor', 'materialized read model refreshed on event')" }
+      evidence:      { type: string, required: false, description: "Performance evidence presented at 4b: legacy tier, data-volume signal, set-vs-row, call frequency, app-tier risk" }
+      rationale:     { type: string, required: false }
+      decidedBy:     { type: string, required: false, description: "Architect name or 'agent-defaults'" }
+      mode:          { type: enum, values: [ModeA, ModeB], required: false, description: "ModeA=agent recommendation applied, ModeB=real workshop" }
+    provenance:
+      createdBy: "phase-4b-implementation-roadmap"
+      confidenceSource: "human-decision | agent-heuristic"
+
+# =============================================================================
+# EDGE TYPES
+# =============================================================================
+
+edgeTypes:
+
+  # --- Extraction Traceability ---
+
+  EXTRACTED_FROM:
+    description: "Business rule was extracted from this source component"
+    source: BusinessRule
+    target: SourceComponent
+    cardinality: { source: many, target: one }  # Many rules from one component
+    required: true  # Every BR-ID must trace to a source
+    properties:
+      lineNumbers:   { type: string, required: false }
+
+  SOURCE_ACCESSES:
+    description: "Legacy component accesses this table (from CAST)"
+    source: SourceComponent
+    target: SourceTable
+    cardinality: { source: many, target: many }
+    properties:
+      operations:    { type: string[], required: true, description: "[Create, Read, Update, Delete]" }
+
+  SOURCE_CALLS:
+    description: "Legacy component calls another component (from CAST)"
+    source: SourceComponent
+    target: SourceComponent
+    cardinality: { source: many, target: many }
+    properties:
+      callType:      { type: enum, values: [sync, async, batch], required: false }
+
+  # --- Architecture Assignment ---
+
+  ASSIGNED_TO:
+    description: "Business rule is assigned to this target service (Phase 3 convergence)"
+    source: BusinessRule
+    target: Service
+    cardinality: { source: many, target: one }  # Each rule in exactly one service
+    required: true
+
+  OWNS:
+    description: "Service owns this table (database-per-service)"
+    source: Service
+    target: Table
+    cardinality: { source: one, target: many }  # One service owns many tables
+
+  EXPOSES:
+    description: "Service exposes this API endpoint"
+    source: Service
+    target: Endpoint
+    cardinality: { source: one, target: many }
+
+  CALLS:
+    description: "Service calls another service (cross-service dependency)"
+    source: Service
+    target: Service
+    cardinality: { source: many, target: many }
+    properties:
+      protocol:      { type: enum, values: [REST, gRPC, Event, MessageQueue], required: true }
+      endpoints:     { type: string[], required: false, description: "Which endpoints are called" }
+      # --- Cross-service contract shape resolution (Class-A knowledge — actionable for egress) ---
+      # Projected from the Stage 1.5 consumer-provider reconciliation. Lets a generation agent
+      # wire a cross-service call with the EXACT expected shape, first time.
+      requestShape:  { type: string, required: false, description: "Expected request shape the provider endpoint requires (summary or ref to spec/shared/cross-service-contracts.md)" }
+      responseShape: { type: string, required: false, description: "Response shape the provider endpoint returns" }
+      verified:      { type: boolean, required: false, description: "true=Stage 1.5 confirmed the called endpoint exists in the provider's 04-api-contract.yaml with matching shape; false=GAP (endpoint/shape mismatch)" }
+
+  # --- Contract Mapping ---
+
+  MAPS_TO:
+    description: "DDL column maps to API contract field"
+    source: Table
+    target: Field
+    cardinality: { source: many, target: many }
+    properties:
+      columnName:    { type: string, required: true }
+      transformation: { type: string, required: false, description: "e.g., snake_case -> camelCase" }
+
+  # --- Implementation ---
+
+  # --- Implementation Evidence (progressive trust) ---
+
+  CLAIMS_IMPLEMENTATION:
+    description: "Business rule has a BR-ID annotation in code (claim only — not yet validated by tests)"
+    source: BusinessRule
+    target: Implementation
+    cardinality: { source: many, target: one }  # Multiple rules can be in one method
+    properties:
+      detectedAt:    { type: datetime, required: false, description: "When the annotation was first detected" }
+      detectedBy:    { type: string, required: false, default: "detect_br_ids", description: "Script/hook that created this edge" }
+      specHash:      { type: string, required: false, description: "Spec hash at time of implementation — enables drift detection" }
+
+  VALIDATED_BY:
+    description: "Business rule implementation is validated by passing test(s) — evidence that the claim is correct"
+    source: BusinessRule
+    target: Implementation
+    cardinality: { source: many, target: one }
+    properties:
+      validatedAt:   { type: datetime, required: false, description: "When tests first passed for this rule" }
+      testCount:     { type: integer, required: false, description: "Number of passing test assertions" }
+      specHash:      { type: string, required: false, description: "Spec hash at time of validation — enables drift detection" }
+
+  TESTED_BY:
+    description: "Business rule is tested by this assertion"
+    source: BusinessRule
+    target: TestAssertion
+    cardinality: { source: one, target: many }  # One rule, multiple test assertions
+    required: true  # Every Active/Core rule must have a test
+
+  RECONCILED_WITH:
+    description: "Business rule implementation is structurally confirmed by CAST evidence (optional — CAST mode only)"
+    source: BusinessRule
+    target: SourceComponent
+    cardinality: { source: many, target: many }
+    properties:
+      reconciliationType: { type: enum, values: [call_path, data_access, structural], required: true }
+      reconcililedAt:     { type: datetime, required: false }
+
+  # --- Decisions ---
+
+  DECIDED_AS:
+    description: "BA/human made this classification decision about the rule"
+    source: Decision
+    target: BusinessRule
+    cardinality: { source: one, target: one }
+
+  # --- Deviations ---
+
+  DEVIATES_FROM:
+    description: "Deviation relates to this business rule or endpoint"
+    source: Deviation
+    target: [BusinessRule, Endpoint]
+    cardinality: { source: many, target: one }
+
+  # --- Derived (Inference) ---
+
+  TRANSITIVELY_DEPENDS_ON:
+    description: "[DERIVED] Transitive service dependency (inferred from CALLS chains)"
+    source: Service
+    target: Service
+    cardinality: { source: many, target: many }
+    derived: true
+
+  CANDIDATE_FOR_REMOVAL:
+    description: "[DERIVED] Table may be unused (all writing rules are Obsolete/Deferred)"
+    source: Table
+    target: Table  # self-referencing marker
+    derived: true
+
+  # --- Workflow Edges ---
+
+  PARTICIPATES_IN:
+    description: "Business rule participates in this workflow (executed as part of the sequence)"
+    source: BusinessRule
+    target: Workflow
+    properties:
+      stepOrder:   { type: integer, required: false, description: "Position in the workflow sequence" }
+      role:        { type: enum, values: [trigger, validation, action, sideEffect], required: false }
+    cardinality: { source: many, target: many }  # A rule can be in multiple workflows, a workflow has multiple rules
+
+  ORCHESTRATES:
+    description: "This service orchestrates (initiates/drives) the workflow"
+    source: Service
+    target: Workflow
+    cardinality: { source: one, target: many }  # One orchestrator per workflow, service can orchestrate many
+
+  # --- Event Edges ---
+
+  PUBLISHES:
+    description: "Service publishes this domain event"
+    source: Service
+    target: Event
+    properties:
+      triggerBrId: { type: string, required: false, description: "BR-ID whose side effect triggers this event" }
+    cardinality: { source: one, target: many }  # One publisher per event, service publishes many events
+
+  CONSUMES:
+    description: "Service consumes (subscribes to) this domain event"
+    source: Service
+    target: Event
+    properties:
+      handlerBrId: { type: string, required: false, description: "BR-ID that processes the consumed event" }
+    cardinality: { source: many, target: many }  # Multiple consumers per event, service consumes many events
+
+  TRIGGERS_EVENT:
+    description: "This workflow step publishes a domain event"
+    source: Workflow
+    target: Event
+    cardinality: { source: many, target: many }
+
+  # --- Decision Edges ---
+
+  DECIDED_AS:
+    description: "BA/human decision applied to a business rule (Phase 4a classification + weight)"
+    source: Decision
+    target: BusinessRule
+    cardinality: { source: one, target: one }  # One decision per rule
+
+  # --- Layer A: State / Invariant Edges ---
+
+  HAS_STATE:
+    description: "An entity (Table) has this state in its lifecycle"
+    source: Table
+    target: EntityState
+    cardinality: { source: one, target: many }
+
+  TRANSITIONS_TO:
+    description: "A legal state transition, guarded by a precondition and driven by an operation/BR-ID. The set of transitions must form a closed machine (verified at 4a)."
+    source: EntityState
+    target: EntityState
+    cardinality: { source: many, target: many }
+    properties:
+      guard:       { type: string, required: false, description: "Precondition that must hold for the transition (domain terms)" }
+      triggerBrId: { type: string, required: false, description: "BR-ID whose operation drives this transition" }
+
+  # NOTE: the BR-ID that DRIVES a transition is carried by TRANSITIONS_TO.triggerBrId (a property),
+  # not a separate edge — Neo4j cannot target a relationship with another relationship. To find the
+  # rule behind a transition: MATCH (a)-[t:TRANSITIONS_TO]->(b) MATCH (br:BusinessRule {brId: t.triggerBrId}).
+
+  CONSTRAINS:
+    description: "An invariant constrains this entity (Table). Enforcement per Invariant.tier (app / db / both)."
+    source: Invariant
+    target: Table
+    cardinality: { source: many, target: many }
+
+  # --- Layer B: Extensibility Edges ---
+
+  EXTENDS_VIA:
+    description: "A business rule's behavior is parameterized by this extension point (the rule calls the engine's resolver rather than hardcoding the customized value/behavior)."
+    source: BusinessRule
+    target: ExtensionPoint
+    cardinality: { source: many, target: many }
+
+  RESOLVED_BY:
+    description: "An extension point is resolved by this implementation (the generated engine resolver / config accessor)."
+    source: ExtensionPoint
+    target: Implementation
+    cardinality: { source: many, target: one }
+
+  # --- Layer C: DB-Tier + Placement Edges ---
+
+  IMPLEMENTS_IN_DB:
+    description: "A business rule's logic is implemented in the database tier by this DbObject (placement decided db-* at 4b)"
+    source: BusinessRule
+    target: DbObject
+    cardinality: { source: many, target: many }  # A rule may map to >1 DB object; a DB object may serve >1 rule
+
+  BOUND_TO:
+    description: "A DbObject is bound to the app-side Implementation that invokes it (the repository method / read-model accessor). Trigger-kind objects may have no binding (fire on DML)."
+    source: DbObject
+    target: Implementation
+    cardinality: { source: one, target: one }
+
+  PLACED_AS:
+    description: "A placement decision governs the tier of this unit (BusinessRule for now; Invariant once Layer A lands). Mirrors DECIDED_AS but for architecture/performance placement rather than business classification."
+    source: PlacementDecision
+    target: BusinessRule
+    cardinality: { source: one, target: one }
+
+# =============================================================================
+# CONSTRAINTS (enforced at write time)
+# =============================================================================
+
+constraints:
+
+  - name: rule_must_have_source
+    description: "Every BusinessRule must have at least one EXTRACTED_FROM edge"
+    query: "MATCH (br:BusinessRule) WHERE NOT (br)-[:EXTRACTED_FROM]->() RETURN br"
+    severity: error
+
+  - name: rule_must_be_assigned
+    description: "Every BusinessRule must have exactly one ASSIGNED_TO edge (after Phase 3)"
+    query: "MATCH (br:BusinessRule) WHERE NOT (br)-[:ASSIGNED_TO]->() RETURN br"
+    severity: warning  # Becomes error after Phase 3
+
+  - name: active_rule_must_have_test
+    description: "Every Core/Active rule must have at least one TESTED_BY edge (after Phase 4c)"
+    query: |
+      MATCH (d:Decision)-[:DECIDED_AS]->(br:BusinessRule)
+      WHERE d.classification IN ['Core', 'Active']
+      AND NOT (br)-[:TESTED_BY]->()
+      RETURN br
+    severity: warning  # Becomes error after Phase 4c
+
+  - name: endpoint_must_belong_to_service
+    description: "Every Endpoint must be exposed by exactly one Service"
+    query: "MATCH (e:Endpoint) WHERE NOT ()-[:EXPOSES]->(e) RETURN e"
+    severity: error
+
+  - name: no_cross_service_table_ownership
+    description: "A Table must be owned by exactly one Service"
+    query: |
+      MATCH (t:Table)<-[:OWNS]-(s1:Service), (t)<-[:OWNS]-(s2:Service)
+      WHERE s1 <> s2
+      RETURN t, s1, s2
+    severity: error
+
+  - name: field_must_map_from_column
+    description: "Every Field should have a MAPS_TO relationship from a Table (after Phase 4)"
+    query: "MATCH (f:Field) WHERE NOT ()-[:MAPS_TO]->(f) RETURN f"
+    severity: warning
+
+# =============================================================================
+# INFERENCE RULES
+# =============================================================================
+
+inferences:
+
+  - name: transitive_dependencies
+    description: "If A calls B and B calls C, then A transitively depends on C"
+    trigger: "On CALLS edge creation"
+    query: |
+      MATCH (a:Service)-[:CALLS*2..5]->(c:Service)
+      WHERE a <> c AND NOT (a)-[:TRANSITIVELY_DEPENDS_ON]->(c)
+      CREATE (a)-[:TRANSITIVELY_DEPENDS_ON {hops: length(path), derivedAt: datetime()}]->(c)
+
+  - name: implementation_completeness
+    description: "Calculate service implementation completeness as ratio of claimed BR-IDs"
+    trigger: "On CLAIMS_IMPLEMENTATION edge creation"
+    query: |
+      MATCH (s:Service)<-[:ASSIGNED_TO]-(br:BusinessRule)
+      WITH s, count(br) AS total
+      OPTIONAL MATCH (s)<-[:ASSIGNED_TO]-(br2:BusinessRule)-[:CLAIMS_IMPLEMENTATION]->()
+      WITH s, total, count(br2) AS implemented
+      SET s.implementationCompleteness = toFloat(implemented) / total
+
+  - name: test_coverage_completeness
+    description: "Calculate service test coverage as ratio of tested BR-IDs"
+    trigger: "On TESTED_BY edge creation"
+    query: |
+      MATCH (s:Service)<-[:ASSIGNED_TO]-(br:BusinessRule)
+      WHERE EXISTS { MATCH (d:Decision)-[:DECIDED_AS]->(br) WHERE d.classification IN ['Core', 'Active'] }
+      WITH s, count(br) AS total
+      OPTIONAL MATCH (s)<-[:ASSIGNED_TO]-(br2:BusinessRule)-[:TESTED_BY]->()
+      WITH s, total, count(br2) AS tested
+      SET s.testCoverage = toFloat(tested) / total
+
+  - name: unused_table_detection
+    description: "Mark tables where ALL writing BR-IDs are Obsolete or Deferred"
+    trigger: "On Decision creation"
+    query: |
+      MATCH (t:Table)<-[:OWNS]-(s:Service)<-[:ASSIGNED_TO]-(br:BusinessRule)
+      WHERE br.statement CONTAINS t.name
+      WITH t, collect(br) AS rules
+      WHERE ALL(r IN rules WHERE EXISTS {
+        MATCH (d:Decision)-[:DECIDED_AS]->(r) WHERE d.classification IN ['Obsolete', 'Deferred']
+      })
+      SET t.candidateForRemoval = true, t.removalReason = 'All writing rules excluded'
+
+  - name: extraction_risk
+    description: "Flag rules with low confidence + high complexity source as high extraction risk"
+    trigger: "On BusinessRule creation"
+    query: |
+      MATCH (br:BusinessRule)-[:EXTRACTED_FROM]->(sc:SourceComponent)
+      WHERE br.confidence < 0.7 AND sc.complexity > 20
+      SET br.extractionRisk = 'High'
+
+  # --- Lifecycle State Advancement ---
+
+  - name: lifecycle_assigned
+    description: "Advance to Assigned when ASSIGNED_TO edge exists"
+    trigger: "On ASSIGNED_TO edge creation"
+    query: |
+      MATCH (br:BusinessRule)-[:ASSIGNED_TO]->(:Service)
+      WHERE br.lifecycleState = 'Extracted'
+      SET br.lifecycleState = 'Assigned'
+
+  - name: lifecycle_declared
+    description: "Advance to Declared when CLAIMS_IMPLEMENTATION edge exists (BR-ID found in code)"
+    trigger: "On CLAIMS_IMPLEMENTATION edge creation"
+    query: |
+      MATCH (br:BusinessRule)-[:CLAIMS_IMPLEMENTATION]->()
+      WHERE br.lifecycleState IN ['Extracted', 'Assigned']
+      SET br.lifecycleState = 'Declared',
+          br.implementationConfidence = 0.5
+
+  - name: lifecycle_tested
+    description: "Advance to Tested when TESTED_BY edge exists"
+    trigger: "On TESTED_BY edge creation"
+    query: |
+      MATCH (br:BusinessRule)-[:TESTED_BY]->(:TestAssertion)
+      WHERE br.lifecycleState IN ['Extracted', 'Assigned', 'Declared']
+      SET br.lifecycleState = CASE WHEN br.lifecycleState = 'Declared' THEN 'Tested' ELSE br.lifecycleState END,
+          br.testQualityConfidence = 0.6
+
+  - name: lifecycle_passing
+    description: "Advance to Passing when all TESTED_BY assertions have status=PASS; creates VALIDATED_BY edge as evidence"
+    trigger: "On TestAssertion status update"
+    query: |
+      MATCH (br:BusinessRule)-[:TESTED_BY]->(ta:TestAssertion)
+      WITH br, collect(ta.status) AS statuses, count(ta) AS testCount
+      WHERE ALL(s IN statuses WHERE s = 'PASS') AND size(statuses) > 0
+      SET br.lifecycleState = 'Passing',
+          br.implementationConfidence = 0.9,
+          br.testQualityConfidence = 0.9
+      WITH br, testCount
+      OPTIONAL MATCH (br)-[:CLAIMS_IMPLEMENTATION]->(impl:Implementation)
+      MERGE (br)-[v:VALIDATED_BY]->(impl)
+      SET v.validatedAt = datetime(), v.testCount = testCount
+
+  - name: lifecycle_effective_confidence
+    description: "Calculate effectiveConfidence as min of active dimensions (excludes runtime — future)"
+    trigger: "On any confidence dimension change"
+    query: |
+      MATCH (br:BusinessRule)
+      WHERE br.provenanceConfidence IS NOT NULL
+      SET br.effectiveConfidence = CASE
+        WHEN br.implementationConfidence IS NOT NULL AND br.testQualityConfidence IS NOT NULL
+          THEN reduce(m = 1.0, v IN [br.provenanceConfidence, br.implementationConfidence, br.testQualityConfidence] | CASE WHEN v < m THEN v ELSE m END)
+        WHEN br.implementationConfidence IS NOT NULL
+          THEN reduce(m = 1.0, v IN [br.provenanceConfidence, br.implementationConfidence] | CASE WHEN v < m THEN v ELSE m END)
+        ELSE br.provenanceConfidence
+        END
+
+  # --- Signal Status Evaluation (single source of "can this proceed?") ---
+
+  - name: signal_status_evaluation
+    description: "Compute signalStatus for each BusinessRule based on precedence model gates and flags"
+    trigger: "On graph_run_inferences() — after lifecycle states and confidence are computed"
+    query: |
+      // Evaluate gates and flags per the signal precedence model
+      MATCH (br:BusinessRule)
+      WHERE br.lifecycleState IS NOT NULL
+      OPTIONAL MATCH (d:Decision)-[:DECIDED_AS]->(br)
+      OPTIONAL MATCH (br)-[ci:CLAIMS_IMPLEMENTATION]->()
+      OPTIONAL MATCH (dev:Deviation)-[:DEVIATES_FROM]->(br) WHERE dev.status = 'OPEN'
+
+      WITH br, d, ci, dev,
+           (d.classification = 'Core' AND d.weight = 'Critical') AS isCritical,
+           // Gate: failing tests
+           EXISTS { MATCH (br)-[:TESTED_BY]->(ta:TestAssertion) WHERE ta.status = 'FAIL' } AS hasFailingTest,
+           // Gate: spec drift (hash mismatch on implementation edge)
+           (ci IS NOT NULL AND ci.specHash IS NOT NULL AND br.specHash IS NOT NULL AND ci.specHash <> br.specHash) AS hasSpecDrift,
+           // Open deviation
+           (dev IS NOT NULL) AS hasOpenDeviation
+
+      WITH br, isCritical, hasFailingTest, hasSpecDrift, hasOpenDeviation,
+           br.mutationKillRate AS mutationRate,
+           br.effectiveConfidence AS confidence,
+           // Evaluate gates
+           CASE WHEN hasFailingTest THEN 'TEST_FAILING' ELSE null END AS g_test,
+           CASE WHEN isCritical AND mutationRate IS NOT NULL AND mutationRate < 1.0 THEN 'MUTATION_SURVIVED' ELSE null END AS g_mutation,
+           CASE WHEN isCritical AND hasSpecDrift THEN 'SPEC_DRIFT_CRITICAL' ELSE null END AS g_drift,
+           CASE WHEN hasOpenDeviation THEN 'OPEN_DEVIATION' ELSE null END AS g_deviation,
+           // Evaluate flags
+           CASE WHEN NOT isCritical AND hasSpecDrift THEN 'SPEC_DRIFT' ELSE null END AS f_drift,
+           CASE WHEN NOT isCritical AND mutationRate IS NOT NULL AND mutationRate < 1.0 THEN 'WEAK_TEST' ELSE null END AS f_mutation,
+           CASE WHEN confidence IS NOT NULL AND confidence < 0.7 THEN 'LOW_CONFIDENCE' ELSE null END AS f_confidence
+
+      WITH br,
+           [x IN [g_test, g_mutation, g_drift, g_deviation] WHERE x IS NOT NULL] AS blockers,
+           [x IN [f_drift, f_mutation, f_confidence] WHERE x IS NOT NULL] AS flags
+
+      SET br.signalStatus = CASE
+              WHEN size(blockers) > 0 THEN 'BLOCKED'
+              WHEN size(flags) > 0 THEN 'FLAGGED'
+              ELSE 'CLEAR'
+          END,
+          br.signalBlockers = blockers,
+          br.signalFlags = flags,
+          br._signalUpdatedAt = datetime()
+
+  - name: implicit_layer_gates
+    description: "Compute service-level structural gates for the implicit-system layers (A/C). These are NOT per-BR — a non-closed state machine or an unenforced mandatory-DB (integrity) invariant is a property of the service. Sets s.implicitBlockers (STATE_MACHINE_NOT_CLOSED, MANDATORY_DB_OBJECT_MISSING) consumed by service_signal_rollup. App-tier load-bearing invariant coverage is a test-suite concern (no BR->Invariant edge to gate on)."
+    trigger: "On graph_run_inferences() — after signal_status_evaluation, before service_signal_rollup"
+    query: |
+      MATCH (s:Service)
+      // Gate STATE_MACHINE_NOT_CLOSED: any owned entity has a transition to a state the entity
+      // does not declare, OR a non-terminal state with no outgoing transition (dead-end).
+      OPTIONAL MATCH (s)-[:OWNS]->(t:Table)-[:HAS_STATE]->(es:EntityState)
+      WITH s, collect(DISTINCT es) AS states
+      WITH s, states,
+           [st IN states WHERE
+              // non-terminal with no outgoing transition = dead end
+              (coalesce(st.isTerminal,false) = false AND NOT (st)-[:TRANSITIONS_TO]->())
+           ] AS deadEnds
+      // transitions whose target state is not in this service's declared state set
+      OPTIONAL MATCH (a:EntityState)-[:TRANSITIONS_TO]->(b:EntityState)
+      WHERE a IN states AND NOT b IN states
+      WITH s, deadEnds, count(b) AS danglingTransitions
+      // Gate MANDATORY_DB_OBJECT_MISSING: an invariant with tier db/both (integrity — must be DB-enforced)
+      // that has NO DbObject enforcing it. This is the "unenforced integrity invariant" hole. It also
+      // covers the load-bearing case: a load-bearing integrity invariant with no DB enforcement is exactly
+      // what must never ship. (Pure app-tier invariant coverage is asserted by the test-suite case-class,
+      // not the graph — there is no BR->Invariant edge to check, so we do NOT over-claim a graph gate there.)
+      OPTIONAL MATCH (s)-[:OWNS]->(t2:Table)<-[:CONSTRAINS]-(inv:Invariant)
+      WHERE inv.tier IN ['db','both']
+        AND NOT EXISTS { MATCH (o:DbObject {enforcesInvariantId: inv.invariantId}) }
+      WITH s, deadEnds, danglingTransitions, count(inv) AS missingDbObjects
+      WITH s,
+           [x IN [
+              CASE WHEN size(deadEnds) > 0 OR danglingTransitions > 0 THEN 'STATE_MACHINE_NOT_CLOSED' ELSE null END,
+              CASE WHEN missingDbObjects > 0 THEN 'MANDATORY_DB_OBJECT_MISSING' ELSE null END
+           ] WHERE x IS NOT NULL] AS implicitBlockers
+      SET s.implicitBlockers = implicitBlockers
+
+  - name: service_signal_rollup
+    description: "Compute service-level signalStatus from its assigned BusinessRules AND the implicit-layer structural gates (A/B/C)"
+    trigger: "After signal_status_evaluation and implicit_layer_gates complete"
+    query: |
+      MATCH (s:Service)
+      OPTIONAL MATCH (s)<-[:ASSIGNED_TO]-(br:BusinessRule)
+      WITH s,
+           count(CASE WHEN br.signalStatus = 'BLOCKED' THEN 1 END) AS blocked,
+           count(CASE WHEN br.signalStatus = 'FLAGGED' THEN 1 END) AS flagged,
+           size(coalesce(s.implicitBlockers, [])) AS implicitBlocked
+      SET s.signalStatus = CASE
+              WHEN blocked > 0 OR implicitBlocked > 0 THEN 'BLOCKED'
+              WHEN flagged > 0 THEN 'FLAGGED'
+              ELSE 'CLEAR'
+          END,
+          s.signalBlockedCount = blocked + implicitBlocked,
+          s.signalFlaggedCount = flagged,
+          s._signalUpdatedAt = datetime()
+
+# =============================================================================
+# CONFIDENCE MODEL
+# =============================================================================
+
+confidence:
+
+  description: |
+    Every node carries a confidence score (0.0 - 1.0) indicating how certain we are
+    about its correctness. Confidence propagates through edges: downstream nodes
+    inherit the minimum confidence of their upstream dependencies.
+
+  sources:
+    cast-imaging:       { baseConfidence: 0.95, description: "CAST structural data is highly reliable" }
+    source-analysis:    { baseConfidence: 0.85, description: "Direct source read — may miss context" }
+    extraction-confidence: { baseConfidence: "varies", description: "Per-rule confidence from Phase 1" }
+    architecture-decision: { baseConfidence: 0.90, description: "Human-approved architecture" }
+    spec-generation:    { baseConfidence: 0.80, description: "Agent-generated spec — needs validation" }
+    api-contract:       { baseConfidence: 0.95, description: "Locked contract — authoritative" }
+    human-decision:     { baseConfidence: 1.00, description: "Explicit human choice" }
+    agent-heuristic:    { baseConfidence: 0.60, description: "Phase 4b Mode A agent inference" }
+    test-suite:         { baseConfidence: 0.90, description: "Generated from contract — high confidence" }
+    code-generation:    { baseConfidence: 0.75, description: "AI-generated code — needs test validation" }
+    test-execution:     { baseConfidence: 1.00, description: "Test passed = verified" }
+
+  propagation_rules:
+    - name: test_verification_raises_confidence
+      description: "When a test assertion passes, the linked BR-ID's implementation confidence → 1.0"
+      condition: "TestAssertion.status = PASS"
+      action: "SET linked Implementation.confidence = 1.0, linked BusinessRule.implementationConfidence = 1.0"
+
+    - name: failed_test_lowers_confidence
+      description: "When a test fails, the implementation confidence drops"
+      condition: "TestAssertion.status = FAIL"
+      action: "SET linked Implementation.confidence = 0.3"
+
+    - name: deviation_lowers_confidence
+      description: "Open DEV-TEST deviations reduce service confidence"
+      condition: "Deviation.type = DEV_TEST AND Deviation.status = OPEN"
+      action: "SET linked Service.specCompliance -= 0.05 per open deviation"
+
+    - name: inferred_items_lower_confidence
+      description: "Phase 4b Mode A inferences carry lower confidence than SME-validated items"
+      condition: "Implementation.isInferred = true"
+      action: "SET Implementation.confidence = min(Implementation.confidence, 0.60)"
+
+    - name: upstream_confidence_propagation
+      description: "A node's confidence cannot exceed the minimum confidence of its upstream dependencies"
+      condition: "Always (recalculated on demand)"
+      action: |
+        For each node N with incoming edges from nodes U1, U2, ...:
+          N.effectiveConfidence = min(N.ownConfidence, min(U1.confidence, U2.confidence, ...))
+
+  aggregation:
+    service_confidence:
+      description: "Overall service confidence = weighted average of its BR-ID effectiveConfidence scores"
+      formula: "avg(BR-ID.effectiveConfidence) for all Active/Core rules assigned to service"
+
+    engagement_confidence:
+      description: "Overall engagement confidence = weighted average of service confidences (by priority)"
+      formula: "weightedAvg(Service.confidence, weights=[priority1: 3, priority2: 2, priority3: 1])"
+
+  # --- Multi-Dimensional Confidence Model ---
+  #
+  # Each BusinessRule has THREE active confidence dimensions (+ one future):
+  #
+  # | Dimension              | What It Measures                                      | Score Range   |
+  # |------------------------|-------------------------------------------------------|---------------|
+  # | provenanceConfidence   | Was the rule extracted correctly from legacy source?  | 0.5-1.0       |
+  # | implementationConfidence | Is the generated code correct for this rule?        | 0.0-0.9       |
+  # | testQualityConfidence  | Does the test actually validate the right behavior?   | 0.0-0.9       |
+  # | runtimeConfidence      | FUTURE: Has production confirmed the rule works?      | NOT ACTIVE    |
+  #
+  # effectiveConfidence = min(provenanceConfidence, implementationConfidence, testQualityConfidence)
+  #
+  # The runtime dimension is documented but NOT included in the min() calculation.
+  # Including it would make all rules 0.0 (nothing is in production during development).
+  # When runtime telemetry integration is built, it will be an ADDITIONAL signal that can
+  # ONLY raise confidence above the test-verified level, never lower it below.
+  #
+  # Lifecycle state drives which dimensions are active:
+  #   Extracted:  only provenanceConfidence is set (from extraction confidence)
+  #   Assigned:   provenanceConfidence (no change — assignment doesn't add evidence)
+  #   Declared:   provenanceConfidence + implementationConfidence=0.5 (claim, not proof)
+  #   Tested:     provenanceConfidence + implementationConfidence=0.5 + testQualityConfidence=0.6
+  #   Passing:    provenanceConfidence + implementationConfidence=0.9 + testQualityConfidence=0.9
+  #
+  # DEV-TEST deviations reduce testQualityConfidence to 0.6 (test was adapted)
+  # Phase 4b Mode A inferences cap provenanceConfidence at 0.6 (not SME-validated)

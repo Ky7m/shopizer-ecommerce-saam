@@ -1,0 +1,36 @@
+# SAAM Knowledge Graph — Neo4j container
+# Works with both: podman compose (preferred) or docker compose (fallback)
+# Each project gets its own container with unique name, ports, and data volume
+#
+# IMPORTANT: Do NOT run 'compose up' directly!
+# Use: bash scripts/ensure_neo4j.sh (writes .env with project-specific values)
+# Or the SessionStart hook handles this automatically.
+#
+# If you see "variable is not set" errors, run ensure_neo4j.sh first.
+
+services:
+  neo4j:
+    image: docker.io/neo4j:5-community
+    container_name: saam-graph-${SAAM_PROJECT_NAME:?Run ensure_neo4j.sh first}
+    ports:
+      - "${NEO4J_HTTP_PORT:?Run ensure_neo4j.sh first}:7474"
+      - "${NEO4J_BOLT_PORT:?Run ensure_neo4j.sh first}:7687"
+    environment:
+      NEO4J_AUTH: neo4j/saamgraph
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_memory_heap_initial__size: "256m"
+      NEO4J_dbms_memory_heap_max__size: "512m"
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    healthcheck:
+      test: ["CMD-SHELL", "neo4j status || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  neo4j_data:
+    name: saam-neo4j-data-${SAAM_PROJECT_NAME:?Run ensure_neo4j.sh first}
+  neo4j_logs:
+    name: saam-neo4j-logs-${SAAM_PROJECT_NAME:?Run ensure_neo4j.sh first}

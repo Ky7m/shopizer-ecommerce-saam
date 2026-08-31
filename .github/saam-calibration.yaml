@@ -1,0 +1,539 @@
+# SAAM Calibration Parameters
+# Single source of tunable parameters for all SAAM steering files.
+# Steering files reference this file instead of hardcoding thresholds.
+#
+# Version: 1 (expert heuristics — not yet empirically calibrated)
+# Generated from: expert judgment (initial baseline)
+# Last calibrated: 2026-08-11
+# Sample size: 0 (pre-engagement baseline)
+# Next calibration: after 10+ services complete Phase 5
+
+schema_version: "1.0"
+calibration_version: 7
+calibration_date: "2026-08-28"
+calibration_basis: "empirical_preliminary"   # expert_heuristic | empirical_preliminary | empirical
+sample_size: 4                               # 4 engagements (ENG-001 ruby-rails 55K, ENG-002 dotnet 300K, ENG-003 dotnet-hybrid 5M, ENG-004 java-struts 989K)
+
+# ─────────────────────────────────────────────────────────────
+# CONFIDENCE WEIGHTS
+# Used by: saam-graph-context.md (lifecycle state transitions)
+# The effectiveConfidence = min(all dimensions), but each
+# dimension's score is set when the rule reaches that state.
+# ─────────────────────────────────────────────────────────────
+confidence:
+  # implementationConfidence values by lifecycle state
+  implementation:
+    declared: 0.5                       # BR-ID annotation found in code (claim only)
+    tested: 0.5                         # test exists but hasn't passed yet
+    passing: 0.9                        # all tests for this rule pass
+    verified: 0.97                      # production telemetry confirms (future)
+
+  # provenanceConfidence values by extraction quality
+  provenance:
+    low_confidence_extraction: 0.5      # agent extracted with low confidence
+    medium_confidence_extraction: 0.7   # agent extracted with medium confidence
+    high_confidence_extraction: 0.9     # agent extracted with high confidence
+    ba_validated: 1.0                   # human BA reviewed and approved
+    phase4b_mode_a_inferred: 0.6        # agent inferred during automatibility improvement
+
+  # testQualityConfidence values
+  test_quality:
+    contract_aligned: 0.9              # test matches API contract exactly
+    dev_test_deviation: 0.6            # test was adapted (tech debt exists)
+    no_test: null                      # dimension not set (excluded from min)
+
+  # Threshold below which rules need attention
+  attention_threshold: 0.7
+
+# ─────────────────────────────────────────────────────────────
+# AUTOMATIBILITY SCORING
+# Used by: saam-phase4b-implementation-roadmap.md
+# Composite = weighted sum of dimension scores (each 0-100%)
+# ─────────────────────────────────────────────────────────────
+automatibility:
+  weights:
+    statement_clarity: 0.30
+    algorithm_completeness: 0.25
+    integration_definition: 0.15
+    data_model_readiness: 0.15
+    edge_case_coverage: 0.15
+
+  # Implementation type classification thresholds
+  # Full model: threshold = f(source_stack, target_stack, br_count_per_service)
+  # - Source stack affects spec quality (COBOL rules are explicit → lower AS still viable)
+  # - Target stack affects what's needed (NestJS tolerates lower AS than Java Spring)
+  # - BR count affects risk accumulation (50 rules at 70% = 15 gaps = too many)
+  thresholds:
+    # Context-specific thresholds (populated from Phase 5 data as it arrives)
+    # Query: "at what AS does first_pass_test_rate drop below 80% for this cohort?"
+    by_context:
+      ruby-rails:                          # source stack
+        typescript-nestjs:                 # target stack
+          br_lt_20: null                  # TBD — awaiting Phase 5 data
+          br_20_40: null
+          br_gt_40: null
+        java-spring:
+          br_lt_20: null
+          br_20_40: null
+          br_gt_40: null
+      # cobol-mainframe:
+      #   typescript-nestjs:
+      #     br_lt_20: null
+      #     br_20_40: null
+      #     br_gt_40: null
+      # dotnet-framework:
+      #   ...
+
+    # Fallback defaults (used when no context-specific data exists)
+    default:
+      type_a_minimum: 0.85               # fully automatable (agent-only)
+      type_b_minimum: 0.70               # assisted (agent + human review)
+      # below type_b_minimum = Type C (manual/human-led)
+
+  # Minimum acceptable score before implementation begins
+  # Also context-dependent — will be calibrated per cohort when data arrives
+  minimum_for_implementation: 0.75
+
+  # Score below which improvement iteration is MANDATORY
+  mandatory_improvement_below: 0.60
+
+  # ── Test Pass Rate vs Automatibility (from ENG-003 P5 — N=21 services, REAL test data) ──
+  # Measured against real PostgreSQL sidecar + comprehensive-test-suite.sh
+  #
+  # KEY FINDING: automatibility barely correlates with actual test pass rate.
+  #   Pearson r = 0.22 (weak). Automatibility predicts SPEC quality, NOT
+  #   implementation test success. The gap is filled by Test-environment
+  #   concerns (dependency mocking, connection wiring) that automatibility
+  #   does not measure.
+  #
+  # NOTE: An earlier (v6 draft) conclusion claimed algorithm_completeness < 75%
+  #   predicts missing BR implementations (pr-service "40 missing"). That was
+  #   based on a BROKEN conformance-audit script that miscounted BR annotations.
+  #   The real test data does NOT support that conclusion — pr-service landed
+  #   mid-pack (56%) and its low score was not the dominant failure driver.
+  #   The focused_algorithm_extraction_pass idea is RETAINED as a reasonable
+  #   heuristic but is NOT empirically validated. Treat as expert judgment.
+  test_pass_validation:
+    sample: "ENG-003 (21 services, Model C batch, .NET 10, real PostgreSQL sidecar)"
+    correlation_automatibility_vs_test_pass: 0.22   # weak — automatibility != test success
+    pass_rate_progression:
+      empty_db_artifact: 29.8        # measurement artifact (empty/misconfigured DB)
+      true_baseline_real_pg: 47.0    # honest starting point (509/1083)
+      after_systemic_fix_r3: 61.0    # after 3 rounds of systemic remediation (~740/1215)
+
+    # The DOMINANT failure driver is Test-mode dependency isolation, NOT spec quality:
+    #   notification-service: 89.8% auto → 12% test pass (SNS/messaging deps unmocked)
+    #   platform-gateway:      91.5% auto → 30% test pass (YARP reverse proxy untestable in harness)
+    #   chat-agent-service:    78.0% auto → 29% test pass (Bedrock/DynamoDB not in Test env)
+    #   cm-service:            87.6% auto → 40% test pass
+    #   hr-service:            88.8% auto → 36% test pass
+    # High automatibility did NOT protect these — they lacked Test-mode dependency mocking.
+    dominant_failure_driver: "test_mode_dependency_isolation"
+
+    # This REINFORCES the infrastructure-patterns.md fix (Phase 4b mandatory artifact):
+    # in-memory messaging for Test, external service mocks, connection-string normalization,
+    # graceful empty-DB responses — all belong in infrastructure-patterns.md.
+
+    # ── METRIC INTERPRETATION CAVEAT (read before using first_pass_test_rate) ──
+    # first_pass_test_rate measures CONFORMANCE TO A SERVICE'S OWN TEST SUITE.
+    # It does NOT measure:
+    #   - interoperability (does this service agree with the services it calls?)
+    #   - contract fidelity (does the impl match its own published contract, or just
+    #     pass the happy-path suite that supplied all params?)
+    #   - runtime correctness (auth enforced? tenant scoped? schema current?)
+    # A service can be "green" (high first_pass_test_rate), healthy, and 1/1 Ready
+    # while the SYSTEM is broken. Three defect classes are invisible to own-suite tests:
+    #   Class A — cross-service contract divergence (consumer vs provider disagree)
+    #   Class B — impl-vs-contract drift (optional param made required; status code mismatch)
+    #   Class C — infra/runtime plumbing (auth wiring, header propagation, schema lifecycle)
+    # Gates that catch these (added to framework):
+    #   Class A → Stage 1.5 consumer-provider contract reconciliation (Phase 4)
+    #   Class B → contract-conformance test cases (test suite template) + build gate
+    #   Class C → Stage 5 integration runtime smoke gate (Phase 5)
+    # When calibrating on first_pass_test_rate, remember it is a LOWER bound on true
+    # correctness, not an upper bound. Do not treat high pass-rate as "system correct."
+    metric_caveat: "first_pass_test_rate = own-suite conformance only; not interop/contract/runtime correctness"
+
+  # ── Focused Algorithm Extraction Pass (EXPERT HEURISTIC — not empirically validated) ──
+  # Triggered when: service algorithm_completeness < 0.75
+  # Rationale: thin Logic sections MAY produce incomplete implementations.
+  # STATUS: retained as a reasonable pre-generation check, but ENG-003 P5 real test
+  # data did NOT confirm algorithm_completeness as a dominant test-pass predictor.
+  # Do not over-weight this trigger; the bigger lever is Test-mode dependency mocking.
+  focused_extraction_pass:
+    trigger_dimension: "algorithm_completeness"
+    trigger_threshold: 0.75
+    target_rules: "BR-IDs where Logic section is < 5 lines OR contains 'see source' references"
+    action: |
+      1. Identify all BR-IDs in the service with thin Logic sections
+      2. Re-read the source procedure(s) for each (from Source Reference field)
+      3. Expand Logic to step-by-step pseudocode:
+         - All branches (if/else/switch) with conditions
+         - Loop structures with termination conditions
+         - Calculation formulas with variable definitions
+         - External lookups (table reads, config fetches)
+      4. Re-score algorithm_completeness after expansion
+      5. If still < 75% after pass → note as documented risk (NOT auto-escalate)
+    max_passes: 2
+    empirical_status: "expert_heuristic"   # NOT validated by ENG-003 P5 real test data
+    # BUT: for Model C (ATX batch) this is a MANDATORY PRE-GENERATION GATE, not a heuristic.
+    # See implementation_fidelity below — thin algorithm density + one-shot batch generation
+    # = guaranteed skeleton output at scale.
+
+  # ── Implementation Fidelity / Anti-Skeleton ──
+  # Used by: saam-phase5-ai-dlc-implementation.md (Implementation Fidelity pipeline),
+  #          saam-test-suite-template.md (Behavioral Assertion Cases),
+  #          saam-phase4-spec-generation.md (Executable Step Recipe)
+  #
+  # The "annotated skeleton" defect: BR-ID comments present, endpoints present, DTOs correct,
+  # build passes, shape-level tests pass — but behavior is a stub (returns 200 doing nothing,
+  # computed fields hardcoded to 0, real logic present but unwired to any route).
+  # EVERY structural gate passes it. Only behavioral assertions + reachability catch it.
+  implementation_fidelity:
+    # The driver: thin algorithm density lets a generator satisfy the spec with a stub.
+    # algorithm_completeness is the primary predictor of stub rate.
+    stub_risk_by_algorithm_completeness:
+      ">= 0.85": "low — spec is prescriptive enough that stub is an invalid reading"
+      "0.75 - 0.85": "medium — some operations under-specified; self-audit + behavioral suite catch"
+      "< 0.75": "high — generator fills gaps with stubs; MUST run focused_extraction_pass first"
+
+    # Prevention pipeline is UNIVERSAL; only the loop-closer branches by mode.
+    # Criticality of the PREVENTION steps scales with mode (same steps, different stakes):
+    criticality_by_mode:
+      model_a_kiro_inline:
+        prevention_criticality: "advisory-strong"   # human closes gaps in-session
+        loop_closer: "in-session agent iterates against behavioral results live"
+      model_b_atx_plus_kiro:
+        prevention_criticality: "essential"
+        loop_closer: "-c fix loop: Kiro remediates against the behavioral suite"
+      model_c_atx_batch:
+        prevention_criticality: "load-bearing (HARD PRE-GENERATION GATES)"
+        loop_closer: "fix-logic/validate loop: behavioral-aware, bounded passes, escalate on stall"
+        # For Model C: do NOT start batch generation until BOTH are complete:
+        #   1. algorithm_completeness >= 0.75 for all services (focused_extraction_pass done)
+        #   2. behavioral test suite complete (asserts effect, not just shape)
+        # Rationale: one-shot isolated headless generation has no in-loop human; a thin spec
+        # guarantees a stub-storm and a thin suite means nothing forces the behavior.
+        # The cost of remediation loops (regenerate N times) far exceeds upstream spec density.
+
+    # Detection controls that confirm prevention held (all modes):
+    detection_controls:
+      - "behavioral assertion cases (state changed / computed non-zero / side effect emitted)"
+      - "static reachability check (BR-ID annotated on unreachable method = dead code = false claim)"
+      - "vector comparison (source had writes/computation, impl has neither = skeleton flag)"
+
+    # Economic principle: move cost UPSTREAM into spec density (paid once) rather than
+    # DOWNSTREAM into remediation loops (paid per-service per-pass).
+    economic_principle: "dense_spec_once_beats_remediation_loops_per_service"
+
+# ─────────────────────────────────────────────────────────────
+# COMPLEXITY / SEMANTIC PRESERVATION
+# Used by: saam-phase4-spec-generation.md (preservation validation)
+# Per-dimension ratio above which a flag is raised
+# ─────────────────────────────────────────────────────────────
+complexity:
+  # Source/spec ratio above which a dimension is FLAGGED
+  ratio_threshold: 3.0
+
+  # If source[dim] > 0 AND spec[dim] == 0 → CRITICAL regardless of ratio
+  zero_spec_is_critical: true
+
+  # Number of non-control-flow dimensions flagged → "likely condensed"
+  multi_flag_threshold: 3
+
+  # Maximum re-extraction passes before stopping
+  max_passes: 3
+
+  # Minimum improvement (%) between passes to continue
+  min_improvement_pct: 20
+
+  # Dimensions used in the semantic preservation vector
+  dimensions:
+    - control_flow
+    - data_flow
+    - constants
+    - state_transitions
+    - outcomes
+    - data_writes
+    - integrations
+    - error_paths
+
+# ─────────────────────────────────────────────────────────────
+# PLANNING & PREDICTION MODEL
+# Used by: saam-phase4b-implementation-roadmap.md (timeline estimation)
+# Prediction inputs: source_stack, target_stack, total_LOC, analysis_mode
+#
+# Prediction formulas:
+#   Phase 1 duration = total_LOC / phase1_loc_per_hour[source_stack][mode]
+#   Phase 4 predicted rules = Phase 1 rules × rule_growth_p1_to_p4[source_stack]
+#   Phase 4 duration = predicted_services × phase4_minutes_per_service[source_stack]
+#   Phase 5 duration = f(final_rules, automatibility, target_stack, execution_model)
+#
+# LOC tiers (for cohort analysis):
+#   small: < 50K LOC
+#   medium: 50K - 200K LOC
+#   large: 200K - 500K LOC
+#   enterprise: > 500K LOC
+# ─────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────
+# SEMANTIC PRESERVATION (Extraction Quality Metrics)
+# Used by: saam-phase4-spec-generation.md (deep convergence verification)
+# Tracks how faithfully business logic is captured during extraction.
+# Enables benchmarking: "is this extraction quality normal for this stack?"
+#
+# Populated after: Phase 4 deep convergence completes with vector import
+# Dimensions order: [controlFlow, dataFlow, constants, stateTransitions,
+#                    outcomes, dataWrites, integrations, errorPaths]
+# ─────────────────────────────────────────────────────────────
+preservation:
+  # Ratio threshold (from complexity section — repeated here for context)
+  ratio_threshold: 3.0           # source[dim] / spec[dim] > 3.0 → FLAGGED
+
+  # Observed preservation rates by source stack
+  by_source_stack:
+    dotnet-framework:
+      sample_size: 1             # ENG-002 (300K LOC, 378 rules)
+      ok_rate: 0.987             # 373/378 rules pass all dimension checks
+      flagged_rate: 0.0          # 0 rules in FLAGGED state (all resolved)
+      unresolved_rate: 0.024     # 9/378 rules need BA review
+      false_positive_rate: 0.54  # 204 initial flags dismissed (integrations moved to gateway, validations don't mutate)
+      avg_spec_vector: [3.6, 3.5, 2.0, 0.7, 2.1, 0.9, 0.2, 1.1]
+      # Interpretation: .NET benefits rules average ~3.6 control branches,
+      # ~3.5 data accesses, ~2 constants, <1 state transition per rule.
+      # Low integrations (0.2) because gateway handles cross-service calls.
+      unresolved_dimensions:     # which dimensions cause the most UNRESOLVEDs
+        - stateTransitions       # 4/9 unresolved rules
+        - dataWrites             # 4/9 unresolved rules
+        - errorPaths             # 3/9 unresolved rules
+    # ruby-rails:
+    #   sample_size: 0           # vectors not computed in ENG-001 (pre-framework-fix)
+    #   ok_rate: null
+    #   avg_spec_vector: null
+
+  # Expected ranges (for outlier detection)
+  # If an engagement's ok_rate is below expected_ok_rate_min, flag as "extraction quality concern"
+  expected_ok_rate_min: 0.90     # below 90% → something is wrong with extraction quality
+  expected_unresolved_max: 0.10  # above 10% → too many rules need human review (spec may be thin)
+
+planning:
+
+  # ── Phase 1: Source Analysis Throughput ──
+  # Primary input: total_LOC / rate = predicted duration
+  phase1_loc_per_hour:
+    # Defaults by mode (used when no stack-specific data exists)
+    default:
+      cast: 15000000             # CAST mode processes LOC structurally (not reading every file)
+      direct: 3000
+      hybrid: 4200000            # N=1, ENG-003 (5M LOC / 1.18h)
+    # Stack-specific rates (populated from telemetry as engagements complete)
+    by_source_stack:
+      ruby-rails:
+        direct: 18500            # N=1, ruby-rails engagement (55K LOC)
+      dotnet-framework:
+        direct: 500000           # N=1, dotnet-framework engagement (300K LOC)
+        hybrid: 4237000          # N=1, dotnet-hybrid engagement (5M LOC / 1.18h — CAST does structural work)
+      java-struts:
+        direct: null             # N=1, ENG-004 (989K LOC) — timing not available from tracking files
+      # cobol-mainframe:
+      #   cast: TBD              # expect lower than default due to fixed-format complexity
+      # java-ee:
+      #   direct: TBD
+      #   hybrid: TBD
+
+  # ── Phase 4: Deep Extraction Throughput ──
+  # Primary input: service_count × minutes_per_service = predicted duration
+  phase4_extraction_minutes_per_service:
+    default: 15                  # N=3 baseline (ENG-001=20, ENG-002=7.5, ENG-003=20 — converging toward 15)
+    by_source_stack:
+      ruby-rails: 20             # N=1, 10 services, avg 20 min (8-45 range)
+      dotnet-framework: 7.5      # N=1, 12 services, 90 min active / 12 = 7.5 min avg
+    by_analysis_mode:
+      hybrid: 20                 # N=1, 18 services, ~360 min effective / 18 = 20 min/svc (includes CAST queries)
+      direct: 10                 # N=2 average (ruby 20, dotnet-direct 7.5)
+      # cast: TBD                # pure CAST (no source reading) — not yet observed
+
+  # ── Rule Growth Factors ──
+  # Phase 4 deep extraction typically discovers MORE rules than Phase 1 surface scan
+  rule_growth_p1_to_p4:
+    default: 2.64                # N=3 average (Ruby 2.63 + .NET-direct 3.26 + .NET-hybrid 2.04) / 3
+    by_source_stack:
+      ruby-rails: 2.63          # N=1 (128→337)
+      dotnet-framework: 3.26    # N=1, direct mode (116→378) — .NET hides more in framework patterns
+    by_analysis_mode:
+      hybrid: 2.04              # N=1, CAST-assisted (357→727) — CAST P1 finds more → lower growth
+      direct: 2.95              # N=2 average (ruby 2.63 + dotnet 3.26)
+      # Note: hybrid growth is LOWER because CAST in P1 identifies more business logic upfront
+      # cobol-mainframe: TBD    # may be lower if Phase 1 extracts more from fixed-format
+      # java-ee: TBD            # annotations may help Phase 1 → lower growth
+
+  # ── LOC-per-Rule Density ──
+  # Derived metric: total_LOC / final_rule_count
+  # Indicates how much of the codebase is business logic vs infrastructure
+  # Lower = more business-dense, higher = more infrastructure/boilerplate
+  loc_per_rule:
+    ruby-rails: 165              # N=1 (55500 LOC / 337 rules)
+    dotnet-framework: 794        # N=1 (300000 LOC / 378 rules) — much more infrastructure per rule
+    dotnet-framework-large: 6912 # N=1 (5M LOC / 727 rules) — enterprise scale, massive infrastructure ratio
+    java-struts: 3071            # N=1 (989000 LOC / 322 rules) — between .NET-small and .NET-large
+    # Note: LOC/rule scales non-linearly with codebase size. Larger codebases have
+    # proportionally MORE infrastructure (frameworks, utilities, generated code, tax tables)
+    # relative to extractable business logic.
+    # cobol-mainframe: TBD       # expect higher (more boilerplate per rule)
+    # java-ee: TBD              # expect higher (XML config, frameworks)
+
+  # ── Credits Cost Prediction (DISABLED — not programmatically accessible) ──
+  # Credits cannot be read by the agent programmatically. Manual tracking by human
+  # operator is unreliable for calibration. Disabled until a reliable mechanism exists.
+  # credits_per_1k_loc:
+  #   extraction:
+  #     ruby-rails:
+  #       direct: 0.18            # N=1: 55K LOC → ~10 credits (P1+P4) — estimated, not verified
+  #   generation:
+  #     typescript-nestjs:
+  #       type_a: null
+  #     java-spring:
+  #       type_a: null
+
+  # ── BA Review Velocity ──
+  ba_review_velocity_br_per_hour: 6.0   # Mode B (human workshop) — expert estimate
+  # Mode A is not constrained by human velocity — it's agent processing speed
+
+  # ── Phase 5: Implementation Duration ──
+  # Inputs: automatibility_score, target_stack, execution_model, rule_count
+  #
+  # Model C (ATX Batch) — validated from ENG-003:
+  #   22 services / 797 rules / 93K LOC generated
+  #   Wall clock: 60 min | Total compute: 270 min | Avg per service: 735s (12.25 min)
+  #   Build fix iterations: 1.1 avg (infrastructure only — namespace/import)
+  #   Post-fix conformance: 95.5% (21/22 fully conformant)
+  #
+  avg_duration_hours:
+    # By target stack + execution model (defaults — stack-specific when calibrated)
+    default:
+      type_a:
+        score_90_100: 20
+        score_85_90: 30
+      type_b:
+        score_75_85: 48
+        score_70_75: 72
+      type_c:
+        score_60_70: 160
+        score_below_60: 240
+    # Target stack overrides (populated after Phase 5 completes per stack)
+    # by_target_stack:
+    #   typescript-nestjs:
+    #     type_a_score_85_90: TBD  # from first NestJS P5 completion
+    #   java-spring:
+    #     type_a_score_85_90: TBD
+
+  # Phase 5 average remediation cycles by implementation type
+  avg_remediation_cycles:
+    type_a: 1.5
+    type_b: 3.0
+    type_c: 0.5
+
+# ─────────────────────────────────────────────────────────────
+# STACK LABELING (for cohort-based calibration)
+# Used by: telemetry import, weight_update.py (covariate analysis)
+# Each engagement is labeled with source + target stack for grouping
+# ─────────────────────────────────────────────────────────────
+stack_taxonomy:
+  # Source stacks (legacy)
+  source:
+    - ruby-rails
+    - dotnet-framework
+    - java-ee
+    - java-struts
+    - cobol-mainframe
+    - ibm-rpg
+    - plsql-oracle
+    - python-django
+    - php-laravel
+  # Target stacks
+  target:
+    - java-spring
+    - typescript-nestjs
+    - dotnet-core
+    - python-fastapi
+    - go
+    - serverless-lambda
+  # LOC tiers (for cohort grouping)
+  loc_tiers:
+    small: "< 50K"
+    medium: "50K - 200K"
+    large: "200K - 500K"
+    enterprise: "> 500K"
+
+# ─────────────────────────────────────────────────────────────
+# GOVERNANCE (Invisible Risk-Adaptive Controls)
+# Used by: saam-governance.md, reconcile_validation.py, spec_drift.py
+# Governance is NOT a choice — it's determined automatically from:
+#   1. Whether BR-ID code was touched (detect_br_ids)
+#   2. Whether spec hash matches (spec_drift)
+#   3. Whether affected BR-ID is Critical (graph classification)
+# ─────────────────────────────────────────────────────────────
+# BR-ID PATTERN (Single Source of Truth)
+# Used by: detect_br_ids.py, run-and-reconcile.sh, CI workflows,
+#          Validator subagent, grep-based verification gates
+# All components that detect/match BR-IDs MUST use this pattern.
+# ─────────────────────────────────────────────────────────────
+br_id_pattern:
+  # Regex (POSIX extended — works in grep -E, Python re, JavaScript)
+  regex: "BR-[A-Z]{2,4}-[A-Z]{2,5}-[0-9]{3}"
+  # Examples: BR-GL-PST-001, BR-AP-VAL-012, BR-TEAM-CRT-001
+  # Structure: BR-<DOMAIN>-<GROUP>-<NUMBER>
+  # Domain: 2-4 uppercase letters (GL, AP, AR, JC, PR, TEAM, etc.)
+  # Group: 2-5 uppercase letters (PST, VAL, CRT, MATCH, etc.)
+  # Number: exactly 3 digits (001-999)
+
+  # Strict mode (for CI — rejects partial matches)
+  regex_strict: "^BR-[A-Z]{2,4}-[A-Z]{2,5}-[0-9]{3}$"
+
+  # Tolerant mode (for detection in comments — allows surrounding text)
+  regex_tolerant: "BR-[A-Z]{2,4}-[A-Z]{2,5}-[0-9]{2,3}"
+  # Allows 2-3 digit numbers (catches BR-GL-PST-01 typos) for detection purposes
+
+# ─────────────────────────────────────────────────────────────
+# GOVERNANCE (Invisible Risk-Adaptive Controls)
+governance:
+  # Governance levels (determined automatically, never selected by developer)
+  levels:
+    passthrough:
+      trigger: "No BR-IDs in changed files"
+      requires_tests: true
+      requires_spec_check: false
+      requires_graph_update: false
+      requires_human_approval: false
+    automated_check:
+      trigger: "BR-IDs touched, spec hash matches"
+      requires_tests: true
+      requires_spec_check: true            # hash comparison — automated
+      requires_graph_update: true           # CLAIMS_IMPLEMENTATION updated
+      requires_human_approval: false
+    drift_response:
+      trigger: "BR-IDs touched, spec hash DOES NOT match"
+      requires_tests: true
+      requires_spec_check: true
+      requires_graph_update: true
+      requires_human_approval: false
+      requires_reconciliation: true         # must update code or spec to align
+      creates_deviation: true               # SPEC_DRIFT deviation node
+    critical_gate:
+      trigger: "Critical BR-ID affected + spec drift detected"
+      requires_tests: true
+      requires_spec_check: true
+      requires_graph_update: true
+      requires_human_approval: true         # merge/deploy blocked
+      requires_reconciliation: true
+      creates_deviation: true
+
+  # What makes a BR-ID "Critical" (from Phase 4a classification)
+  critical_classifications: ["Core"]
+  critical_weights: ["Critical"]
+
+  # Drift detection parameters
+  drift:
+    hash_algorithm: "sha256_first16"       # first 16 chars of SHA256
+    normalization: "strip_trailing_whitespace_collapse_blanks"
+    auto_baseline_on_spec_edit: false       # must explicitly run --update

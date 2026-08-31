@@ -1,0 +1,11 @@
+# Generated per-project (dynamic ports from ensure_neo4j.sh)
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Neo4j data (persisted in podman volumes, not in project)
+data/
+logs/

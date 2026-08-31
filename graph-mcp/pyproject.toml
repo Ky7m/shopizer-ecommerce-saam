@@ -1,0 +1,38 @@
+[project]
+name = "saam-graph-mcp"
+version = "0.1.0"
+description = "SAAM Knowledge Graph MCP Server — Neo4j-backed graph for modernization traceability, validation, and agent context construction"
+authors = [
+    { name = "Max Kozinenko", email = "max.kozinenko@softserveinc.com" },
+    { name = "Roman Kalita", email = "roman.kalita@softserveinc.com" },
+]
+requires-python = ">=3.11"
+dependencies = [
+    "mcp>=1.0.0",
+    "neo4j>=5.20.0",
+    "pyyaml>=6.0",
+    "pydantic>=2.0",
+    "streamlit>=1.35.0",
+    "pandas>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.5",
+]
+
+[project.scripts]
+saam-graph = "saam_graph.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/saam_graph"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
