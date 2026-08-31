@@ -1,0 +1,90 @@
+schema_version: "1.0"
+phase: "P1"
+status: "completed"
+started_at: "2026-08-31T21:47:24.963+04:00"
+completed_at: "2026-08-31T22:39:50.226+04:00"
+exit_gate_presented_at: "2026-08-31T22:22:21+04:00"
+timing_source: "machine_recorded"
+timing_caveat: "Segment worker completion timestamps were not emitted as graph StepEvents; active-work timing remains provisional. Human exit-gate approval was recorded at completed_at."
+wall_clock_minutes: null
+active_work_minutes: null
+human_wait_minutes: null
+unattributed_minutes: null
+step_timings:
+  - step: "step0-inventory-ingest"
+    minutes: null
+    status: "started-and-completed-event-recorded; duration query pending"
+  - step: "reclassification"
+    minutes: null
+    status: "started-event-recorded; completion event pending"
+  - step: "segment-extraction"
+    minutes: null
+    status: "delegated segment summaries collected; per-segment StepEvents not emitted"
+duration_hours: null
+actor: "mixed"
+analysis_mode: "hybrid"
+
+metrics:
+  total_source_files_analyzed: 1138
+  total_loc: 308769
+  languages: ["java", "typescript", "javascript", "html", "scss", "xml", "drools"]
+  modules_identified: 8
+  components_catalogued: 1138
+  business_layer_components: 473
+  br_candidates_extracted: 180
+  integration_points_found: 38
+  data_stores_identified: 40
+  frontend_applications: 2
+
+cast_intent_fidelity:
+  business_components: 473
+  cast_unknown: null
+  cast_unknown_pct: null
+  name_confirmed: null
+  firstpass_flips_from_cast: null
+  method: "provisional-source-behavior"
+  note: "CAST per-component CRUD semantics were unavailable through the registered session surface. Unknown residuals were retained in the denominator; source/behavior lexical classification populated first-pass intent properties where available."
+
+source_vectors:
+  total_components_with_vectors: 908
+  partial_vectors: true
+  aggregate:
+    control_flow: 6392
+    data_flow: 1132
+    constants: 611
+    state_transitions: 24
+    outcomes: 5921
+    data_writes: 456
+    integrations: 818
+    error_paths: 4018
+  per_component_stats:
+    control_flow: {min: 0, max: 198, median: 0, p90: 16, mean: 5.632}
+    data_flow: {min: 0, max: 31, median: 0, p90: 3, mean: 1.247}
+    constants: {min: 0, max: 55, median: 0, p90: 1, mean: 0.673}
+    state_transitions: {min: 0, max: 3, median: 0, p90: 0, mean: 0.026}
+    outcomes: {min: 0, max: 90, median: 3.5, p90: 15, mean: 6.521}
+    data_writes: {min: 0, max: 11, median: 0, p90: 2, mean: 0.502}
+    integrations: {min: 0, max: 106, median: 0, p90: 1, mean: 0.901}
+    error_paths: {min: 0, max: 125, median: 0, p90: 13, mean: 4.425}
+  note: "CAST control-flow vectors cover 1135 components; the remaining seven dimensions cover 908 components after direct lexical/source population. Values are graph aggregates and contain no component names or paths."
+
+complexity_distribution:
+  vector_sum_buckets:
+    simple_lt_10: 725
+    medium_10_to_30: 257
+    complex_31_to_60: 80
+    very_complex_gt_60: 76
+
+graph_reconciliation:
+  source_components: 1138
+  business_layer_components: 473
+  business_rules: 180
+  extracted_from_edges: 671
+  extracted_components_with_edges: 61
+  source_tables: 34
+  static_source_call_edges: 5370
+  note: "Multiple EXTRACTED_FROM edges are retained when a rule spans more than one source component. Rule count equals the BR-ID count in the seven assessment summaries. Static call edges are inferred from Java source references and marked with inference=static-java-reference."
+  saam_graph_mcp_configured: false
+  saam_graph_mcp_registered_in_active_session: false
+  exit_gate_approved_by: "human"
+  exit_gate_approval_timestamp: "2026-08-31T22:39:50.226+04:00"

@@ -17,7 +17,7 @@
 | Phase | Status | Completed |
 |-------|--------|-----------|
 | Phase 0: Onboarding | ✅ Complete | 2026-08-31 |
-| Phase 1: Bottom-Up | Approved to start | — |
+| Phase 1: Bottom-Up | ✅ Complete | 2026-08-31 |
 | Phase 2: Top-Down | Approved to start | — |
 | Phase 3: Convergence | — | — |
 | Phase 4: Specification | — | — |
@@ -25,6 +25,14 @@
 | Phase 4b: Roadmap | — | — |
 | Phase 4c: Test Suites | — | — |
 | Phase 5: Implementation | — | — |
+
+## Phase 1 Completion Summary
+
+The eight planned bottom-up segments were analyzed using the Hybrid workflow: CAST structural
+inventory plus direct source extraction. The phase produced 180 business rules, identified 38
+integration points, and recorded graph effective-confidence results of 49 high and 131 medium
+rules. The full graph inventory contains 1,138 source components, including 473 business-layer
+components; 61 business components currently have extracted-rule coverage.
 
 ## Analysis Scope
 
