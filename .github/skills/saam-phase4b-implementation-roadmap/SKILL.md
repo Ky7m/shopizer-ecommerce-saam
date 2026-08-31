@@ -17,8 +17,8 @@ Phase 4b is an ITERATIVE process — not a one-shot calculation. The architect d
 
 The agent MUST read the following steering files before executing Phase 4b:
 
-1. **`saam-human-guidance-protocol.md`** — Prompt categories, decision register format, agent rules
-2. **`saam-task-tracking.md`** — Tracking file format and Jira dual-write protocol
+1. **`.github/skills/saam-human-guidance-protocol/SKILL.md`** — Prompt categories, decision register format, agent rules
+2. **`.github/skills/saam-task-tracking/SKILL.md`** — Tracking file format and Jira dual-write protocol
 
 No additional templates are needed — Phase 4b produces its own deliverables (scores, improvement plan, roadmap, team composition).
 
@@ -28,7 +28,7 @@ No additional templates are needed — Phase 4b produces its own deliverables (s
 
 **PhaseEvent (telemetry timestamp):** Immediately after creating the tracking file, write: `graph_add_node(nodeType="PhaseEvent", id="P4B-started", properties={phase: "P4B", event: "started", timestamp: <current ISO timestamp>})`.
 
-After each major milestone (scores calculated, iteration complete, roadmap finalized), the agent MUST update the tracking file immediately. If Jira is configured, create an Epic with Tasks. See `saam-task-tracking.md` for format.
+After each major milestone (scores calculated, iteration complete, roadmap finalized), the agent MUST update the tracking file immediately. If Jira is configured, create an Epic with Tasks. See `.github/skills/saam-task-tracking/SKILL.md` for format.
 
 ## Entry Precondition
 
@@ -42,7 +42,7 @@ Before starting Phase 4b:
 
 ### Scoring Dimensions
 
-Each service receives a score (0-100%) across these dimensions. Weights are defined in `saam-calibration.yaml` → `automatibility.weights` (defaults shown below):
+Each service receives a score (0-100%) across these dimensions. Weights are defined in `.github/saam-calibration.yaml` → `automatibility.weights` (defaults shown below):
 
 | Dimension | Weight (calibrated) | What It Measures |
 |-----------|--------|------------------|
@@ -52,7 +52,7 @@ Each service receives a score (0-100%) across these dimensions. Weights are defi
 | **Data model readiness** | 15% | Is DDL complete with all columns, types, constraints, indexes? |
 | **Edge case coverage** | 15% | Are error cases, boundary conditions, and rejection paths documented? |
 
-**Note:** Read weights from `saam-calibration.yaml` at execution time. The values above are fallback defaults if the calibration file is absent.
+**Note:** Read weights from `.github/saam-calibration.yaml` at execution time. The values above are fallback defaults if the calibration file is absent.
 
 ### Per-Dimension Scoring
 
@@ -93,7 +93,7 @@ Each service receives a score (0-100%) across these dimensions. Weights are defi
 
 ### Composite Score Calculation
 
-Each dimension is scored 0-100%. The composite is a weighted average using weights from `saam-calibration.yaml` → `automatibility.weights` (result is also 0-100%):
+Each dimension is scored 0-100%. The composite is a weighted average using weights from `.github/saam-calibration.yaml` → `automatibility.weights` (result is also 0-100%):
 
 ```
 Automatibility Score (%) = (Statement% × clarity_weight) + (Algorithm% × algorithm_weight) + (Integration% × integration_weight) + (DataModel% × data_model_weight) + (EdgeCases% × edge_case_weight)
@@ -114,7 +114,7 @@ Example (using default weights): Statement=80%, Algorithm=60%, Integration=70%, 
 
 ### Minimum Threshold
 
-Thresholds from `saam-calibration.yaml` → `automatibility.thresholds` (defaults shown):
+Thresholds from `.github/saam-calibration.yaml` → `automatibility.thresholds` (defaults shown):
 
 - **Type A (full auto):** ≥ `type_a_minimum` (default: 85%)
 - **Type B (assisted):** ≥ `type_b_minimum` (default: 70%)
@@ -698,8 +698,8 @@ The human may:
 - Adjust the roadmap manually (agent incorporates changes)
 
 **Next steps after human approval:**
-- Activate `saam-phase4c-test-suite-generation.md` for comprehensive test suite generation per service
-- The Phase 4c file will instruct reading `saam-test-suite-template.md` and `saam-api-contract.md`
+- Activate `.github/skills/saam-phase4c-test-suite-generation/SKILL.md` for comprehensive test suite generation per service
+- The Phase 4c file will instruct reading `.github/skills/saam-test-suite-template/SKILL.md` and `.github/skills/saam-api-contract/SKILL.md`
 - Update the root `README.md` — add Phase 4b completion summary: automatibility scores per service, implementation timeline, parallel execution plan, team composition
 
 ## Telemetry Production (MANDATORY)
@@ -720,7 +720,7 @@ The human may:
    - Working sessions planned vs completed
    - Information requests planned vs completed
    - Average score improvement in points across iterations
-4. **Planning data (from `saam-calibration.yaml` values used):**
+4. **Planning data (from `.github/saam-calibration.yaml` values used):**
    - Record which calibration version was active during scoring
 
-**Schema:** See `saam-telemetry.md` → `phase4b-roadmap.yaml` for the full YAML structure.
+**Schema:** See `.github/skills/saam-telemetry/SKILL.md` → `phase4b-roadmap.yaml` for the full YAML structure.

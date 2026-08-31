@@ -15,11 +15,11 @@ Generate a `comprehensive-test-suite.sh` for every in-scope service. This test s
 
 The agent MUST read the following steering files before executing Phase 4c:
 
-1. **`saam-test-suite-template.md`** — Template structure, helper functions, rules for test creation, common pitfalls
-2. **`saam-api-contract.md`** — Protocol for how the API contract drives naming in test assertions
-3. **`saam-human-guidance-protocol.md`** — Prompt categories and decision logging
-4. **`saam-task-tracking.md`** — Tracking file format (for `tracking/phase4c-test-suites.md`)
-5. **`saam-frontend-spec-template.md`** — (Only if frontend spec exists) Section `07-frontend-test-plan.md` defines frontend test structure
+1. **`.github/skills/saam-test-suite-template/SKILL.md`** — Template structure, helper functions, rules for test creation, common pitfalls
+2. **`.github/skills/saam-api-contract/SKILL.md`** — Protocol for how the API contract drives naming in test assertions
+3. **`.github/skills/saam-human-guidance-protocol/SKILL.md`** — Prompt categories and decision logging
+4. **`.github/skills/saam-task-tracking/SKILL.md`** — Tracking file format (for `tracking/phase4c-test-suites.md`)
+5. **`.github/skills/saam-frontend-spec-template/SKILL.md`** — (Only if frontend spec exists) Section `07-frontend-test-plan.md` defines frontend test structure
 
 ## Task Tracking Activation
 
@@ -27,7 +27,7 @@ The agent MUST read the following steering files before executing Phase 4c:
 
 **PhaseEvent (telemetry timestamp):** Immediately after creating the tracking file, write: `graph_add_node(nodeType="PhaseEvent", id="P4C-started", properties={phase: "P4C", event: "started", timestamp: <current ISO timestamp>})`.
 
-After each service's test suite is complete, the agent MUST update the tracking file immediately (mark service DONE) BEFORE starting the next service. If Jira is configured, create an Epic with Tasks per service. See `saam-task-tracking.md` for format.
+After each service's test suite is complete, the agent MUST update the tracking file immediately (mark service DONE) BEFORE starting the next service. If Jira is configured, create an Epic with Tasks per service. See `.github/skills/saam-task-tracking/SKILL.md` for format.
 
 ## Subagent Delegation (Per-Service Test Suite Generation)
 
@@ -43,9 +43,9 @@ When delegating test suite generation to a subagent for context optimization:
 Generate the comprehensive test suite for service <service-name>.
 
 READ THESE FILES FIRST (included in your context):
-- saam-phase4c-test-suite-generation.md (orchestration protocol)
-- saam-test-suite-template.md (EXACT test format — extract_field function, curl patterns, BR-ID comments)
-- saam-api-contract.md (contract is naming authority)
+- .github/skills/saam-phase4c-test-suite-generation/SKILL.md (orchestration protocol)
+- .github/skills/saam-test-suite-template/SKILL.md (EXACT test format — extract_field function, curl patterns, BR-ID comments)
+- .github/skills/saam-api-contract/SKILL.md (contract is naming authority)
 
 INPUT:
 - spec/microservices/<service>/04-api-contract.yaml (field names, paths, status codes)
@@ -96,7 +96,7 @@ Before starting Phase 4c, verify:
 - [ ] `modernization/services-composition.md` exists with service catalog
 - [ ] `modernization/tech-stack-recommendation.md` exists (needed for Stage 0 DTO generation)
 
-**If API contracts are missing:** STOP. The contract MUST exist before test suites can be generated — it is the naming authority. Inform the user and offer to generate contracts per `saam-api-contract.md`.
+**If API contracts are missing:** STOP. The contract MUST exist before test suites can be generated — it is the naming authority. Inform the user and offer to generate contracts per `.github/skills/saam-api-contract/SKILL.md`.
 
 ---
 
@@ -270,7 +270,7 @@ This ensures test payloads are mechanically consistent with what the implementat
 
 ### Relationship to Phase 5 (Implementation)
 
-Phase 5 copies `spec/<service>/08-dtos/` into `sourcecode/<service>/src/dto/` **verbatim**. The implementation MUST NOT regenerate or rename DTO fields. See `saam-phase5-ai-dlc-implementation.md` for the hard rule.
+Phase 5 copies `spec/<service>/08-dtos/` into `sourcecode/<service>/src/dto/` **verbatim**. The implementation MUST NOT regenerate or rename DTO fields. See `.github/skills/saam-phase5-ai-dlc-implementation/SKILL.md` for the hard rule.
 
 ### Frontend API Client Generation (Stage 0b — If Frontend Spec Exists)
 
@@ -369,7 +369,7 @@ RULES:
 
 **Relationship to Phase 5 frontend implementation:**
 
-Phase 5 copies `spec/frontend/<app>/09-api-client/` into `sourcecode/<app>/src/api/` **verbatim**. Frontend pages MUST import from this api-client — they MUST NOT construct URLs, use fetch/axios directly for backend calls, or invent path strings. See `saam-phase5-ai-dlc-implementation.md` for the enforcement rule.
+Phase 5 copies `spec/frontend/<app>/09-api-client/` into `sourcecode/<app>/src/api/` **verbatim**. Frontend pages MUST import from this api-client — they MUST NOT construct URLs, use fetch/axios directly for backend calls, or invent path strings. See `.github/skills/saam-phase5-ai-dlc-implementation/SKILL.md` for the enforcement rule.
 
 ---
 
@@ -415,7 +415,7 @@ Before writing the script, produce a coverage plan:
 
 ### Step 3: Generate Test Suite
 
-Generate the test script following the structure from `saam-test-suite-template.md`:
+Generate the test script following the structure from `.github/skills/saam-test-suite-template/SKILL.md`:
 
 1. Use the template's helper functions (`assert_status`, `assert_json_field`, `assert_json_regex`)
 2. Organize tests into sections by BR-ID group (matching the business rules document structure)
@@ -425,7 +425,7 @@ Generate the test script following the structure from `saam-test-suite-template.
 6. **Use `extract_field "$LAST_BODY" "fieldName"` for all ID/value extraction from responses** — NEVER use `grep -o '"id":[0-9]*'` which breaks on nested objects serialized before root fields
 7. Capture IDs from POST responses (never from subsequent GET lists)
 8. Build tests in dependency order (create entities before testing operations on them)
-9. **Generate ALL applicable mandatory case-classes from `saam-test-suite-template.md`** — not just happy
+9. **Generate ALL applicable mandatory case-classes from `.github/skills/saam-test-suite-template/SKILL.md`** — not just happy
    path. In addition to Contract-Conformance and Behavioral Assertion cases (always mandatory), generate
    the implicit-system case-classes WHEN the service's spec has the corresponding section:
    - **State Machine & Invariant Cases** (Layer A) — if `02-domain-model.md` has `### Entity State Model`
@@ -682,6 +682,6 @@ exit $TEST_EXIT
 All suites validated against API contracts. Ready for Phase 5 (Implementation)?"
 
 **Next steps after human approval:**
-- Activate `saam-phase5-setup.md` to begin the Phase 5 setup wizard
+- Activate `.github/skills/saam-phase5-setup/SKILL.md` to begin the Phase 5 setup wizard
 - The setup wizard will verify test suites exist as a precondition
 - Update the root `README.md` — add Phase 4c completion summary: test suites generated per service, total test assertions, frontend test coverage, coverage confirmation

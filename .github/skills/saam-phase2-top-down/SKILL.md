@@ -14,8 +14,8 @@ The Domain Architect defines what the modernized system SHOULD look like using D
 
 The agent MUST read the following steering files before executing Phase 2:
 
-1. **`saam-human-guidance-protocol.md`** — Prompt categories, decision register format, agent rules
-2. **`saam-task-tracking.md`** — Tracking file format and Jira dual-write protocol
+1. **`.github/skills/saam-human-guidance-protocol/SKILL.md`** — Prompt categories, decision register format, agent rules
+2. **`.github/skills/saam-task-tracking/SKILL.md`** — Tracking file format and Jira dual-write protocol
 
 Phase 2 does NOT require source reading guides or CAST integration — it operates from business knowledge and domain expertise, independent of legacy implementation details.
 
@@ -35,7 +35,7 @@ The agent MUST update the knowledge graph as architecture decisions are made —
 
 **PhaseEvent (telemetry timestamp):** Immediately after creating the tracking file, write: `graph_add_node(nodeType="PhaseEvent", id="P2-started", properties={phase: "P2", event: "started", timestamp: <current ISO timestamp>})`.
 
-After each architecture artifact is produced, update the tracking file immediately. If Jira is configured, create an Epic with Tasks. See `saam-task-tracking.md` for format.
+After each architecture artifact is produced, update the tracking file immediately. If Jira is configured, create an Epic with Tasks. See `.github/skills/saam-task-tracking/SKILL.md` for format.
 
 ## 2.1 Business Domain Identification
 
@@ -170,7 +170,7 @@ If any artifact is missing or empty, the agent MUST create it BEFORE asking for 
 - Timing (started_at, completed_at, duration_hours), actor
 - Metrics: bounded_contexts_identified, services_designed, shared_kernel_entities, integration_patterns_count, data_stores_planned, adrs_produced
 
-**Schema:** See `saam-telemetry.md` → `phase2-top-down.yaml` for the full YAML structure.
+**Schema:** See `.github/skills/saam-telemetry/SKILL.md` → `phase2-top-down.yaml` for the full YAML structure.
 
 **🔴 PROMPT HUMAN**: "Target architecture complete. Please review service boundaries and approve before convergence."
 
@@ -192,7 +192,7 @@ This is a preliminary architecture; if unsure, approve-with-notes and let Phase 
 reconciliation catch stack/boundary issues rather than blocking here.
 
 **Next steps after human approval:**
-- Activate `saam-phase3-convergence.md` (once Phase 1 is also complete)
+- Activate `.github/skills/saam-phase3-convergence/SKILL.md` (once Phase 1 is also complete)
 - Phase 3 requires BOTH Phase 1 and Phase 2 outputs — do not start convergence until both tracks finish
 - Update the root `README.md` — add Phase 2 completion summary: target services defined, technology stack chosen, architecture decisions documented
 - **Graph update (always):** Verify Service nodes and CALLS edges were populated incrementally during Phase 2. Run `graph_run_inferences(rules=["transitive_dependencies"])` to compute transitive service dependencies.

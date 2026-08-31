@@ -15,12 +15,12 @@ Maintain the modernized system through a spec-driven feedback loop. Deviations f
 
 The agent MUST read the following steering files before executing Phase 6 work:
 
-1. **`saam-human-guidance-protocol.md`** — Prompt categories, decision register format
-2. **`saam-task-tracking.md`** — Tracking file format and Jira dual-write protocol
-3. **`saam-api-contract.md`** — API contract protocol (any spec change may require contract update)
-4. **`saam-test-suite-template.md`** — Test assertion format (for test updates)
-5. **`saam-phase5-ai-dlc-implementation.md`** — Implementation protocol (for code changes)
-6. **`saam-governance.md`** — Invisible governance model (drift detection drives proportional controls)
+1. **`.github/skills/saam-human-guidance-protocol/SKILL.md`** — Prompt categories, decision register format
+2. **`.github/skills/saam-task-tracking/SKILL.md`** — Tracking file format and Jira dual-write protocol
+3. **`.github/skills/saam-api-contract/SKILL.md`** — API contract protocol (any spec change may require contract update)
+4. **`.github/skills/saam-test-suite-template/SKILL.md`** — Test assertion format (for test updates)
+5. **`.github/skills/saam-phase5-ai-dlc-implementation/SKILL.md`** — Implementation protocol (for code changes)
+6. **`.github/skills/saam-governance/SKILL.md`** — Invisible governance model (drift detection drives proportional controls)
 
 ## When Phase 6 Activates
 
@@ -57,7 +57,7 @@ this is a touchpoint, not an auto-decision.
 
 **Preconditions (two):**
 1. Classification reads `reachable` from the graph — it assumes the graph is a current from-disk
-   projection (see the reconcile discipline in `saam-phase5-ai-dlc-implementation.md` → Knowledge Graph
+   projection (see the reconcile discipline in `.github/skills/saam-phase5-ai-dlc-implementation/SKILL.md` → Knowledge Graph
    Population). If in doubt the graph is current, reconcile first; a stale graph invents orphans and
    hides real ones.
 2. The reachability audit (`fidelity_audit.py`) is an HTTP-shaped heuristic — it does not recognize
@@ -171,7 +171,7 @@ For inputs requiring test changes:
 1. Read the current `validation/<service>/comprehensive-test-suite.sh`
 2. Read `04-api-contract.yaml` for field names (ALWAYS — even for small changes)
 3. Add new assertions (feature) or fix existing ones (spec correction)
-4. Follow all rules from `saam-test-suite-template.md` (extract_field, global headers, etc.)
+4. Follow all rules from `.github/skills/saam-test-suite-template/SKILL.md` (extract_field, global headers, etc.)
 5. Verify the test suite still runs (syntax check)
 
 **For new features:** Add test section with header comment referencing the new BR-IDs.
@@ -218,7 +218,7 @@ This automatically:
 - Checks for spec drift (flags SPEC_DRIFT deviations if spec changed since implementation)
 - Generates/updates `.kiro/specs/<service>/tasks.md` if failures remain
 
-**Governance enforcement (automatic — see `saam-governance.md`):**
+**Governance enforcement (automatic — see `.github/skills/saam-governance/SKILL.md`):**
 - If the change touched BR-ID code and spec hashes match → validated automatically
 - If spec drift is detected → SPEC_DRIFT deviation created, must be resolved
 - If Critical BR-ID is affected + drift detected → human approval required before marking done

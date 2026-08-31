@@ -14,8 +14,8 @@ Map every source feature to a target service. Identify gaps. Validate boundaries
 
 The agent MUST read the following steering files before executing Phase 3:
 
-1. **`saam-human-guidance-protocol.md`** — Prompt categories, decision register format, agent rules
-2. **`saam-task-tracking.md`** — Tracking file format and Jira dual-write protocol
+1. **`.github/skills/saam-human-guidance-protocol/SKILL.md`** — Prompt categories, decision register format, agent rules
+2. **`.github/skills/saam-task-tracking/SKILL.md`** — Tracking file format and Jira dual-write protocol
 
 Phase 3 operates on the outputs of Phase 1 (extraction summaries) and Phase 2 (architecture artifacts). No additional templates are needed — convergence produces its own deliverables.
 
@@ -25,7 +25,7 @@ Phase 3 operates on the outputs of Phase 1 (extraction summaries) and Phase 2 (a
 
 **PhaseEvent (telemetry timestamp):** Immediately after creating the tracking file, write: `graph_add_node(nodeType="PhaseEvent", id="P3-started", properties={phase: "P3", event: "started", timestamp: <current ISO timestamp>})`.
 
-After each convergence task completes (mapping done, validation passed, gaps resolved), update the tracking file immediately. If Jira is configured, create an Epic with Tasks. See `saam-task-tracking.md` for format.
+After each convergence task completes (mapping done, validation passed, gaps resolved), update the tracking file immediately. If Jira is configured, create an Epic with Tasks. See `.github/skills/saam-task-tracking/SKILL.md` for format.
 
 ## Entry Precondition: Verify Phase 2 Artifacts
 
@@ -164,7 +164,7 @@ engine]. Who owns/enforces each? Options per item presented." If neither exists,
 - Produce `.saam/telemetry/phase3-convergence.yaml`
 
 **Next steps after human approval:**
-- Activate `saam-phase4-spec-generation.md` for microservice specification generation
-- Activate `saam-spec-template.md` for the specification structure reference
-- Activate `saam-api-contract.md` for the API contract generation protocol
+- Activate `.github/skills/saam-phase4-spec-generation/SKILL.md` for microservice specification generation
+- Activate `.github/skills/saam-spec-template/SKILL.md` for the specification structure reference
+- Activate `.github/skills/saam-api-contract/SKILL.md` for the API contract generation protocol
 - Update the root `README.md` — add Phase 3 completion summary: feature matrix status, gaps resolved, services with assigned rules, test feasibility confirmed

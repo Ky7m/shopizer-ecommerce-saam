@@ -47,7 +47,7 @@ Telemetry is produced **per phase** (not once at engagement end). Each phase com
 
 ## Calibration File Reference
 
-Telemetry analysis produces calibrated parameters stored in `saam-calibration.yaml`. All steering files that use thresholds MUST read from the calibration file (with hardcoded fallbacks for fresh installs). See `saam-calibration.yaml` for the current values and their provenance.
+Telemetry analysis produces calibrated parameters stored in `.github/saam-calibration.yaml`. All steering files that use thresholds MUST read from the calibration file (with hardcoded fallbacks for fresh installs). See `.github/saam-calibration.yaml` for the current values and their provenance.
 
 ## Telemetry Production Protocol
 
@@ -151,7 +151,7 @@ events, never from a gap's duration alone:
 human-context/diagnostic — NOT calibration inputs (they carry idle noise). This resolves the "2h overnight
 gap counted as work" corruption at the source.
 
-**Credits tracking (DISABLED):** Credits cannot be read programmatically by the agent. The `credits_used` field is retained in schemas for future use but should NOT be populated — values would be unreliable estimates. If a reliable credits API becomes available, re-enable by uncommenting `credits_per_1k_loc` in `saam-calibration.yaml`.
+**Credits tracking (DISABLED):** Credits cannot be read programmatically by the agent. The `credits_used` field is retained in schemas for future use but should NOT be populated — values would be unreliable estimates. If a reliable credits API becomes available, re-enable by uncommenting `credits_per_1k_loc` in `.github/saam-calibration.yaml`.
 
 ---
 
@@ -197,7 +197,7 @@ gap counted as work" corruption at the source.
 
 ### Calibration Eligibility
 
-Only telemetry with `timing_source: machine_recorded` OR `timing_source: git_derived` is eligible for automatic calibration updates. All other sources are recorded for human analysis but do NOT feed into `saam-calibration.yaml` weight updates.
+Only telemetry with `timing_source: machine_recorded` OR `timing_source: git_derived` is eligible for automatic calibration updates. All other sources are recorded for human analysis but do NOT feed into `.github/saam-calibration.yaml` weight updates.
 
 This means the FIRST engagement with proper PhaseEvent discipline will produce the FIRST reliable calibration data. Prior engagements have `calibration_eligible: false` for most timing dimensions because they were retroactively reconstructed.
 
@@ -895,7 +895,7 @@ Import is idempotent — re-running with the same engagement ID performs an upse
 ```
 Engagements produce telemetry → imported to central DuckDB →
   statistical analysis (correlations, regressions) →
-  produces updated saam-calibration.yaml →
+  produces updated .github/saam-calibration.yaml →
   committed to SAAM repo →
   next engagement uses calibrated values
 ```
@@ -905,4 +905,4 @@ The calibration file is updated when:
 - A specific metric shows statistically significant deviation from current weights
 - False positive/negative rates indicate threshold adjustment needed
 
-See `saam-calibration.yaml` for current calibrated values and their provenance.
+See `.github/saam-calibration.yaml` for current calibrated values and their provenance.

@@ -93,17 +93,17 @@ flowchart TD
 
 | Stack | Source Reading Guide | CAST Imaging Support |
 |-------|---------------------|---------------------|
-| IBM i (RPG/CL/DDS) | `saam-source-reading-ibm-rpg.md` | ✅ Full |
-| COBOL/JCL/CICS | `saam-source-reading-cobol.md` (create when needed) | ✅ Full |
-| Java EE (EJB/Struts) | `saam-source-reading-java-legacy.md` (create when needed) | ✅ Full |
-| .NET Framework | `saam-source-reading-dotnet.md` | ✅ Full |
-| PL/SQL + Forms | Generic (see fallback below) | ✅ Full |
-| PowerBuilder | Generic (see fallback below) | ✅ Full |
-| Any other | Generic (see fallback below) | Depends on CAST analyzer |
+| IBM i (RPG/CL/DDS) | `.github/skills/saam-source-reading-ibm-rpg/SKILL.md` | ✅ Full |
+| COBOL/JCL/CICS | `.github/skills/saam-source-reading-cobol/SKILL.md` (create dynamically if missing — see Phase 1 Protocol) | ✅ Full |
+| Java EE (EJB/Struts/Spring) | `.github/skills/saam-source-reading-java-legacy/SKILL.md` (create dynamically if missing — see Phase 1 Protocol) | ✅ Full |
+| .NET Framework | `.github/skills/saam-source-reading-dotnet/SKILL.md` | ✅ Full |
+| PL/SQL + Forms | Create dynamically per Phase 1 Protocol (or fallback below) | ✅ Full |
+| PowerBuilder | Create dynamically per Phase 1 Protocol (or fallback below) | ✅ Full |
+| Any other | Create dynamically per Phase 1 Protocol (or fallback below) | Depends on CAST analyzer |
 
 **Fallback for stacks without a dedicated source reading guide:**
 
-If no `saam-source-reading-<stack>.md` exists for the project's legacy technology, the agent uses the **Purpose-First Extraction Method** from Phase 4 (`saam-phase4-spec-generation.md`) as the generic extraction approach:
+If no `.github/skills/saam-source-reading-<stack>/SKILL.md` exists for the project's legacy technology and one has not been dynamically generated, the agent uses the **Purpose-First Extraction Method** from Phase 4 (`.github/skills/saam-phase4-spec-generation/SKILL.md`) as the generic extraction approach:
 1. Read the entire source unit
 2. Understand WHAT business operation it accomplishes
 3. Identify decision points (conditionals, calculations, state transitions)
@@ -127,7 +127,7 @@ The Purpose-First method is technology-agnostic — it works for any imperative 
 | 5 | AI-DLC | Specs + API contracts + test suites | Running code | Accept implementation |
 | 6 | Continuous Evolution | Deviation log, bugs, features, SPEC-DRIFT | Spec-compliant, evolving system | Ongoing — loop until engagement ends |
 
-**Task Tracking:** Every phase is tracked in `tracking/phase<N>-<name>.md`. When Jira is configured, tickets are created and kept in sync automatically. See `saam-task-tracking.md` for the full protocol.
+**Task Tracking:** Every phase is tracked in `tracking/phase<N>-<name>.md`. When Jira is configured, tickets are created and kept in sync automatically. See `.github/skills/saam-task-tracking/SKILL.md` for the full protocol.
 
 **Tracking Activation (MANDATORY for ALL phases):** At the START of each phase, the agent MUST:
 1. Check if `tracking/phase<N>-<name>.md` exists
@@ -144,7 +144,7 @@ These timestamps are the authoritative timing source for telemetry (not agent es
 During phase execution, the agent updates the tracking file after each task completion. This applies to ALL phases (0, 1, 2, 3, 4, 4a, 4b, 4c, 5, 6).
 
 **Phase Entry Protocol (MANDATORY):** When the user asks to start any phase, the agent MUST:
-1. READ the corresponding steering file BEFORE taking any action (e.g., `saam-phase5-ai-dlc-implementation.md` for Phase 5)
+1. READ the corresponding steering file BEFORE taking any action (e.g., `.github/skills/saam-phase5-ai-dlc-implementation/SKILL.md` for Phase 5)
 2. Follow the instructions IN that file — do not improvise from memory or prior context
 3. If the phase involves external tools (AWS Transform, CAST Imaging, etc.), read the relevant sections about those tools before running commands
 4. Never assume familiarity — always re-read the steering file at phase start
@@ -152,7 +152,7 @@ During phase execution, the agent updates the tracking file after each task comp
 **Phase 4 Known Failure Mode — Category Templating:**
 Phase 4 has a known failure mode where the agent generates rules by rotating through a fixed set of categories per entity (Validation/Decision/Lifecycle/Integration/etc.), producing rule counts that pass numeric gates but score <70% automatibility. The Phase 4 steering includes template detection heuristics and quality gates to prevent this. After Phase 4 completion, an independent validation must confirm that rules are implementable from their Statements alone.
 
-**API Contract (`04-api-contract.yaml`):** Phase 4 generates an OpenAPI 3.1 contract per service that locks field names, endpoint paths, status codes, and response shapes. Both Phase 4c (test suites) and Phase 5 (code generators) MUST reference this contract for all naming decisions. This eliminates mismatches between generated tests and generated code. See `saam-api-contract.md`.
+**API Contract (`04-api-contract.yaml`):** Phase 4 generates an OpenAPI 3.1 contract per service that locks field names, endpoint paths, status codes, and response shapes. Both Phase 4c (test suites) and Phase 5 (code generators) MUST reference this contract for all naming decisions. This eliminates mismatches between generated tests and generated code. See `.github/skills/saam-api-contract/SKILL.md`.
 
 **Phase 5 Execution Models:** Phase 5 supports three models for maximum flexibility:
 - **Model A (Pure Kiro)** — interactive, task by task (1-3 services)
@@ -219,7 +219,7 @@ SAAM produces agentic AI-led implementation estimates as a core outcome:
 - **Target state cost** — infrastructure cost for the modernized system (AWS priority, GCP and Azure as options)
 - **Target accuracy: ≥95%** — human inputs solicited when confidence is below threshold
 
-**Phase 4b is iterative:** Scores are calculated, gaps identified, improvement items executed (working sessions + information requests), specs amended, scores recalculated, and roadmap updated. This repeats until all services reach ≥75% or the human accepts current state. Once scores stabilize, Phase 4b produces an evidence-based tech stack recommendation per service and reconciles the architecture from Phase 2's preliminary decisions. See `saam-phase4b-implementation-roadmap.md` for full workflow.
+**Phase 4b is iterative:** Scores are calculated, gaps identified, improvement items executed (working sessions + information requests), specs amended, scores recalculated, and roadmap updated. This repeats until all services reach ≥75% or the human accepts current state. Once scores stabilize, Phase 4b produces an evidence-based tech stack recommendation per service and reconciles the architecture from Phase 2's preliminary decisions. See `.github/skills/saam-phase4b-implementation-roadmap/SKILL.md` for full workflow.
 
 **Architecture Reconciliation rationale:** Phase 2 makes preliminary technology decisions (tech stack, database, event system) based on business domain knowledge — before detailed source extraction exists. By Phase 4b, SAAM has full evidence: rule complexity profiles, integration patterns, data access shapes, automatibility scores, and BA-validated classifications. This is the RIGHT moment to confirm or revise the stack. The recommendation compares the evidence-based choice against the preliminary decision and reconciles the architecture document accordingly.
 
@@ -251,26 +251,26 @@ Engagement exports telemetry (no client data — safe to centralize)
     ↓
 Central analytics (DuckDB) runs correlations and regressions
     ↓
-Produces updated saam-calibration.yaml with empirically calibrated weights
+Produces updated .github/saam-calibration.yaml with empirically calibrated weights
     ↓
 Committed to SAAM repo → next engagement uses calibrated values
 ```
 
 ### Key Components
 
-- **`saam-telemetry.md`** — defines per-phase YAML schemas, collection protocol, export/import rules
-- **`saam-calibration.yaml`** — single source of tunable parameters (confidence weights, automatibility thresholds, complexity ratios, planning estimates). All steering files reference this instead of hardcoding values.
+- **`.github/skills/saam-telemetry/SKILL.md`** — defines per-phase YAML schemas, collection protocol, export/import rules
+- **`.github/saam-calibration.yaml`** — single source of tunable parameters (confidence weights, automatibility thresholds, complexity ratios, planning estimates). All steering files reference this instead of hardcoding values.
 - **`.saam/telemetry/`** — engagement workspace directory where per-phase YAML files accumulate
 
 ### What Gets Calibrated
 
 | Parameter | Steering That Uses It | Calibrated By |
 |-----------|----------------------|---------------|
-| Confidence weights (Declared=0.5, Passing=0.9, etc.) | `saam-graph-context.md` | Correlation of confidence scores with actual deviations |
-| Automatibility dimension weights (clarity 30%, etc.) | `saam-phase4b-implementation-roadmap.md` | Regression of dimension scores against implementation success |
-| Automatibility thresholds (Type A ≥85%, etc.) | `saam-phase4b-implementation-roadmap.md` | Observed success rate boundaries |
-| Complexity ratio threshold (>3.0 = flagged) | `saam-phase4-spec-generation.md` | False positive rate of preservation flags |
-| Planning estimates (BA velocity, duration per type) | `saam-phase4b-implementation-roadmap.md` | Historical phase durations |
+| Confidence weights (Declared=0.5, Passing=0.9, etc.) | `.github/skills/saam-graph-context/SKILL.md` | Correlation of confidence scores with actual deviations |
+| Automatibility dimension weights (clarity 30%, etc.) | `.github/skills/saam-phase4b-implementation-roadmap/SKILL.md` | Regression of dimension scores against implementation success |
+| Automatibility thresholds (Type A ≥85%, etc.) | `.github/skills/saam-phase4b-implementation-roadmap/SKILL.md` | Observed success rate boundaries |
+| Complexity ratio threshold (>3.0 = flagged) | `.github/skills/saam-phase4-spec-generation/SKILL.md` | False positive rate of preservation flags |
+| Planning estimates (BA velocity, duration per type) | `.github/skills/saam-phase4b-implementation-roadmap/SKILL.md` | Historical phase durations |
 
 ### Calibration Lifecycle
 
@@ -319,8 +319,8 @@ Even with all layers active, correlated error cannot be fully eliminated if:
 ### Mitigation Protocols
 
 - **Mutation testing:** Mandatory for Critical BR-IDs after implementation passes all tests. See Phase 5 steering.
-- **Cross-model verification:** Optional Phase 4 quality gate for high-risk extractions. See `saam-cross-model-verification.md`.
-- **CAST reconciliation:** Automatic when CAST is configured. See `saam-graph-validation.md`.
+- **Cross-model verification:** Optional Phase 4 quality gate for high-risk extractions. See `.github/skills/saam-cross-model-verification/SKILL.md`.
+- **CAST reconciliation:** Automatic when CAST is configured. See `.github/skills/saam-graph-validation/SKILL.md`.
 - **Complexity preservation:** Automatic for all extractions. See Phase 4 steering.
 
 ## Knowledge Graph (Always Active)
@@ -334,15 +334,15 @@ SAAM maintains a Neo4j-backed knowledge graph for ALL projects (set up during bo
 - **Impact analysis** — graph traversal shows what breaks if a rule/endpoint/table changes
 - **Inference** — derives transitive dependencies, completeness scores, unused tables, extraction risk
 
-**CAST Validation Layer (add-on):** When CAST is also configured, additional reconciliation tools compare the modernized graph against legacy structural data to detect unaccounted business logic loss. See `saam-graph-validation.md`.
+**CAST Validation Layer (add-on):** When CAST is also configured, additional reconciliation tools compare the modernized graph against legacy structural data to detect unaccounted business logic loss. See `.github/skills/saam-graph-validation/SKILL.md`.
 
-**Core graph features:** See `saam-graph-context.md` for the lifecycle state model, confidence dimensions, and how agents use the graph for prioritization.
+**Core graph features:** See `.github/skills/saam-graph-context/SKILL.md` for the lifecycle state model, confidence dimensions, and how agents use the graph for prioritization.
 
 ## Frontend Specifications
 
 Frontend applications (SPAs, dashboards, admin panels) use a DIFFERENT spec template than backend services. Backend specs define algorithms; frontend specs define user interactions, data bindings, and visual states.
 
-**Use `saam-frontend-spec-template.md` for frontend.** It produces specs organized around:
+**Use `.github/skills/saam-frontend-spec-template/SKILL.md` for frontend.** It produces specs organized around:
 - API contracts per screen (exactly which endpoints, response→UI mapping, error handling)
 - Screen inventory with data bindings (what data, from where, displayed how)
 - User flows as state machines (not just "user can do X" but full state transitions)
@@ -435,7 +435,7 @@ SAAM optionally integrates with Jira to track implementation progress using [mcp
 - During implementation: AI-DLC agent transitions tickets (To Do → In Progress → Done) as work progresses
 - Both Kiro and AWS Transform support this via MCP (`.kiro/settings/mcp.json` and `~/.aws/atx/mcp.json`)
 
-See `saam-jira-integration.md` for full configuration and workflow details.
+See `.github/skills/saam-jira-integration/SKILL.md` for full configuration and workflow details.
 
 ## Target-First Extraction Strategy
 

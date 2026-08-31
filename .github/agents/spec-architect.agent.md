@@ -21,7 +21,7 @@ The **Spec Architect** authors formal microservice specifications, OpenAPI contr
 ## Key Responsibilities
 1. Extract and formulate unambiguous business rules with Given/When/Then acceptance criteria.
 2. Produce OpenAPI 3.0+ YAML contracts serving as the single authority for endpoints, DTOs, and error codes.
-3. Generate comprehensive microservice specifications following `saam-spec-template.md`.
+3. Generate comprehensive microservice specifications following `.github/skills/saam-spec-template/SKILL.md`.
 4. Conduct BA validation workshops and record rule classifications (Core, Obsolete, Edge Case).
 5. Calculate automatibility scores (statement clarity, algorithm completeness, data model readiness, edge cases).
 6. Ingest all rules and specifications into Neo4j with `@BR-ID` mappings.

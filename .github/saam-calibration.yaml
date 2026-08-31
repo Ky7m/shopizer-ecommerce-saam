@@ -16,7 +16,7 @@ sample_size: 4                               # 4 engagements (ENG-001 ruby-rails
 
 # ─────────────────────────────────────────────────────────────
 # CONFIDENCE WEIGHTS
-# Used by: saam-graph-context.md (lifecycle state transitions)
+# Used by: .github/skills/saam-graph-context/SKILL.md (lifecycle state transitions)
 # The effectiveConfidence = min(all dimensions), but each
 # dimension's score is set when the rule reaches that state.
 # ─────────────────────────────────────────────────────────────
@@ -47,7 +47,7 @@ confidence:
 
 # ─────────────────────────────────────────────────────────────
 # AUTOMATIBILITY SCORING
-# Used by: saam-phase4b-implementation-roadmap.md
+# Used by: .github/skills/saam-phase4b-implementation-roadmap/SKILL.md
 # Composite = weighted sum of dimension scores (each 0-100%)
 # ─────────────────────────────────────────────────────────────
 automatibility:
@@ -181,9 +181,9 @@ automatibility:
     # = guaranteed skeleton output at scale.
 
   # ── Implementation Fidelity / Anti-Skeleton ──
-  # Used by: saam-phase5-ai-dlc-implementation.md (Implementation Fidelity pipeline),
-  #          saam-test-suite-template.md (Behavioral Assertion Cases),
-  #          saam-phase4-spec-generation.md (Executable Step Recipe)
+  # Used by: .github/skills/saam-phase5-ai-dlc-implementation/SKILL.md (Implementation Fidelity pipeline),
+  #          .github/skills/saam-test-suite-template/SKILL.md (Behavioral Assertion Cases),
+  #          .github/skills/saam-phase4-spec-generation/SKILL.md (Executable Step Recipe)
   #
   # The "annotated skeleton" defect: BR-ID comments present, endpoints present, DTOs correct,
   # build passes, shape-level tests pass — but behavior is a stub (returns 200 doing nothing,
@@ -228,7 +228,7 @@ automatibility:
 
 # ─────────────────────────────────────────────────────────────
 # COMPLEXITY / SEMANTIC PRESERVATION
-# Used by: saam-phase4-spec-generation.md (preservation validation)
+# Used by: .github/skills/saam-phase4-spec-generation/SKILL.md (preservation validation)
 # Per-dimension ratio above which a flag is raised
 # ─────────────────────────────────────────────────────────────
 complexity:
@@ -260,7 +260,7 @@ complexity:
 
 # ─────────────────────────────────────────────────────────────
 # PLANNING & PREDICTION MODEL
-# Used by: saam-phase4b-implementation-roadmap.md (timeline estimation)
+# Used by: .github/skills/saam-phase4b-implementation-roadmap/SKILL.md (timeline estimation)
 # Prediction inputs: source_stack, target_stack, total_LOC, analysis_mode
 #
 # Prediction formulas:
@@ -278,7 +278,7 @@ complexity:
 
 # ─────────────────────────────────────────────────────────────
 # SEMANTIC PRESERVATION (Extraction Quality Metrics)
-# Used by: saam-phase4-spec-generation.md (deep convergence verification)
+# Used by: .github/skills/saam-phase4-spec-generation/SKILL.md (deep convergence verification)
 # Tracks how faithfully business logic is captured during extraction.
 # Enables benchmarking: "is this extraction quality normal for this stack?"
 #
@@ -467,7 +467,7 @@ stack_taxonomy:
 
 # ─────────────────────────────────────────────────────────────
 # GOVERNANCE (Invisible Risk-Adaptive Controls)
-# Used by: saam-governance.md, reconcile_validation.py, spec_drift.py
+# Used by: .github/skills/saam-governance/SKILL.md, reconcile_validation.py, spec_drift.py
 # Governance is NOT a choice — it's determined automatically from:
 #   1. Whether BR-ID code was touched (detect_br_ids)
 #   2. Whether spec hash matches (spec_drift)

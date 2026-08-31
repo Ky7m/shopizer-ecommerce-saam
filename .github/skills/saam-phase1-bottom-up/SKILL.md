@@ -14,16 +14,69 @@ The Source Architect builds understanding of what the system DOES by reading cod
 
 The agent MUST read the following steering files before executing Phase 1:
 
-1. **`saam-human-guidance-protocol.md`** — Prompt categories, decision register format, agent rules
-2. **`saam-task-tracking.md`** — Tracking file format and Jira dual-write protocol
-3. **`saam-source-reading-<stack>.md`** — The source reading guide matching the project's legacy stack (determined in Phase 0). For example:
-   - IBM i / RPG → `saam-source-reading-ibm-rpg.md`
-   - .NET Framework → `saam-source-reading-dotnet.md`
-   - COBOL → `saam-source-reading-cobol.md` (create if needed)
-   - Java EE → `saam-source-reading-java-legacy.md` (create if needed)
-4. **`saam-cast-imaging-integration.md`** — **(MANDATORY if CAST or Hybrid mode)** Full CAST-guided extraction workflow: service brief assembly, component classification, file targeting, coverage validation. This file defines HOW the orchestrator uses CAST to build subagent context. Skipping it in CAST mode = blind extraction.
+1. **`.github/skills/saam-human-guidance-protocol/SKILL.md`** — Prompt categories, decision register format, agent rules
+2. **`.github/skills/saam-task-tracking/SKILL.md`** — Tracking file format and Jira dual-write protocol
+3. **`.github/skills/saam-source-reading-<stack>/SKILL.md`** — The source reading guide matching the project's legacy stack (determined in Phase 0). For example:
+   - IBM i / RPG → `.github/skills/saam-source-reading-ibm-rpg/SKILL.md`
+   - .NET Framework → `.github/skills/saam-source-reading-dotnet/SKILL.md`
+   - COBOL → `saam-source-reading-cobol` (create dynamically if missing — see Protocol below)
+   - Java EE / Legacy Java → `saam-source-reading-java-legacy` (create dynamically if missing — see Protocol below)
+   - Other legacy stack (PL/SQL, PowerBuilder, Delphi, etc.) → Create dynamically per the Protocol below
+4. **`.github/skills/saam-cast-imaging-integration/SKILL.md`** — **(MANDATORY if CAST or Hybrid mode)** Full CAST-guided extraction workflow: service brief assembly, component classification, file targeting, coverage validation. This file defines HOW the orchestrator uses CAST to build subagent context. Skipping it in CAST mode = blind extraction.
 
 The source reading guide provides stack-specific patterns for identifying business rules, call structures, data access, and integration points. Skipping it results in missed extraction patterns.
+
+### Protocol: Creating a Custom Stack Source Reading Guide / Skill Dynamically
+
+When modernizing a legacy stack that does not yet have a pre-authored source reading guide in the framework (such as Java EE / Legacy Java, COBOL, PL/SQL, PowerBuilder, Delphi, ColdFusion, Natural/Adabas, or proprietary enterprise frameworks), the agent MUST dynamically create one BEFORE beginning extraction.
+
+#### 1. Target Directory & File Structure (CRITICAL)
+
+The target location and file structure depend strictly on the active harness:
+
+- **GitHub Copilot Harness:**
+  - **Skill Directory:** `.github/skills/<skill-name>/` (e.g., `.github/skills/saam-source-reading-java-legacy/`)
+  - **Skill File:** `.github/skills/<skill-name>/SKILL.md` (e.g., `.github/skills/saam-source-reading-java-legacy/SKILL.md`)
+  - **CRITICAL STRUCTURAL RULES FOR COPILOT:**
+    - In GitHub Copilot, skills **MUST ALWAYS** reside in their own dedicated subfolder named after the skill, with the markdown file named `SKILL.md`.
+    - **NEVER** create a flat file such as `.github/skills/<skill-name>.md` (e.g. creating `.github/skills/saam-source-reading-java-legacy` as a single file without a subdirectory). GitHub Copilot only discovers skills structured as `<skill-name>/SKILL.md`. Flat markdown files directly under `.github/skills/` are ignored by the Copilot skill loader.
+    - **NEVER** create skill files in the workspace root directory.
+    - Use lowercase kebab-case naming for the directory (e.g., `saam-source-reading-java-legacy`, `saam-source-reading-cobol`).
+  - **YAML Frontmatter Schema (Copilot):**
+    ```yaml
+    ---
+    name: saam-source-reading-<stack>
+    description: "Source code analysis guide for <stack> legacy architectures, components, data access, and extraction patterns."
+    copyright: "Copyright 2024-2026 SoftServe Inc. All rights reserved."
+    authors: Max Kozinenko, Roman Kalita (SoftServe)
+    ---
+    ```
+
+- **Kiro IDE Harness:**
+  - **Steering Directory:** `.kiro/steering/`
+  - **Steering File:** `.github/skills/saam-source-reading-<stack>/SKILL.md` (e.g., `.github/skills/saam-source-reading-java-legacy/SKILL.md`)
+  - **YAML Frontmatter Schema (Kiro IDE):**
+    ```yaml
+    ---
+    title: Source Reading Guide - <Stack>
+    copyright: "Copyright 2024-2026 SoftServe Inc. All rights reserved."
+    inclusion: manual
+    authors: Max Kozinenko, Roman Kalita (SoftServe)
+    ---
+    ```
+
+#### 2. Required Guide Content & Structure Blueprint
+
+The dynamically created guide MUST follow this standardized 8-part markdown blueprint:
+
+1. `## When to Activate` — Target technologies, frameworks, file extensions, and trigger conditions.
+2. `## Architecture & Project Structure` — Packaging formats (EAR/WAR/JAR, monolithic binaries, solution/project structures), directory layouts, and configuration descriptors (`web.xml`, `application.xml`, config files).
+3. `## Key File Types` — Markdown table of extensions, language/type, and extraction significance (source code, descriptors, schemas, UI, queries).
+4. `## Component & Framework Patterns` — UI/Controller layer, Business logic layer (e.g., EJBs, services, transaction boundaries, stateful/stateless objects), and dependency injection or service lookup mechanisms.
+5. `## Data Access & Persistence Patterns` — ORM mappings, raw SQL/DAOs, stored procedures, table mappings, connection lifecycle, and transaction management.
+6. `## Integration & Messaging Protocols` — Message queues/topics, RPC/SOAP/REST endpoints, external service calls, remote interfaces, and middleware integrations.
+7. `## Business Rule Extraction Heuristics` — Concrete heuristics for extracting calculations, validations, state transitions, invariants, and placement candidates.
+8. `## Legacy Anti-Patterns & Pitfalls to Watch For` — Stack-specific traps (e.g., business logic hidden in UI/views/scriptlets, god classes, implicit globals/thread-locals, unhandled resource leaks).
 
 ## Entry Precondition: Verify Phase 0 Outputs
 
@@ -62,7 +115,7 @@ being invisible because no node was ever created for it.
 > count `SourceComponent` nodes. If nodes are created ONLY during extraction (one per component walked),
 > the denominator is the ingested subset and coverage falsely reports ~100% while the majority of the
 > legacy is silently missing. Full-inventory ingestion up front is what makes the guarantee measure
-> against the legacy, not against itself. See `saam-graph-validation.md`.
+> against the legacy, not against itself. See `.github/skills/saam-graph-validation/SKILL.md`.
 
 Protocol:
 1. Query CAST for the full business-layer component inventory (stored procedures, programs, modules,
@@ -181,7 +234,7 @@ instead. Note `partial_inventory: true` in the exit telemetry.
 
 **Why incremental:** If context is compacted mid-phase or the session breaks, the graph retains what was already extracted. The agent can resume by querying the graph for what's already there.
 
-**Step-level timing (P1 is a step-instrumented phase — see `saam-telemetry.md`):** emit a StepEvent
+**Step-level timing (P1 is a step-instrumented phase — see `.github/skills/saam-telemetry/SKILL.md`):** emit a StepEvent
 (`PhaseEvent` with a `step` label) at the START and END of each of these boundaries — they are checkpoints
 you already hit, so this is timestamping, not new work: Step 0 inventory ingest, the Step 0b
 reclassification sweep (bracket it — it is a known long cycle, so it counts as WORK not a mystery gap),
@@ -196,7 +249,7 @@ wall-clock gaps — never silent.
 
 **PhaseEvent (telemetry timestamp):** Immediately after creating the tracking file, write: `graph_add_node(nodeType="PhaseEvent", id="P1-started", properties={phase: "P1", event: "started", timestamp: <current ISO timestamp>})`.
 
-After each segment is analyzed, the agent MUST update this tracking file immediately (mark segment DONE) BEFORE moving to the next segment. If Jira is configured, create an Epic with Tasks per segment. See `saam-task-tracking.md` for format.
+After each segment is analyzed, the agent MUST update this tracking file immediately (mark segment DONE) BEFORE moving to the next segment. If Jira is configured, create an Epic with Tasks per segment. See `.github/skills/saam-task-tracking/SKILL.md` for format.
 
 **Verification:** If `tracking/phase1-bottom-up.md` does not show a segment as DONE, that segment's extraction is not considered complete — even if the assessment file exists.
 
@@ -206,15 +259,17 @@ When delegating segment extraction to a subagent for context optimization:
 
 **contextFiles to include:**
 - `.github/skills/saam-phase1-bottom-up/SKILL.md`
-- `.github/skills/saam-source-reading-<stack>.md` (the project's legacy stack guide)
+- The project's legacy stack guide (pre-existing or dynamically created per the Protocol above):
+  - In GitHub Copilot: `.github/skills/<skill-name>/SKILL.md` (e.g. `.github/skills/saam-source-reading-java-legacy/SKILL.md`)
+  - In Kiro IDE: `.github/skills/<skill-name>.md` (e.g. `.github/skills/saam-source-reading-java-legacy/SKILL.md`)
 
 **Delegation prompt template:**
 ```
 Extract business rules from segment <segment-name> of the legacy system.
 
 READ THESE FILES FIRST (included in your context):
-- saam-phase1-bottom-up.md (extraction protocol)
-- saam-source-reading-<stack>.md (stack-specific patterns)
+- .github/skills/saam-phase1-bottom-up/SKILL.md (or saam-phase1-bottom-up/SKILL.md in Copilot) (extraction protocol)
+- <skill-name> (stack-specific patterns, e.g. saam-source-reading-dotnet or dynamically created skill)
 
 SOURCE FILES: initial-source/<system>/<segment-files>
 
@@ -610,7 +665,7 @@ After the exit gate is approved, the agent MUST produce `.saam/telemetry/phase1-
 3. **Distribution stats** — compute min/max/median/p90/mean per dimension across all components
 4. **Complexity distribution** — count components by total vector sum buckets (simple <10, medium 10-30, complex 30-60, very complex >60)
 
-**Schema:** See `saam-telemetry.md` → `phase1-bottom-up.yaml` for the full YAML structure.
+**Schema:** See `.github/skills/saam-telemetry/SKILL.md` → `phase1-bottom-up.yaml` for the full YAML structure.
 
 **Rules:**
 - Aggregate and distribution stats only — never export individual component names or file paths
@@ -658,7 +713,7 @@ missing writer HERE, before specs, means the gap is re-extracted into a BR befor
 the assumption it doesn't exist.
 
 **Direct Source mode:** the CAST write-enumeration isn't available, so this exact sweep can't run — the
-Phase 3 convergence "top-down flow without a backing BR" check (see `saam-phase3-convergence.md`) is the
+Phase 3 convergence "top-down flow without a backing BR" check (see `.github/skills/saam-phase3-convergence/SKILL.md`) is the
 mode-independent net for the same class. In Hybrid/CAST, run BOTH: they catch it from two directions.
 
 ## Exit Gate
@@ -700,7 +755,7 @@ presenting the gate.
 All segments analyzed. Human reviews flagged items **and the Coverage Summary above**. Proceed to Phase 3 convergence.
 
 **Next steps after human approval:**
-- Activate `saam-phase3-convergence.md` (once Phase 2 is also complete)
+- Activate `.github/skills/saam-phase3-convergence/SKILL.md` (once Phase 2 is also complete)
 - Phase 3 requires BOTH Phase 1 and Phase 2 outputs — do not start convergence until both tracks finish
 - Update the root `README.md` — add Phase 1 completion summary: segments analyzed, total rules extracted, confidence distribution, integration points identified
 - **Telemetry:** Produce `.saam/telemetry/phase1-bottom-up.yaml` per the Telemetry Production section above
@@ -713,7 +768,7 @@ All segments analyzed. Human reviews flagged items **and the Coverage Summary ab
     coverage number below is meaningless (the historical wrong-denominator bug). Ingest the full inventory
     before proceeding.
   - Run graph validation **Query 1 (Extraction Coverage)** and **Query 4 (Unaccounted Loss)** per
-    `saam-graph-validation.md` — now measured against the FULL business inventory. Read the coverage
+    `.github/skills/saam-graph-validation/SKILL.md` — now measured against the FULL business inventory. Read the coverage
     SHAPE (per-intent breakdown): a healthy full run is NOT posting-heavy with entry/derive/distribute
     near-zero. A high `post` coverage with near-zero `entry`/`derive`/`distribute` is the classic
     posting-bias miss (posting spine captured, the body of entry/calculation/fan-out logic missed) — treat

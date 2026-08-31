@@ -16,7 +16,7 @@ The SAAM Knowledge Graph has two layers:
 
 This steering file documents the **CAST Validation Layer** specifically — the reconciliation queries that compare what was built against what existed in legacy.
 
-For the Core Graph features (lifecycle, confidence, context), see `saam-graph-context.md`.
+For the Core Graph features (lifecycle, confidence, context), see `.github/skills/saam-graph-context/SKILL.md`.
 
 ## Activation Condition (CAST Validation Layer Only)
 
@@ -150,7 +150,7 @@ Every query below counts `SourceComponent` nodes. The guarantee is only valid if
 **full CAST business inventory**, not the subset SAAM happened to extract a rule from. Therefore:
 
 > **Phase 1 (CAST/Hybrid) MUST create a `SourceComponent` node for EVERY business-layer CAST component
-> up front (`extracted=false`), BEFORE extraction** — see `saam-phase1-bottom-up.md` Step 0. A component
+> up front (`extracted=false`), BEFORE extraction** — see `.github/skills/saam-phase1-bottom-up/SKILL.md` Step 0. A component
 > that is never walked then still exists as a node with no `EXTRACTED_FROM` edge, so the queries can SEE
 > it as a gap. If nodes are created only during extraction (one per component walked), the denominator
 > collapses to the ingested subset and coverage falsely reports ~100% while the majority of the legacy is

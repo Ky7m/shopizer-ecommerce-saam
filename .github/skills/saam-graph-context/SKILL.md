@@ -222,7 +222,7 @@ Sandboxed gen/fix agent (ATX Fargate / fix container — NO Neo4j)
 ```bash
 uv run --project graph-mcp python graph-mcp/scripts/graph_context_export.py --all
 ```
-See `saam-phase5-ai-dlc-implementation.md` → "Reconcile-In / Export-Out Dispatch Protocol" for the
+See `.github/skills/saam-phase5-ai-dlc-implementation/SKILL.md` → "Reconcile-In / Export-Out Dispatch Protocol" for the
 full pre-dispatch sequence.
 
 ## BR-ID Lifecycle State Model
@@ -496,7 +496,7 @@ If the graph server is unavailable (Neo4j down, MCP connection failed):
 
 These are the reconcile-in / export-out primitives. They are NOT MCP tools (they run as scripts because
 sandboxed generation/fix agents have no Neo4j); the orchestrator runs them around every Phase 5/6
-dispatch. See the full dispatch protocol in `saam-phase5-ai-dlc-implementation.md`.
+dispatch. See the full dispatch protocol in `.github/skills/saam-phase5-ai-dlc-implementation/SKILL.md`.
 
 | Script | Purpose | When |
 |--------|---------|------|

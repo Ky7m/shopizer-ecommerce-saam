@@ -219,7 +219,7 @@ invoke_sub_agent(
     contextFiles=[
         {path: ".github/skills/saam-phase4-spec-generation/SKILL.md"},
         {path: ".github/skills/saam-spec-template/SKILL.md"},
-        {path: ".github/skills/saam-source-reading-<stack>.md"},
+        {path: ".github/skills/saam-source-reading-<stack>/SKILL.md"},
         {path: ".github/skills/saam-api-contract/SKILL.md"},
     ],
     prompt="""
@@ -237,7 +237,7 @@ invoke_sub_agent(
     6. PRODUCE EXACTLY: 01-business-rules.md, 02-domain-model.md, 03-api-design.md,
        04-api-contract.yaml, 06-completion-summary.md, extraction-evidence.md
     
-    QUALITY REQUIREMENTS (from saam-phase4-spec-generation.md):
+    QUALITY REQUIREMENTS (from .github/skills/saam-phase4-spec-generation/SKILL.md):
     - Every rule has Semantic Statement (business meaning, not just pseudocode)
     - Every rule has Concrete Examples (success + error, real domain fields)
     - Every rule has Semantic Preservation table (8 dimensions, Source + Spec columns)

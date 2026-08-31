@@ -15,14 +15,14 @@ This steering file guides the agent through the Phase 5 setup process. When the 
 
 The agent MUST read the following steering files before executing Phase 5 Setup:
 
-1. **`saam-human-guidance-protocol.md`** — Prompt categories, decision register format, agent rules
-2. **`saam-task-tracking.md`** — Tracking file format and Jira dual-write protocol
-3. **`saam-api-contract.md`** — API contract protocol (needed for TD materials that reference the contract as naming authority)
-4. **`saam-jira-integration.md`** — (Only if Jira is configured) Jira ticket structure and ATX skill configuration
+1. **`.github/skills/saam-human-guidance-protocol/SKILL.md`** — Prompt categories, decision register format, agent rules
+2. **`.github/skills/saam-task-tracking/SKILL.md`** — Tracking file format and Jira dual-write protocol
+3. **`.github/skills/saam-api-contract/SKILL.md`** — API contract protocol (needed for TD materials that reference the contract as naming authority)
+4. **`.github/skills/saam-jira-integration/SKILL.md`** — (Only if Jira is configured) Jira ticket structure and ATX skill configuration
 
 ## Task Tracking Activation
 
-At the START of Phase 5, the agent MUST create `tracking/phase5-setup.md` (if it doesn't exist) with setup tasks listed as PENDING. If Jira is configured, create an Epic with Tasks. See `saam-task-tracking.md` for format.
+At the START of Phase 5, the agent MUST create `tracking/phase5-setup.md` (if it doesn't exist) with setup tasks listed as PENDING. If Jira is configured, create an Epic with Tasks. See `.github/skills/saam-task-tracking/SKILL.md` for format.
 
 **PhaseEvent (telemetry timestamp):** Immediately after creating the tracking file, write: `graph_add_node(nodeType="PhaseEvent", id="P5-started", properties={phase: "P5", event: "started", timestamp: <current ISO timestamp>})`.
 
@@ -31,9 +31,9 @@ At the START of Phase 5, the agent MUST create `tracking/phase5-setup.md` (if it
 Before proceeding with setup, verify:
 
 1. **Specs exist:** `spec/microservices/` contains at least one service directory with `01-business-rules.md`
-2. **API contracts exist:** Each service has `04-api-contract.yaml` (if missing, this is a Phase 4 gap — offer to run Phase 4's API contract generation step now per `saam-api-contract.md`. The contract should NEVER have been deferred past Phase 4.)
-3. **DTOs exist:** Each service has `spec/microservices/<service>/08-dtos/` with target-language DTO files (if missing, offer to run Phase 4c Stage 0 per `saam-phase4c-test-suite-generation.md`). **These DTOs are the concrete binding that prevents naming drift between tests and implementation.**
-4. **Test suites exist:** `validation/<service>/comprehensive-test-suite.sh` exists per service (if missing, offer to run Phase 4c first per `saam-phase4c-test-suite-generation.md`)
+2. **API contracts exist:** Each service has `04-api-contract.yaml` (if missing, this is a Phase 4 gap — offer to run Phase 4's API contract generation step now per `.github/skills/saam-api-contract/SKILL.md`. The contract should NEVER have been deferred past Phase 4.)
+3. **DTOs exist:** Each service has `spec/microservices/<service>/08-dtos/` with target-language DTO files (if missing, offer to run Phase 4c Stage 0 per `.github/skills/saam-phase4c-test-suite-generation/SKILL.md`). **These DTOs are the concrete binding that prevents naming drift between tests and implementation.**
+4. **Test suites exist:** `validation/<service>/comprehensive-test-suite.sh` exists per service (if missing, offer to run Phase 4c first per `.github/skills/saam-phase4c-test-suite-generation/SKILL.md`)
 5. **Modernization artifacts exist:** `modernization/implementation-roadmap.md` exists (if missing, warn that Phase 4b was skipped)
 
 If any critical precondition fails, inform the user and offer to resolve before continuing.
@@ -137,7 +137,7 @@ For each service (sequential, one at a time):
 **Delegation Mode 1: Full service (≤ 20 rules)**
 ```
 Single subagent implements entire service:
-  contextFiles: saam-phase5-ai-dlc-implementation.md, saam-api-contract.md
+  contextFiles: .github/skills/saam-phase5-ai-dlc-implementation/SKILL.md, .github/skills/saam-api-contract/SKILL.md
   Input: 01-business-rules.md, 02-domain-model.md, 03-api-design.md, 04-api-contract.yaml, 08-dtos/
   Output: sourcecode/<service>/ (complete project, DTOs copied from 08-dtos/ as first step)
 ```
@@ -618,7 +618,7 @@ Regardless of model chosen, after setup the agent:
    - After each service implementation completes (post-service checklist), the agent adds the service to compose if it has a Dockerfile/Containerfile. Include inter-service environment variables derived from `spec/microservices/<service>/05-dependencies.md` (e.g., `IDENTITY_SERVICE_URL: "http://identity-service:3001"` for services that call identity-service).
    - Message broker (RabbitMQ/Kafka) is uncommented only if services use async events (check `05-dependencies.md` for event patterns)
    - This file lives at `sourcecode/` root — NEVER inside individual service directories
-   - **After ALL services are implemented:** generate `sourcecode/scripts/bootstrap.sh` (seed minimum viable data) and `sourcecode/scripts/verify-system.sh` (health + connectivity check). See `saam-phase6-continuous-evolution.md` → "System Integration Validation" for the full protocol.
+   - **After ALL services are implemented:** generate `sourcecode/scripts/bootstrap.sh` (seed minimum viable data) and `sourcecode/scripts/verify-system.sh` (health + connectivity check). See `.github/skills/saam-phase6-continuous-evolution/SKILL.md` → "System Integration Validation" for the full protocol.
 
 5. **Scaffolds `spec/test-config.yaml` (shared test configuration):**
 

@@ -37,68 +37,68 @@ SAAM is a graph-driven modernization platform that transforms legacy application
 ## Document Index
 
 ### Framework
-- `saam-framework.md` — Master framework, phases, architecture
-- `saam-human-guidance-protocol.md` — When/how to prompt humans, decision register
+- `.github/skills/saam-framework/SKILL.md` — Master framework, phases, architecture
+- `.github/skills/saam-human-guidance-protocol/SKILL.md` — When/how to prompt humans, decision register
 
 ### Phase Guides
-- `saam-phase0-onboarding.md` — System intake, inventory, analysis mode selection
-- `saam-phase1-bottom-up.md` — Source Architect: code analysis or CAST data extraction
-- `saam-phase2-top-down.md` — Domain Architect: boundaries, target architecture
-- `saam-phase3-convergence.md` — Feature validation, gap analysis, boundary checks
-- `saam-phase4-spec-generation.md` — Microservice specs with business rules
-- `saam-api-contract.md` — OpenAPI contract generation (naming authority for tests + code)
-- `saam-phase4a-business-rule-validation.md` — BA review: classify, weight, optimize, drop obsolete rules (mandatory — agent defaults or full workshop)
-- `saam-ba-review-template.md` — Template for the BA-oriented review document
-- `saam-phase4b-implementation-roadmap.md` — Automatibility scores, improvement plan, roadmap iteration
-- `saam-phase4c-test-suite-generation.md` — Phase 4c orchestration: test suite generation per service
-- `saam-task-tracking.md` — File-based task tracking per phase + Jira dual-write protocol
-- `saam-phase5-setup.md` — Phase 5 setup wizard: model selection, parameter gathering, artifact creation
-- `saam-phase5-ai-dlc-implementation.md` — AI-DLC code generation, test suites, CI/CD
-- `saam-backend-fidelity.md` — Cross-service wiring & round-trip fidelity: 8 checkpoints (event emission, tenant propagation, callee-DTO alignment, schema migration, DB round-trip) + grep-able wiring-defect self-audit. Read before the Events / Integration Wiring layers in Phase 5.
-- `saam-phase6-continuous-evolution.md` — Continuous loop: deviations, bugs, features, SPEC-DRIFT feed back through spec → test → implement → validate
+- `.github/skills/saam-phase0-onboarding/SKILL.md` — System intake, inventory, analysis mode selection
+- `.github/skills/saam-phase1-bottom-up/SKILL.md` — Source Architect: code analysis or CAST data extraction
+- `.github/skills/saam-phase2-top-down/SKILL.md` — Domain Architect: boundaries, target architecture
+- `.github/skills/saam-phase3-convergence/SKILL.md` — Feature validation, gap analysis, boundary checks
+- `.github/skills/saam-phase4-spec-generation/SKILL.md` — Microservice specs with business rules
+- `.github/skills/saam-api-contract/SKILL.md` — OpenAPI contract generation (naming authority for tests + code)
+- `.github/skills/saam-phase4a-business-rule-validation/SKILL.md` — BA review: classify, weight, optimize, drop obsolete rules (mandatory — agent defaults or full workshop)
+- `.github/skills/saam-ba-review-template/SKILL.md` — Template for the BA-oriented review document
+- `.github/skills/saam-phase4b-implementation-roadmap/SKILL.md` — Automatibility scores, improvement plan, roadmap iteration
+- `.github/skills/saam-phase4c-test-suite-generation/SKILL.md` — Phase 4c orchestration: test suite generation per service
+- `.github/skills/saam-task-tracking/SKILL.md` — File-based task tracking per phase + Jira dual-write protocol
+- `.github/skills/saam-phase5-setup/SKILL.md` — Phase 5 setup wizard: model selection, parameter gathering, artifact creation
+- `.github/skills/saam-phase5-ai-dlc-implementation/SKILL.md` — AI-DLC code generation, test suites, CI/CD
+- `.github/skills/saam-backend-fidelity/SKILL.md` — Cross-service wiring & round-trip fidelity: 8 checkpoints (event emission, tenant propagation, callee-DTO alignment, schema migration, DB round-trip) + grep-able wiring-defect self-audit. Read before the Events / Integration Wiring layers in Phase 5.
+- `.github/skills/saam-phase6-continuous-evolution/SKILL.md` — Continuous loop: deviations, bugs, features, SPEC-DRIFT feed back through spec → test → implement → validate
 
 ### Source Reading Guides (activate based on legacy stack)
-- `saam-source-reading-ibm-rpg.md` — IBM i: RPG IV, CL, DDS, Data Queues
-- `saam-source-reading-cobol.md` — COBOL, JCL, CICS, VSAM (create when needed)
-- `saam-source-reading-java-legacy.md` — Java EE, EJB, Struts (create when needed)
-- `saam-source-reading-dotnet.md` — .NET Framework: WCF, WinForms, ASP.NET WebForms/MVC
+- `.github/skills/saam-source-reading-ibm-rpg/SKILL.md` — IBM i: RPG IV, CL, DDS, Data Queues
+- `.github/skills/saam-source-reading-cobol/SKILL.md` — COBOL, JCL, CICS, VSAM (create dynamically if missing — see Phase 1 Protocol)
+- `.github/skills/saam-source-reading-java-legacy/SKILL.md` — Java EE, EJB, Struts (create dynamically if missing — see Phase 1 Protocol)
+- `.github/skills/saam-source-reading-dotnet/SKILL.md` — .NET Framework: WCF, WinForms, ASP.NET WebForms/MVC
 
 ### Templates
-- `saam-spec-template.md` — Microservice specification template (backend)
-- `saam-frontend-spec-template.md` — Frontend application specification template
-- `saam-test-suite-template.md` — Comprehensive test suite template (MANDATORY)
+- `.github/skills/saam-spec-template/SKILL.md` — Microservice specification template (backend)
+- `.github/skills/saam-frontend-spec-template/SKILL.md` — Frontend application specification template
+- `.github/skills/saam-test-suite-template/SKILL.md` — Comprehensive test suite template (MANDATORY)
 
 ### Integration & Knowledge Graph
-- `saam-graph-context.md` — Knowledge Graph agent usage: lifecycle states, confidence model, context construction (always active)
-- `saam-graph-validation.md` — CAST Validation Layer: reconciliation queries comparing against legacy CAST graph (requires CAST)
-- `saam-cast-imaging-integration.md` — CAST Imaging MCP usage guide
-- `saam-jira-integration.md` — Optional Jira integration for task tracking
+- `.github/skills/saam-graph-context/SKILL.md` — Knowledge Graph agent usage: lifecycle states, confidence model, context construction (always active)
+- `.github/skills/saam-graph-validation/SKILL.md` — CAST Validation Layer: reconciliation queries comparing against legacy CAST graph (requires CAST)
+- `.github/skills/saam-cast-imaging-integration/SKILL.md` — CAST Imaging MCP usage guide
+- `.github/skills/saam-jira-integration/SKILL.md` — Optional Jira integration for task tracking
 
 ### Telemetry & Calibration
-- `saam-telemetry.md` — Telemetry collection protocol: per-phase YAML schemas, export/import rules, timing inference
-- `saam-calibration.yaml` — Single source of tunable parameters: confidence weights, automatibility thresholds, complexity ratios, planning estimates (v1: expert heuristics)
+- `.github/skills/saam-telemetry/SKILL.md` — Telemetry collection protocol: per-phase YAML schemas, export/import rules, timing inference
+- `.github/saam-calibration.yaml` — Single source of tunable parameters: confidence weights, automatibility thresholds, complexity ratios, planning estimates (v1: expert heuristics)
 
 ### Governance & Verification
-- `saam-governance.md` — Invisible risk-adaptive governance: spec drift detection, automatic enforcement levels
-- `saam-cross-model-verification.md` — Optional Phase 4 quality gate: independent extraction verification to detect correlated errors
-- `saam-signal-precedence.md` — Formal decision model: resolves contradictory signals deterministically (gates vs flags, precedence hierarchy)
-- `saam-ci-governance.md` — CI/CD integration guide: GitHub Actions reference + GitLab/Azure/Bitbucket adaptations
+- `.github/skills/saam-governance/SKILL.md` — Invisible risk-adaptive governance: spec drift detection, automatic enforcement levels
+- `.github/skills/saam-cross-model-verification/SKILL.md` — Optional Phase 4 quality gate: independent extraction verification to detect correlated errors
+- `.github/skills/saam-signal-precedence/SKILL.md` — Formal decision model: resolves contradictory signals deterministically (gates vs flags, precedence hierarchy)
+- `.github/skills/saam-ci-governance/SKILL.md` — CI/CD integration guide: GitHub Actions reference + GitLab/Azure/Bitbucket adaptations
 
 ## How to Use
 
-1. New engagement: activate `saam-framework.md`
-2. Phase 0: activate `saam-phase0-onboarding.md` (selects analysis mode)
-3. Bottom-Up: activate `saam-phase1-bottom-up.md` + appropriate source reading guide
-4. Top-Down: activate `saam-phase2-top-down.md`
-5. Convergence: activate `saam-phase3-convergence.md`
-6. Specs: activate `saam-phase4-spec-generation.md` + `saam-spec-template.md`
-7. BA Review: activate `saam-phase4a-business-rule-validation.md` + `saam-ba-review-template.md`
-8. Roadmap: activate `saam-phase4b-implementation-roadmap.md`
-9. Test Suites: activate `saam-phase4c-test-suite-generation.md` + `saam-test-suite-template.md`
-10. Implementation: activate `saam-phase5-setup.md` then `saam-phase5-ai-dlc-implementation.md` (+ `saam-backend-fidelity.md` before the wiring layers)
-11. Continuous Evolution: activate `saam-phase6-continuous-evolution.md` (ongoing after Phase 5)
+1. New engagement: activate `.github/skills/saam-framework/SKILL.md`
+2. Phase 0: activate `.github/skills/saam-phase0-onboarding/SKILL.md` (selects analysis mode)
+3. Bottom-Up: activate `.github/skills/saam-phase1-bottom-up/SKILL.md` + appropriate source reading guide
+4. Top-Down: activate `.github/skills/saam-phase2-top-down/SKILL.md`
+5. Convergence: activate `.github/skills/saam-phase3-convergence/SKILL.md`
+6. Specs: activate `.github/skills/saam-phase4-spec-generation/SKILL.md` + `.github/skills/saam-spec-template/SKILL.md`
+7. BA Review: activate `.github/skills/saam-phase4a-business-rule-validation/SKILL.md` + `.github/skills/saam-ba-review-template/SKILL.md`
+8. Roadmap: activate `.github/skills/saam-phase4b-implementation-roadmap/SKILL.md`
+9. Test Suites: activate `.github/skills/saam-phase4c-test-suite-generation/SKILL.md` + `.github/skills/saam-test-suite-template/SKILL.md`
+10. Implementation: activate `.github/skills/saam-phase5-setup/SKILL.md` then `.github/skills/saam-phase5-ai-dlc-implementation/SKILL.md` (+ `.github/skills/saam-backend-fidelity/SKILL.md` before the wiring layers)
+11. Continuous Evolution: activate `.github/skills/saam-phase6-continuous-evolution/SKILL.md` (ongoing after Phase 5)
 
-Always keep `saam-human-guidance-protocol.md` active during analysis work.
+Always keep `.github/skills/saam-human-guidance-protocol/SKILL.md` active during analysis work.
 
 ## Authors
 

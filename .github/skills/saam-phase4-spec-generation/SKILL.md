@@ -15,13 +15,13 @@ Produce complete microservice specifications with all business rules, data model
 
 The agent MUST read the following steering files before executing Phase 4:
 
-1. **`saam-human-guidance-protocol.md`** — Prompt categories, decision register format, agent rules
-2. **`saam-task-tracking.md`** — Tracking file format and Jira dual-write protocol
-3. **`saam-spec-template.md`** — Microservice specification structure (defines the output format for each service spec)
-4. **`saam-api-contract.md`** — OpenAPI contract generation protocol (MUST be generated during Phase 4 per service)
-5. **`saam-source-reading-<stack>.md`** — The source reading guide for the project's legacy stack (same one used in Phase 1). Phase 4 reads actual source code — the stack-specific guide provides extraction patterns for the technology.
-6. **`saam-cast-imaging-integration.md`** — **(MANDATORY if CAST or Hybrid mode)** Full CAST-guided extraction workflow: service brief assembly, source file targeting, complexity classification, coverage validation. Defines the orchestrator's data-gathering protocol that REPLACES guesswork about which files to read. Skipping it = blind extraction on a large codebase.
-7. **`saam-frontend-spec-template.md`** — (Only if the legacy system has a UI) Frontend specification template for generating frontend specs during Phase 4
+1. **`.github/skills/saam-human-guidance-protocol/SKILL.md`** — Prompt categories, decision register format, agent rules
+2. **`.github/skills/saam-task-tracking/SKILL.md`** — Tracking file format and Jira dual-write protocol
+3. **`.github/skills/saam-spec-template/SKILL.md`** — Microservice specification structure (defines the output format for each service spec)
+4. **`.github/skills/saam-api-contract/SKILL.md`** — OpenAPI contract generation protocol (MUST be generated during Phase 4 per service)
+5. **`.github/skills/saam-source-reading-<stack>/SKILL.md`** — The source reading guide for the project's legacy stack (same one used in Phase 1). Phase 4 reads actual source code — the stack-specific guide provides extraction patterns for the technology.
+6. **`.github/skills/saam-cast-imaging-integration/SKILL.md`** — **(MANDATORY if CAST or Hybrid mode)** Full CAST-guided extraction workflow: service brief assembly, source file targeting, complexity classification, coverage validation. Defines the orchestrator's data-gathering protocol that REPLACES guesswork about which files to read. Skipping it = blind extraction on a large codebase.
+7. **`.github/skills/saam-frontend-spec-template/SKILL.md`** — (Only if the legacy system has a UI) Frontend specification template for generating frontend specs during Phase 4
 
 ## Task Tracking Activation
 
@@ -29,7 +29,7 @@ The agent MUST read the following steering files before executing Phase 4:
 
 **PhaseEvent (telemetry timestamp):** Immediately after creating the tracking file, write: `graph_add_node(nodeType="PhaseEvent", id="P4-started", properties={phase: "P4", event: "started", timestamp: <current ISO timestamp>})`.
 
-After each service's spec package is complete (all 7 files written), the agent MUST update the tracking file immediately (mark service DONE with timestamp) BEFORE starting the next service. If Jira is configured, create an Epic with Tasks per service. See `saam-task-tracking.md` for format.
+After each service's spec package is complete (all 7 files written), the agent MUST update the tracking file immediately (mark service DONE with timestamp) BEFORE starting the next service. If Jira is configured, create an Epic with Tasks per service. See `.github/skills/saam-task-tracking/SKILL.md` for format.
 
 **Verification:** The parent agent checks tracking file status as part of the per-service verification checklist. If tracking doesn't show the service as DONE, the service is not considered complete.
 
@@ -105,7 +105,7 @@ If Subagent C (Validator) fails the output TWICE, the orchestrator:
 You are the CAST Scout for Phase 4 extraction of <service-name> (<service-id>).
 
 READ THIS FIRST (included in your context):
-- saam-cast-imaging-integration.md — full CAST query workflow
+- .github/skills/saam-cast-imaging-integration/SKILL.md — full CAST query workflow
 
 YOUR JOB: Query CAST Imaging to build a service brief for the Extractor agent.
 Follow the "Phase 4: CAST-Guided Extraction Workflow" protocol exactly.
@@ -150,7 +150,7 @@ and producing the brief file.
 ```
 - .github/skills/saam-phase4-spec-generation/SKILL.md
 - .github/skills/saam-spec-template/SKILL.md
-- .github/skills/saam-source-reading-<stack>.md
+- .github/skills/saam-source-reading-<stack>/SKILL.md
 - .github/skills/saam-api-contract/SKILL.md
 - .github/skills/saam-cast-imaging-integration/SKILL.md  (CAST/Hybrid mode — for ad-hoc queries during extraction)
 ```
@@ -167,11 +167,11 @@ and producing the brief file.
 You are the Extractor for Phase 4 of <service-name> (<service-id>).
 
 READ THESE STEERING FILES FIRST (included in your context):
-- saam-phase4-spec-generation.md (extraction protocol, quality rules, semantic elevation)
-- saam-spec-template.md (exact BR-ID format with all required fields)
-- saam-source-reading-<stack>.md (stack-specific extraction patterns)
-- saam-api-contract.md (OpenAPI contract format)
-- saam-cast-imaging-integration.md (CAST/Hybrid mode — use for ad-hoc queries)
+- .github/skills/saam-phase4-spec-generation/SKILL.md (extraction protocol, quality rules, semantic elevation)
+- .github/skills/saam-spec-template/SKILL.md (exact BR-ID format with all required fields)
+- .github/skills/saam-source-reading-<stack>/SKILL.md (stack-specific extraction patterns)
+- .github/skills/saam-api-contract/SKILL.md (OpenAPI contract format)
+- .github/skills/saam-cast-imaging-integration/SKILL.md (CAST/Hybrid mode — use for ad-hoc queries)
 
 SERVICE BRIEF: Read assessment/<service-id>-cast-brief.md for the file list.
 (If no brief exists: read assessment/*-extraction-summary.md for P1 context)
@@ -271,8 +271,8 @@ YOUR JOB: Check the spec package for compliance. You have NOT seen the source co
 You are checking ONLY whether the output meets quality standards.
 
 READ THESE STEERING FILES (included in your context):
-- saam-phase4-spec-generation.md (quality gates, semantic elevation rules, statement rules)
-- saam-spec-template.md (expected format for each field)
+- .github/skills/saam-phase4-spec-generation/SKILL.md (quality gates, semantic elevation rules, statement rules)
+- .github/skills/saam-spec-template/SKILL.md (expected format for each field)
 
 THEN READ the 6 spec files at spec/microservices/<service-id>/.
 
@@ -410,9 +410,9 @@ You are the Tracker for Phase 4 extraction. The Validator has confirmed <service
 (<service-id>) PASSES all quality gates. Your job: update all tracking systems.
 
 READ THESE STEERING FILES (in your context):
-- saam-task-tracking.md (tracking file format + Phase Transition Protocol)
-- saam-telemetry.md (timing + PhaseEvent requirements)
-- saam-graph-context.md (graph node/edge types)
+- .github/skills/saam-task-tracking/SKILL.md (tracking file format + Phase Transition Protocol)
+- .github/skills/saam-telemetry/SKILL.md (timing + PhaseEvent requirements)
+- .github/skills/saam-graph-context/SKILL.md (graph node/edge types)
 
 EXECUTE THESE STEPS IN ORDER:
 
@@ -501,12 +501,12 @@ for service in services_in_order:
 **COMMIT IS NOT OPTIONAL.** It is the durability guarantee for the extraction work AND the timing data source for telemetry. Without per-service commits, telemetry cannot compute per-service duration and context loss means re-extraction.
 ```
 
-**Step-level timing (P4 is a step-instrumented phase — see `saam-telemetry.md`):** emit a StepEvent
+**Step-level timing (P4 is a step-instrumented phase — see `.github/skills/saam-telemetry/SKILL.md`):** emit a StepEvent
 (`PhaseEvent` with `step: "<service>-extraction"`) at the START and END of each service's deep extraction —
 these bound the per-service active-work interval (more reliable than deriving it from commit cadence). Also
 stamp `p4Intent` per component read (step 6a). If an unprompted human redirect changes the plan mid-phase,
 stamp the resulting deviation event's `origin: "unsolicited-intervention"` + summary + led_to (the
-intervention is a property of the deviation, not a separate log — see `saam-telemetry.md`).
+intervention is a property of the deviation, not a separate log — see `.github/skills/saam-telemetry/SKILL.md`).
 
 **Why subagent delegation:** The subagent gets its own context window. It can read multiple source files without consuming the parent's context. The parent stays lean — it orchestrates and verifies, never loads source code itself.
 
@@ -628,7 +628,7 @@ Before beginning Phase 4 work, the agent MUST verify that prior phases produced 
 **CAST Mode Check (MANDATORY):**
 If `inventory/INDEX.md` declares analysis mode as CAST or Hybrid:
 - Verify CAST Imaging MCP server is configured and responsive (test query: `mcp_imaging_applications()`)
-- Confirm `saam-cast-imaging-integration.md` is loaded (this is a Required Steering File — item 6 above)
+- Confirm `.github/skills/saam-cast-imaging-integration/SKILL.md` is loaded (this is a Required Steering File — item 6 above)
 - If CAST MCP is unreachable: STOP. Do not proceed with direct-source-only extraction on a >150K LOC codebase. Inform the human.
 - The Phase 4 extraction workflow MUST follow the CAST-guided protocol (service brief assembly, component classification, targeted file lists). Falling back to "read everything" is NOT acceptable for large codebases.
 
@@ -1229,7 +1229,7 @@ For each service (after initial extraction is complete):
         specErrorPaths = sum of error cases in all rules' Concrete Examples
       - Compare each dimension independently:
 
-    Per-dimension assessment (thresholds from saam-calibration.yaml → complexity):
+    Per-dimension assessment (thresholds from .github/saam-calibration.yaml → complexity):
       - source[dim] > 0 AND spec[dim] == 0 → CRITICAL (entire dimension missing)
       - source[dim] / spec[dim] > complexity.ratio_threshold (default: 3.0) → FLAGGED
       - source[dim] / spec[dim] <= complexity.ratio_threshold → OK
@@ -1627,7 +1627,7 @@ After `03-api-design.md` is complete for a service, the agent MUST generate `04-
 
 **The contract MUST be generated during Phase 4 — NEVER deferred to later phases.** Both Phase 4c (test suites) and Phase 5 (code generation) depend on it.
 
-See `saam-api-contract.md` for the full generation protocol, schema mapping tables, and validation checklist.
+See `.github/skills/saam-api-contract/SKILL.md` for the full generation protocol, schema mapping tables, and validation checklist.
 
 ## Deliverables (ALL MANDATORY — Phase 4 is NOT complete until every item exists)
 
@@ -1660,7 +1660,7 @@ For each service, verify ALL files exist at `spec/microservices/<service-name>/`
 
 ### Additional Deliverables
 
-- [ ] **Frontend spec** (if legacy system has a UI) — generated at `spec/frontend/<app-name>/` using `saam-frontend-spec-template.md`. Uses brownfield mode if source UI exists. Generated AFTER all backend service specs are complete (because it references their `04-api-contract.yaml` files).
+- [ ] **Frontend spec** (if legacy system has a UI) — generated at `spec/frontend/<app-name>/` using `.github/skills/saam-frontend-spec-template/SKILL.md`. Uses brownfield mode if source UI exists. Generated AFTER all backend service specs are complete (because it references their `04-api-contract.yaml` files).
 
 ## Phase 4 Execution Order (MANDATORY)
 
@@ -1704,9 +1704,9 @@ STAGE 1.5: Cross-Service Dependency Compilation (once, after ALL backend specs d
   Generate 05-dependencies.md for all services in this engagement.
 
   READ THESE FILES FIRST (included in your context):
-  - saam-phase4-spec-generation.md (Stage 1.5 protocol + 05-dependencies.md template)
-  - saam-api-contract.md (contract naming authority)
-  - saam-spec-template.md (spec format reference)
+  - .github/skills/saam-phase4-spec-generation/SKILL.md (Stage 1.5 protocol + 05-dependencies.md template)
+  - .github/skills/saam-api-contract/SKILL.md (contract naming authority)
+  - .github/skills/saam-spec-template/SKILL.md (spec format reference)
 
   INPUT:
   - All spec/microservices/<service>/04-api-contract.yaml files (provider contracts)
@@ -2029,10 +2029,10 @@ STAGE 1.6: Workflow Compilation (per service + cross-service, after Stage 1.5 �
   ANALYSIS MODE: <CAST/Hybrid | Direct Source>
 
   READ THESE FILES FIRST (included in your context):
-  - saam-phase4-spec-generation.md (Stage 1.6 protocol + workflow format)
-  - saam-spec-template.md (spec format reference)
-  - saam-api-contract.md (contract naming authority)
-  - saam-cast-imaging-integration.md (CAST mode only — transaction query patterns)
+  - .github/skills/saam-phase4-spec-generation/SKILL.md (Stage 1.6 protocol + workflow format)
+  - .github/skills/saam-spec-template/SKILL.md (spec format reference)
+  - .github/skills/saam-api-contract/SKILL.md (contract naming authority)
+  - .github/skills/saam-cast-imaging-integration/SKILL.md (CAST mode only — transaction query patterns)
 
   INPUT (read from disk):
   - spec/microservices/<service>/01-business-rules.md (all BR-IDs with intents + side effects)
@@ -2396,7 +2396,7 @@ STAGE 2: Frontend Specification (once, after ALL backend specs done)
   Step 2.4: Generate Frontend Spec (per human decisions)
     - Read ALL backend 04-api-contract.yaml files
     - Read ALL backend 07-workflows.md files + spec/07-cross-service-workflows.md
-    - Read saam-frontend-spec-template.md
+    - Read .github/skills/saam-frontend-spec-template/SKILL.md
     - Build the Gateway Routing Table (from Step 2.3 decision + backend contract paths)
     - **DERIVE user flows from backend workflows:** Every backend workflow with a user trigger
       (API call initiated by a human action) maps to a frontend user flow. Do NOT invent
@@ -2510,7 +2510,7 @@ After all services are specified and the semantic preservation validation has co
    - Threshold sensitivity: count how many components WOULD be flagged at ratio thresholds 2, 4, and 5 (in addition to the current threshold)
 4. **Passes needed** — average re-extraction passes across all flagged components
 
-**Schema:** See `saam-telemetry.md` → `phase4-specs.yaml` for the full YAML structure.
+**Schema:** See `.github/skills/saam-telemetry/SKILL.md` → `phase4-specs.yaml` for the full YAML structure.
 
 **Rules:**
 - `true_positive_count` per dimension can only be determined after Phase 4a (BA review) or Phase 5 (implementation failures). Initially set to 0 and mark `true_positives_pending: true`. Phase 4a telemetry will retroactively update this file.
@@ -2532,7 +2532,7 @@ After all services are specified and the semantic preservation validation has co
 
 All [N] services have complete spec packages (business rules + domain model + API design + API contract + completion summary). Frontend spec: [✅ generated at spec/frontend/<app>/ | N/A — no UI]. Ready for Phase 4a."
 
-**Next step (mandatory):** Proceed to Phase 4a (Business Rule Validation) — activate `saam-phase4a-business-rule-validation.md` and read `saam-ba-review-template.md`.
+**Next step (mandatory):** Proceed to Phase 4a (Business Rule Validation) — activate `.github/skills/saam-phase4a-business-rule-validation/SKILL.md` and read `.github/skills/saam-ba-review-template/SKILL.md`.
 
 **BUT FIRST — Deep Convergence Re-Check (MANDATORY before P4a):**
 

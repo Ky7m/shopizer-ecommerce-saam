@@ -26,7 +26,7 @@ The **Source Architect** leads the bottom-up track in Phase 1 of SAAM. The role 
 
 ## Relevant Steering Documents
 - `.github/skills/saam-phase1-bottom-up/SKILL.md`
-- `.github/skills/saam-source-reading-ibm-rpg/SKILL.md` (or relevant stack guide)
+- `.github/skills/saam-source-reading-ibm-rpg/SKILL.md` (or relevant stack guide / dynamically created guide)
 - `.github/skills/saam-source-reading-dotnet/SKILL.md`
 - `.github/skills/saam-cast-imaging-integration/SKILL.md`
 - `.github/skills/saam-graph-context/SKILL.md`

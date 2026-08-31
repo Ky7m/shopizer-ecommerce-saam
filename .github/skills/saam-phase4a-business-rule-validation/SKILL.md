@@ -17,9 +17,9 @@ Classify, weight, and validate extracted business rules BEFORE implementation in
 
 The agent MUST read the following steering files before executing Phase 4a:
 
-1. **`saam-ba-review-template.md`** — The document template the agent generates for the BA (defines sections, format, parse-back instructions)
-2. **`saam-human-guidance-protocol.md`** — Prompt categories, decision register format, agent rules
-3. **`saam-task-tracking.md`** — Tracking file format and Jira dual-write protocol
+1. **`.github/skills/saam-ba-review-template/SKILL.md`** — The document template the agent generates for the BA (defines sections, format, parse-back instructions)
+2. **`.github/skills/saam-human-guidance-protocol/SKILL.md`** — Prompt categories, decision register format, agent rules
+3. **`.github/skills/saam-task-tracking/SKILL.md`** — Tracking file format and Jira dual-write protocol
 
 The BA review template is CRITICAL — it defines the exact document structure the BA will work through. Do NOT generate BA review documents without first reading the template.
 
@@ -29,7 +29,7 @@ The BA review template is CRITICAL — it defines the exact document structure t
 
 **PhaseEvent (telemetry timestamp):** Immediately after creating the tracking file, write: `graph_add_node(nodeType="PhaseEvent", id="P4A-started", properties={phase: "P4A", event: "started", timestamp: <current ISO timestamp>})`.
 
-After each service's BA review is generated (or defaults approved), the agent MUST update the tracking file immediately (mark tasks DONE) BEFORE moving to the next service. If Jira is configured, create an Epic with Tasks. See `saam-task-tracking.md` for format.
+After each service's BA review is generated (or defaults approved), the agent MUST update the tracking file immediately (mark tasks DONE) BEFORE moving to the next service. If Jira is configured, create an Epic with Tasks. See `.github/skills/saam-task-tracking/SKILL.md` for format.
 
 ## Subagent Delegation (BA Review Document Generation)
 
@@ -44,14 +44,14 @@ When delegating BA review document generation to a subagent:
 Generate the BA review document for service <service-name>.
 
 READ THESE FILES FIRST (included in your context):
-- saam-phase4a-business-rule-validation.md (review protocol)
-- saam-ba-review-template.md (EXACT document format)
+- .github/skills/saam-phase4a-business-rule-validation/SKILL.md (review protocol)
+- .github/skills/saam-ba-review-template/SKILL.md (EXACT document format)
 
 INPUT: spec/microservices/<service>/01-business-rules.md
 
 PRODUCE: assessment/ba-review-<service>.md
 
-The document MUST follow the EXACT structure from saam-ba-review-template.md:
+The document MUST follow the EXACT structure from .github/skills/saam-ba-review-template/SKILL.md:
 - Section 1: Rule inventory table (all BR-IDs with pre-classification)
 - Section 2: Per-rule review cards (Statement, Agent Classification, Agent Rationale, BA fields to fill)
 - Section 3: Scope reduction summary
@@ -181,7 +181,7 @@ Phase 4 Complete (specs exist)
 
 ## Step 1: Generate BA Review Document (Mode B)
 
-The agent produces ONE review document per service (or per domain if services are small). The document uses the template from `saam-ba-review-template.md`.
+The agent produces ONE review document per service (or per domain if services are small). The document uses the template from `.github/skills/saam-ba-review-template/SKILL.md`.
 
 ### Generation Protocol
 
@@ -255,7 +255,7 @@ accidentally demoted to app-only during a business review.
 - Record load-bearing/legacy-artifact/correction decisions in `assessment/ba-decision-register.md`
   (a dedicated "Invariant & Lifecycle Decisions" subsection).
 - Load-bearing invariants get exhaustive test coverage (the invariant-holds and illegal-transition
-  test cases in `saam-test-suite-template.md`).
+  test cases in `.github/skills/saam-test-suite-template/SKILL.md`).
 
 ## Extension Point Validation (Layer B — parallel review track)
 
@@ -423,7 +423,7 @@ Phase 4b (Automatibility Scoring) uses the BA-reviewed specs:
 **🔴 PROMPT HUMAN**: "BA review complete for [N] services. Scope reduction: [X]% ([Y] rules dropped, [Z] deferred, [W] simplified). Updated specs ready for Phase 4b (Automatibility Scoring). Proceed?"
 
 **Next steps after human approval (both modes):**
-- Activate `saam-phase4b-implementation-roadmap.md` for automatibility scoring and roadmap generation
+- Activate `.github/skills/saam-phase4b-implementation-roadmap/SKILL.md` for automatibility scoring and roadmap generation
 - Update the root `README.md` — add Phase 4a completion summary: mode used (A or B), scope reduction %, rules dropped/deferred/simplified, weight distribution
 - **Graph update (always):** Use `graph_bulk_import` to add Decision nodes + `decidedAs` edges. Run `graph_run_inferences(rules=["lifecycle_states", "effective_confidence"])`. This records the authorized delta (Obsolete + Deferred counts) for reconciliation.
 
@@ -447,6 +447,6 @@ After the exit gate is approved, the agent MUST produce `.saam/telemetry/phase4a
    - `new_rules_added_from_flags`: new BRs created because of unresolved preservation flags
 4. **Mode** — `full_workshop` or `agent_defaults`
 
-**Schema:** See `saam-telemetry.md` → `phase4a-ba-review.yaml` for the full YAML structure.
+**Schema:** See `.github/skills/saam-telemetry/SKILL.md` → `phase4a-ba-review.yaml` for the full YAML structure.
 
 **Retroactive update to Phase 4 telemetry:** If Phase 4 telemetry exists and has `true_positives_pending: true`, update the `dimension_flags.{dim}.true_positive_count` values based on BA review outcomes (gaps confirmed = true positives, flags dismissed = false positives).

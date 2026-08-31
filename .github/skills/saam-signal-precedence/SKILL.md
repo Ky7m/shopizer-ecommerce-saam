@@ -275,7 +275,7 @@ When the agent encounters contradictory signals:
 5. If GATE → block and report to human
 6. If FLAG → record, continue, surface at exit gate
 
-**This model is referenced by:** `saam-governance.md`, `saam-graph-context.md`, `saam-phase5-ai-dlc-implementation.md`, and `reconcile_validation.py`.
+**This model is referenced by:** `.github/skills/saam-governance/SKILL.md`, `.github/skills/saam-graph-context/SKILL.md`, `.github/skills/saam-phase5-ai-dlc-implementation/SKILL.md`, and `reconcile_validation.py`.
 
 
 ---

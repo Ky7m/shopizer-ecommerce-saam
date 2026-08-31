@@ -10,7 +10,7 @@ authors: "Max Kozinenko, Roman Kalita (SoftServe)"
 ## Purpose
 
 Phase 5 already forbids skeletons at the *service* level: no stubs, no algorithm
-simplification, computed fields must be computed (`saam-phase5-ai-dlc-implementation.md`,
+simplification, computed fields must be computed (`.github/skills/saam-phase5-ai-dlc-implementation/SKILL.md`,
 Anti-Skeleton rules SAAM-01 / SAAM-08 / SAAM-09). Those rules govern a single method in
 isolation.
 

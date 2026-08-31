@@ -97,7 +97,7 @@ spec/frontend/<app-name>/
     └── ...                     — One file per backend service
 ```
 
-**Note on `09-api-client/`:** This directory is generated in Phase 4c (Stage 0b) AFTER all backend contracts and DTOs exist. It is the mechanical binding that prevents the frontend from inventing API paths. Phase 5 copies it verbatim into `sourcecode/<app>/src/api/`. See `saam-phase4c-test-suite-generation.md` for the generation protocol.
+**Note on `09-api-client/`:** This directory is generated in Phase 4c (Stage 0b) AFTER all backend contracts and DTOs exist. It is the mechanical binding that prevents the frontend from inventing API paths. Phase 5 copies it verbatim into `sourcecode/<app>/src/api/`. See `.github/skills/saam-phase4c-test-suite-generation/SKILL.md` for the generation protocol.
 
 ### File Splitting Rule (MANDATORY)
 

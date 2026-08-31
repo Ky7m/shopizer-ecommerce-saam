@@ -98,12 +98,12 @@ targeted-fix, which is what bounds the loop count (especially critical for Model
 
 The agent MUST read the following steering files before executing Phase 5 implementation:
 
-1. **`saam-phase5-setup.md`** — Setup wizard (MUST be run FIRST if not already completed for this engagement)
-2. **`saam-human-guidance-protocol.md`** — Prompt categories, decision register format, agent rules
-3. **`saam-task-tracking.md`** — Tracking file format and Jira dual-write protocol (especially the Phase 5 append-only log model)
-4. **`saam-api-contract.md`** — API contract is the naming authority for ALL code generation
-5. **`saam-jira-integration.md`** — (Only if Jira is configured) Session-start sync protocol, ticket transitions, reopen handling
-6. **`saam-backend-fidelity.md`** — (Read before the Events / Integration Wiring layers) The 8 cross-service and persistence fidelity checkpoints + grep-able wiring-defect self-audit. This is the procedure the Events and Integration Wiring layer names imply.
+1. **`.github/skills/saam-phase5-setup/SKILL.md`** — Setup wizard (MUST be run FIRST if not already completed for this engagement)
+2. **`.github/skills/saam-human-guidance-protocol/SKILL.md`** — Prompt categories, decision register format, agent rules
+3. **`.github/skills/saam-task-tracking/SKILL.md`** — Tracking file format and Jira dual-write protocol (especially the Phase 5 append-only log model)
+4. **`.github/skills/saam-api-contract/SKILL.md`** — API contract is the naming authority for ALL code generation
+5. **`.github/skills/saam-jira-integration/SKILL.md`** — (Only if Jira is configured) Session-start sync protocol, ticket transitions, reopen handling
+6. **`.github/skills/saam-backend-fidelity/SKILL.md`** — (Read before the Events / Integration Wiring layers) The 8 cross-service and persistence fidelity checkpoints + grep-able wiring-defect self-audit. This is the procedure the Events and Integration Wiring layer names imply.
 
 **Note:** The agent does NOT need to re-read the spec template or test suite template during Phase 5 — it reads the actual generated specs and test suites in the workspace.
 
@@ -171,7 +171,7 @@ Running Service ←── validates ──── comprehensive-test-suite.sh
 
 ## Implementation State Tracking (MANDATORY)
 
-Implementation progress for each service is tracked in `tracking/phase5-implementation/<service-name>.md` (as defined in `saam-task-tracking.md`). This file is the SINGLE source of truth for:
+Implementation progress for each service is tracked in `tracking/phase5-implementation/<service-name>.md` (as defined in `.github/skills/saam-task-tracking/SKILL.md`). This file is the SINGLE source of truth for:
 - What has been done
 - What is in progress
 - What is pending
@@ -254,7 +254,7 @@ The `tracking/phase5-implementation/<service-name>.md` file includes:
 ### Session Resumption Protocol
 
 When the agent starts a session and `tracking/phase5-implementation/<service-name>.md` exists:
-1. **If Jira configured: sync first** — run the Jira Sync Check from `saam-task-tracking.md` BEFORE any other action. This may create fix tasks or confirm completed work.
+1. **If Jira configured: sync first** — run the Jira Sync Check from `.github/skills/saam-task-tracking/SKILL.md` BEFORE any other action. This may create fix tasks or confirm completed work.
 2. Read the tracking file (now up-to-date after sync)
 3. Identify the current layer status and next pending BR-ID
 4. Re-read the relevant section of the service spec (only the pending BR-IDs)
@@ -489,8 +489,8 @@ When delegating per-service implementation work to a subagent (Model A — Pure 
 Implement service <service-name> following SAAM Phase 5 protocol.
 
 READ THESE FILES FIRST (included in your context):
-- saam-phase5-ai-dlc-implementation.md (implementation protocol)
-- saam-api-contract.md (naming authority protocol)
+- .github/skills/saam-phase5-ai-dlc-implementation/SKILL.md (implementation protocol)
+- .github/skills/saam-api-contract/SKILL.md (naming authority protocol)
 
 INPUT (read these from the workspace):
 - spec/microservices/<service>/01-business-rules.md (source of truth for logic)
@@ -548,8 +548,8 @@ When delegating frontend implementation to a subagent:
 Implement the frontend application <app-name> following SAAM Phase 5 protocol.
 
 READ THESE FILES FIRST (included in your context):
-- saam-phase5-ai-dlc-implementation.md (Frontend Implementation section — hard rules)
-- saam-frontend-spec-template.md (spec structure reference)
+- .github/skills/saam-phase5-ai-dlc-implementation/SKILL.md (Frontend Implementation section — hard rules)
+- .github/skills/saam-frontend-spec-template/SKILL.md (spec structure reference)
 
 FIRST STEP (MANDATORY): Copy spec/frontend/<app>/09-api-client/* into sourcecode/<app>/src/api/ UNCHANGED. This is the API client. All pages MUST import from it.
 
@@ -626,7 +626,7 @@ This wrapper builds the service, starts it, runs the comprehensive suite, and re
 
 ## Execution Engine Selection (MANDATORY FIRST DECISION)
 
-**When the user asks to start Phase 5, the agent MUST first activate `saam-phase5-setup.md`.** That file contains the full setup wizard: model selection prompt, parameter gathering, and artifact creation. Only after setup is complete does the agent proceed with the implementation workflow below.
+**When the user asks to start Phase 5, the agent MUST first activate `.github/skills/saam-phase5-setup/SKILL.md`.** That file contains the full setup wizard: model selection prompt, parameter gathering, and artifact creation. Only after setup is complete does the agent proceed with the implementation workflow below.
 
 **Before selecting an engine:** If using AWS Transform, the agent MUST read the "AWS Transform Execution Protocol" section in this file (Steps T1-T3) and the "Scaled Execution" section BEFORE running any `atx` commands or advising the user on Transform setup. Do not rely on memory or general knowledge about ATX — follow the documented protocol exactly.
 
@@ -1091,7 +1091,7 @@ requests pass through with no tenant scoping).
    values the workflow recipe named: correct tenant/context, non-zero computed value,
    resolved linkage. A 200/201 is necessary, NOT sufficient — an API-level check reads
    back through the same path that wrote and can share its blind spot. See the 8 fidelity
-   checkpoints in `saam-backend-fidelity.md`.
+   checkpoints in `.github/skills/saam-backend-fidelity/SKILL.md`.
 ```
 
 **What this gate specifically catches (invisible to unit/contract tests):**
@@ -1467,7 +1467,7 @@ Before ANY implementation work begins (including decomposing SAAM specs into Kir
 - **If YES** → proceed to Step 1
 - **If NO** → this means Phase 4c was not executed for this service. The agent MUST:
   1. Inform the user: "No test suite found for <service-name>. Phase 4c (Test Suite Generation) should have produced this. Would you like me to generate it now?"
-  2. If user confirms: generate the test suite using `saam-test-suite-template.md` and the service specification from `spec/microservices/`. Every BR-ID in the spec must map to at least one test assertion. Save to `validation/<service-name>/comprehensive-test-suite.sh`.
+  2. If user confirms: generate the test suite using `.github/skills/saam-test-suite-template/SKILL.md` and the service specification from `spec/microservices/`. Every BR-ID in the spec must map to at least one test assertion. Save to `validation/<service-name>/comprehensive-test-suite.sh`.
   3. If user declines: Issue a strong warning and proceed at user's risk:
      > "WARNING: Proceeding without a test suite means there is NO automated acceptance gate for this service. Implementation quality cannot be verified programmatically. The comprehensive test suite is the ONLY mechanism that validates all business rules are correctly implemented. You will need to verify correctness manually."
      
@@ -1773,7 +1773,7 @@ The agent MUST keep `tasks.md` and the tracking file in sync:
 
 **CRITICAL: The agent MUST NEVER set a task to DONE.** The maximum status the agent can set autonomously is **IN_REVIEW** (implementation complete, PR submitted, awaiting human review). The DONE transition happens only after human PR merge + CI tests pass.
 
-**Reopened tickets:** On session start, if the agent detects a Jira ticket linked to an IN_REVIEW task has been Reopened, it creates a new fix task in `tasks.md` with the reopen reason, transitions Jira back to In Progress, and implements the fix following the same spec-driven protocol. See `saam-task-tracking.md` for the full reopen handling protocol.
+**Reopened tickets:** On session start, if the agent detects a Jira ticket linked to an IN_REVIEW task has been Reopened, it creates a new fix task in `tasks.md` with the reopen reason, transitions Jira back to In Progress, and implements the fix following the same spec-driven protocol. See `.github/skills/saam-task-tracking/SKILL.md` for the full reopen handling protocol.
 
 ### Task Completion Triggers
 
@@ -1983,7 +1983,7 @@ return a plausible value and the test passes. After an operation succeeds, asser
 directly against the database (the row exists, the computed value is non-zero and correct, the
 new column holds the written value), not just the response shape.
 
-**Full procedure:** `saam-backend-fidelity.md` — the 8 fidelity checkpoints (symptom → why it
+**Full procedure:** `.github/skills/saam-backend-fidelity/SKILL.md` — the 8 fidelity checkpoints (symptom → why it
 passes every structural gate → what to verify), with Java examples. Read it when implementing
 the Events and Integration Wiring layers.
 
@@ -2136,7 +2136,7 @@ gh api "repos/mkozinenko/saam/contents/.github/workflows/saam-governance.yml.sam
   --jq '.content' | base64 -d > .github/workflows/saam-governance.yml
 ```
 
-Then configure secrets if Neo4j is accessible from CI. See `saam-ci-governance.md` for full setup instructions and platform adaptations (GitLab, Azure DevOps, Bitbucket).
+Then configure secrets if Neo4j is accessible from CI. See `.github/skills/saam-ci-governance/SKILL.md` for full setup instructions and platform adaptations (GitLab, Azure DevOps, Bitbucket).
 
 This only needs to happen once per engagement — the governance workflow covers all services.
 
@@ -2481,10 +2481,10 @@ Review?"
 - When ALL services are complete:
   - **Telemetry (summary):** Produce `.saam/telemetry/phase5-implementation/summary.yaml` aggregating all per-service telemetry
   - Update README to reflect full Phase 5 completion with final project status and aggregate deviation statistics
-  - **Transition to Phase 6 (Continuous Evolution):** DEV-TEST items, SPEC-DRIFT items, and any new bugs/features feed into the Phase 6 loop. Activate `saam-phase6-continuous-evolution.md`.
+  - **Transition to Phase 6 (Continuous Evolution):** DEV-TEST items, SPEC-DRIFT items, and any new bugs/features feed into the Phase 6 loop. Activate `.github/skills/saam-phase6-continuous-evolution/SKILL.md`.
   - Phase 6 processes deviations through the same spec-driven pipeline (fix code → validate) without creating Jira tickets first — AI-DLC resolves them directly
   - **Graph update (always):** Reconcile FIRST — run `detect_br_ids.py --all` (orchestrator-only; see "Knowledge Graph Population" at the top of this file) so Implementation nodes and CLAIMS_IMPLEMENTATION edges match the current source tree. Do NOT assume they are already populated — bulk-landed code (ATX batch, git pull, fix loops) only enters the graph via this reconcile. Then: add TestAssertion status updates (PASS/FAIL from validation), add Deviation nodes from the deviation log. Run `graph_run_inferences()` and `graph_propagate_confidence()` for final lifecycle states and confidence scores. VALIDATED_BY edges are created automatically by the inference engine when all tests for a rule pass.
-  - **If CAST is configured (additional):** Run FULL graph reconciliation (Queries 3, 4, 5, 6) per `saam-graph-validation.md`. Produce `assessment/graph-validation-report.md`. Report unaccounted loss count to human.
+  - **If CAST is configured (additional):** Run FULL graph reconciliation (Queries 3, 4, 5, 6) per `.github/skills/saam-graph-validation/SKILL.md`. Produce `assessment/graph-validation-report.md`. Report unaccounted loss count to human.
 
 ## Telemetry Production (MANDATORY)
 
@@ -2494,7 +2494,7 @@ After each service's exit gate is approved, the agent MUST produce `.saam/teleme
 
 **Data to compute from graph + task tracker + deviation log:**
 
-1. **Timing** — P5 is a step-instrumented phase (see `saam-telemetry.md`). Emit these milestones as
+1. **Timing** — P5 is a step-instrumented phase (see `.github/skills/saam-telemetry/SKILL.md`). Emit these milestones as
    StepEvents (`PhaseEvent` with `step`, graph-timestamped) as they occur, not just as tracking-file
    entries — the graph timestamp is the machine-recorded source; the tracking file is the human-facing
    mirror:
@@ -2504,7 +2504,7 @@ After each service's exit gate is approved, the agent MUST produce `.saam/teleme
    - `all_tests_passing_at`: when comprehensive suite first reached 100%
    - `completed_at`: exit gate approval timestamp
    Also compute `active_work_minutes` / `wall_clock_minutes` / `unattributed_minutes` per
-   `saam-telemetry.md`; a plan-deviating unprompted human redirect stamps its event's
+   `.github/skills/saam-telemetry/SKILL.md`; a plan-deviating unprompted human redirect stamps its event's
    `origin: "unsolicited-intervention"`.
 2. **Execution metrics:**
    - `first_pass_compile`: did it compile on first generation? (true/false)
@@ -2526,7 +2526,7 @@ After each service's exit gate is approved, the agent MUST produce `.saam/teleme
 
 **Important:** Use `implementation_type` from Phase 4b roadmap. Use `automatibility_score` from Phase 4b final scores.
 
-**Schema:** See `saam-telemetry.md` → `phase5-implementation/service-NNN.yaml` for the full YAML structure.
+**Schema:** See `.github/skills/saam-telemetry/SKILL.md` → `phase5-implementation/service-NNN.yaml` for the full YAML structure.
 
 ### Phase 5 Summary Telemetry (after ALL services complete)
 
@@ -2537,11 +2537,11 @@ After all services pass their exit gates, produce `.saam/telemetry/phase5-implem
 - Breakdown by implementation type (Type A/B/C averages)
 - Total deviations and resolution stats
 
-**Schema:** See `saam-telemetry.md` → `phase5-implementation/summary.yaml`.
+**Schema:** See `.github/skills/saam-telemetry/SKILL.md` → `phase5-implementation/summary.yaml`.
 
 ### Calibration References
 
-During Phase 5 execution, the agent SHOULD reference `saam-calibration.yaml` → `planning` section for duration expectations. If actual duration significantly exceeds predicted (>2x), note this in telemetry as `duration_exceeded_prediction: true` — this signal helps calibrate future planning estimates.
+During Phase 5 execution, the agent SHOULD reference `.github/saam-calibration.yaml` → `planning` section for duration expectations. If actual duration significantly exceeds predicted (>2x), note this in telemetry as `duration_exceeded_prediction: true` — this signal helps calibrate future planning estimates.
 
 ## Frontend Specification Trigger (Phase 4)
 
@@ -2552,7 +2552,7 @@ Frontend specifications are generated DURING Phase 4 — NOT deferred to Phase 5
 Does `spec/frontend/` contain frontend specs for all UI applications in scope?
 
 - **If YES** → proceed normally (frontend will be implemented in Phase 5 alongside backend services)
-- **If NO and the legacy system has a UI** → inform the user: "Frontend specs are missing. The legacy system has a UI — should I generate frontend specs now using `saam-frontend-spec-template.md`? Backend API contracts are ready to reference."
+- **If NO and the legacy system has a UI** → inform the user: "Frontend specs are missing. The legacy system has a UI — should I generate frontend specs now using `.github/skills/saam-frontend-spec-template/SKILL.md`? Backend API contracts are ready to reference."
 - **If the system has no UI** → skip (no frontend needed)
 
 **Frontend specs MUST be generated in Phase 4 because:**

@@ -14,8 +14,8 @@ Intake the legacy system, build inventory, and select the analysis mode (Direct 
 
 The agent MUST read the following steering files before executing Phase 0:
 
-1. **`saam-human-guidance-protocol.md`** — Prompt categories, decision register format, agent rules
-2. **`saam-task-tracking.md`** — Tracking file format and Jira dual-write protocol
+1. **`.github/skills/saam-human-guidance-protocol/SKILL.md`** — Prompt categories, decision register format, agent rules
+2. **`.github/skills/saam-task-tracking/SKILL.md`** — Tracking file format and Jira dual-write protocol
 
 These files provide the interaction patterns and tracking mechanics needed throughout this phase.
 
@@ -25,7 +25,7 @@ These files provide the interaction patterns and tracking mechanics needed throu
 
 **PhaseEvent (telemetry timestamp):** Immediately after creating the tracking file, write a PhaseEvent node to the graph: `graph_add_node(nodeType="PhaseEvent", id="P0-started", properties={phase: "P0", event: "started", timestamp: <current ISO timestamp>})`. This provides a machine-recorded start time for telemetry.
 
-After each step completes (system profile documented, analysis mode selected, etc.), update the tracking file immediately. If Jira is configured, create an Epic with Tasks. See `saam-task-tracking.md` for format.
+After each step completes (system profile documented, analysis mode selected, etc.), update the tracking file immediately. If Jira is configured, create an Epic with Tasks. See `.github/skills/saam-task-tracking/SKILL.md` for format.
 
 ## Agent Interaction Style (MANDATORY)
 
@@ -179,7 +179,7 @@ Segmentation criteria:
 
 ## Step 0.8: Create Application Context Steering
 
-After all previous steps are complete, use Kiro’s built-in steering generation feature to automatically generate project steering for the analyzed application.
+After all previous steps are complete, use GitHub Copilot’s built-in steering generation feature to automatically generate project steering for the analyzed application.
 
 The generated steering should establish core workspace context based on:
 - source inventory
@@ -215,7 +215,7 @@ After all previous steps are complete, the agent MUST generate or overwrite the 
 
 The README is updated after every subsequent phase completion to reflect current project state.
 
-Generate `README.md` at the workspace root using the template from `saam-framework.md` (section "Project README Template"). Populate it with:
+Generate `README.md` at the workspace root using the template from `.github/skills/saam-framework/SKILL.md` (section "Project README Template"). Populate it with:
 
 - System name and business domain (from Step 0.1)
 - Technology stack and analysis mode (from Step 0.2)
@@ -248,12 +248,12 @@ The README should be written for someone joining the engagement mid-flight — t
 - `engagement.yaml`: engagement_id, industry, legacy_stack, target_stack, total services in scope, analysis mode, start date, team size
 - `phase0-onboarding.yaml`: timing (started_at, completed_at, duration_hours), actor, metrics (total LOC, segments identified, analysis mode, integrations found)
 
-**Schema:** See `saam-telemetry.md` for full YAML structures.
+**Schema:** See `.github/skills/saam-telemetry/SKILL.md` for full YAML structures.
 
 Human confirms: "Phase 0 complete, proceed with Phase 1 and Phase 2 in parallel."
 
 **Next steps after human approval:**
-- Activate `saam-phase1-bottom-up.md` for the Source Architect track
-- Activate `saam-phase2-top-down.md` for the Domain Architect track
-- Activate the appropriate source reading guide for the project's legacy stack (e.g., `saam-source-reading-ibm-rpg.md`, `saam-source-reading-dotnet.md`)
-- Keep `saam-human-guidance-protocol.md` active throughout both tracks
+- Activate `.github/skills/saam-phase1-bottom-up/SKILL.md` for the Source Architect track
+- Activate `.github/skills/saam-phase2-top-down/SKILL.md` for the Domain Architect track
+- Activate or dynamically generate the appropriate source reading guide for the project's legacy stack (e.g., `.github/skills/saam-source-reading-ibm-rpg/SKILL.md`, `.github/skills/saam-source-reading-dotnet/SKILL.md`, or dynamically create per `.github/skills/saam-phase1-bottom-up/SKILL.md` protocol)
+- Keep `.github/skills/saam-human-guidance-protocol/SKILL.md` active throughout both tracks
