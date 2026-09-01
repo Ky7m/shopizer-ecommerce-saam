@@ -1,0 +1,7 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: OrderCompensationRequired
+type: object
+x-contract-status: GAP
+description: Event is named by MS-05; compensation payload is not defined.
+additionalProperties: true
+

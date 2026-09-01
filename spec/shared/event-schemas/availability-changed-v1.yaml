@@ -1,0 +1,16 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: AvailabilityChanged.v1
+type: object
+required: [eventId, eventType, eventVersion, tenantId, storeId, aggregateId, occurredAt]
+properties:
+  eventId: {type: string}
+  eventType: {const: AvailabilityChanged.v1}
+  eventVersion: {const: 1}
+  tenantId: {type: string}
+  storeId: {type: string}
+  aggregateId: {type: string}
+  occurredAt: {type: string, format: date-time}
+  availabilityId: {type: string}
+  quantity: {type: integer}
+  state: {type: string}
+

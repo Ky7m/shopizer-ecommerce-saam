@@ -1,0 +1,13 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: PaymentRefunded.v1
+type: object
+required: [eventId, eventType]
+properties:
+  eventId: {type: string}
+  eventType: {const: PaymentRefunded.v1}
+  paymentIntentId: {type: string}
+  orderId: {type: string}
+  amount: {type: number}
+  currency: {type: string}
+  providerReference: {type: string}
+x-contract-status: GAP

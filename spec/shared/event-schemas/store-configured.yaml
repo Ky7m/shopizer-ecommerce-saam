@@ -1,0 +1,7 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: StoreConfigured
+type: object
+x-contract-status: GAP
+description: Sequence-only event name; payload and naming reconciliation are not defined.
+additionalProperties: true
+

@@ -1,0 +1,7 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: ShippingConfigurationChanged.v1
+type: object
+x-contract-status: GAP
+description: Recommended MS-09 target event only; not an approved publisher contract.
+additionalProperties: true
+

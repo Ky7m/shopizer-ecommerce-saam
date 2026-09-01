@@ -1,0 +1,7 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: ShipmentStatusUpdated
+type: object
+x-contract-status: GAP
+description: Consumed by MS-05 in its API design; provider payload is not defined.
+additionalProperties: true
+

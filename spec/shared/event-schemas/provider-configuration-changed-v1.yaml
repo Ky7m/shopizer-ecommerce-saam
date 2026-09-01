@@ -1,0 +1,7 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: ProviderConfigurationChanged.v1
+type: object
+x-contract-status: GAP
+description: MS-06 names this consumed event, but MS-11 does not define its publisher.
+additionalProperties: true
+

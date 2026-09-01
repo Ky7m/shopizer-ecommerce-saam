@@ -1,0 +1,7 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: SearchIndexingFailed.v1
+type: object
+x-contract-status: GAP
+description: Operational event name is defined; payload fields are not defined.
+additionalProperties: true
+

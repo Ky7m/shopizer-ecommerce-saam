@@ -1,0 +1,6 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: ContentPublished
+type: object
+x-contract-status: GAP
+description: Event is supplied by the target sequence and MS-11/MS-03 boundary; payload is not defined.
+additionalProperties: true

@@ -1,0 +1,19 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: IntegrationDeliveryDeadLettered
+type: object
+required: [eventId, eventType, occurredAt, tenantId, storeId, correlationId, operationId, attemptId, endpointId, idempotencyKey, attemptNumber, deadLetteredAt]
+properties:
+  eventId: {type: string}
+  eventType: {type: string}
+  occurredAt: {type: string, format: date-time}
+  tenantId: {type: string}
+  storeId: {type: string}
+  correlationId: {type: string}
+  operationId: {type: string, format: uuid}
+  attemptId: {type: string, format: uuid}
+  messageId: {type: string, format: uuid}
+  endpointId: {type: string, format: uuid}
+  idempotencyKey: {type: string}
+  attemptNumber: {type: integer}
+  deadLetteredAt: {type: string, format: date-time}
+

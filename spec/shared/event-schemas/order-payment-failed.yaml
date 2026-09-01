@@ -1,0 +1,7 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: OrderPaymentFailed
+type: object
+x-contract-status: GAP
+description: Rules-only MS-05 event; payload is not defined in the API design.
+additionalProperties: true
+

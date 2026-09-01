@@ -1,0 +1,6 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: PaymentReconciliationRequired.v1
+type: object
+x-contract-status: GAP
+description: Event is named in MS-06 API design; payload fields are not defined.
+additionalProperties: true

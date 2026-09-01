@@ -1,0 +1,26 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: OrderSubmitted
+type: object
+required: [eventId, eventType, eventVersion, tenantId, storeId, submissionId, currency, total, lines, occurredAt]
+properties:
+  eventId: {type: string}
+  eventType: {const: OrderSubmitted}
+  eventVersion: {const: 1}
+  tenantId: {type: string}
+  storeId: {type: string}
+  submissionId: {type: string}
+  customerId: {type: [integer, string, "null"]}
+  currency: {type: string}
+  total: {type: number}
+  lines:
+    type: array
+    items:
+      type: object
+      required: [sku, productName, quantity, unitPrice, attributes]
+      properties:
+        sku: {type: string}
+        productName: {type: string}
+        quantity: {type: integer}
+        unitPrice: {type: number}
+        attributes: {type: array}
+  occurredAt: {type: string, format: date-time}

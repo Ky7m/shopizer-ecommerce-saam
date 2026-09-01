@@ -1,0 +1,16 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: OrderStatusChanged
+type: object
+required: [eventId, eventType, eventVersion, tenantId, storeId, orderId, previousStatus, status, source, occurredAt]
+properties:
+  eventId: {type: string}
+  eventType: {const: OrderStatusChanged}
+  eventVersion: {type: integer}
+  tenantId: {type: string}
+  storeId: {type: string}
+  orderId: {type: integer}
+  previousStatus: {type: string}
+  status: {type: string}
+  source: {type: string}
+  occurredAt: {type: string, format: date-time}
+

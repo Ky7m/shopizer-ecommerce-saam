@@ -10,7 +10,7 @@
 | In progress | 0 |
 | Blocked | 0 |
 | Started | 2026-09-01T12:52:17+04:00 |
-| Last updated | 2026-09-01T22:48:24+04:00 |
+| Last updated | 2026-09-01T23:00:30+04:00 |
 
 ## Tasks
 
@@ -35,10 +35,10 @@
 
 | Deliverable | Status | Notes |
 |---|---|---|
-| Generate all 05-dependencies.md files | PENDING | After all provider contracts exist |
-| Reconcile synchronous consumer-provider contracts | PENDING | Produce spec/shared/cross-service-contracts.md |
-| Compile event schemas and shared conventions | PENDING | Human reconciliation required for convention normalization |
-| Pin shared dependency versions | PENDING | Target stack currently confirmed as .NET 10 |
+| Generate all 05-dependencies.md files | DONE | 2026-09-01 — all 12 files written; graph CALLS edges resolved; explicit contract/event GAPs retained |
+| Reconcile synchronous consumer-provider contracts | DONE | 2026-09-01 — spec/shared/cross-service-contracts.md; 11 REST call rows, all RECONCILED |
+| Compile event schemas and shared conventions | IN_PROGRESS | 2026-09-01 — event inventory and schemas compiled; assessment/shared-convention-reconciliation.md awaits human approval; unresolved event payload GAPs documented |
+| Pin shared dependency versions | BLOCKED | 2026-09-01 — target is .NET 10, but no approved version source exists; spec/shared/09-dependency-versions.md records the approval blocker |
 
 ### Stage 1.6–1.8 — Shared Compilation
 

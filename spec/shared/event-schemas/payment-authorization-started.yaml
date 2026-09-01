@@ -1,0 +1,7 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: PaymentAuthorizationStarted
+type: object
+x-contract-status: GAP
+description: Sequence-only payment progress event; publisher payload and consumer are not defined.
+additionalProperties: true
+

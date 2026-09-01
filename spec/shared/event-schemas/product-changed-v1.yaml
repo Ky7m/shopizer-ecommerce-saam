@@ -1,0 +1,16 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: ProductChanged.v1
+type: object
+required: [eventId, eventType, eventVersion, tenantId, storeId, aggregateId, aggregateVersion, occurredAt]
+properties:
+  eventId: {type: string}
+  eventType: {const: ProductChanged.v1}
+  eventVersion: {const: 1}
+  tenantId: {type: string}
+  storeId: {type: string}
+  aggregateId: {type: string}
+  aggregateVersion: {type: integer}
+  occurredAt: {type: string, format: date-time}
+  changeType: {type: string}
+  product: {type: object, additionalProperties: true}
+

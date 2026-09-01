@@ -1,0 +1,7 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: InventoryReservationReleased
+type: object
+x-contract-status: GAP
+description: Consumed by MS-05; MS-02 does not define this event payload.
+additionalProperties: true
+

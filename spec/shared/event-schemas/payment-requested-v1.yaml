@@ -1,0 +1,6 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: PaymentRequested.v1
+type: object
+x-contract-status: GAP
+description: MS-06 API design names the command event; its payload is not defined.
+additionalProperties: true

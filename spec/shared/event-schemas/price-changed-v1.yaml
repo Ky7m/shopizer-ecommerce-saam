@@ -1,0 +1,7 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: PriceChanged.v1
+type: object
+x-contract-status: GAP
+description: Event is named by MS-07; price-change payload is not defined.
+additionalProperties: true
+
