@@ -1,0 +1,763 @@
+openapi: "3.1.0"
+info:
+  title: MS-08 Tax API
+  version: "1.0.0"
+  description: |
+    API contract for the MS-08 Tax service.
+    This contract is the single source of truth for paths, fields, schemas,
+    status codes, required headers, and error responses.
+servers:
+  - url: http://localhost:8008/api/v1
+
+x-naming-conventions:
+  fieldNaming: camelCase
+  endpointNaming: kebab-case
+  headerNaming: kebab-case
+  enumValues: PascalCase
+  queryParams: camelCase
+
+x-global-headers:
+  - name: x-tenant-id
+    required: true
+    description: Tenant isolation identifier
+    testValue: tenant-001
+  - name: x-store-id
+    required: true
+    description: Store isolation identifier
+    testValue: store-001
+  - name: x-correlation-id
+    required: true
+    description: Distributed trace correlation identifier
+    testValue: corr-001
+  - name: Authorization
+    required: true
+    description: Bearer authentication token
+    testValue: Bearer test-token
+
+tags:
+  - name: Tax Classes
+  - name: Tax Rates
+  - name: Tax Configuration
+  - name: Tax Calculation
+
+paths:
+  /tax-classes:
+    get:
+      tags: [Tax Classes]
+      operationId: listTaxClasses
+      summary: List tax classes for the authenticated store
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: Tax classes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaxClassListResponse"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "500": { $ref: "#/components/responses/InternalError" }
+    post:
+      tags: [Tax Classes]
+      operationId: createTaxClass
+      summary: Create a tax class
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTaxClassRequest"
+      responses:
+        "201":
+          description: Tax class created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaxClass"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /tax-classes/exists:
+    get:
+      tags: [Tax Classes]
+      operationId: taxClassExists
+      summary: Check tax-class code uniqueness
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 10
+      responses:
+        "200":
+          description: Existence result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExistsResponse"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /tax-classes/{id}:
+    parameters:
+      - $ref: "#/components/parameters/TenantId"
+      - $ref: "#/components/parameters/StoreId"
+      - $ref: "#/components/parameters/CorrelationId"
+      - $ref: "#/components/parameters/Authorization"
+      - $ref: "#/components/parameters/TaxClassId"
+    get:
+      tags: [Tax Classes]
+      operationId: getTaxClass
+      summary: Get a store-owned tax class
+      responses:
+        "200":
+          description: Tax class
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaxClass"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/InternalError" }
+    put:
+      tags: [Tax Classes]
+      operationId: updateTaxClass
+      summary: Update a store-owned tax class
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTaxClassRequest"
+      responses:
+        "200":
+          description: Updated tax class
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaxClass"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+        "500": { $ref: "#/components/responses/InternalError" }
+    delete:
+      tags: [Tax Classes]
+      operationId: deleteTaxClass
+      summary: Delete a store-owned tax class
+      responses:
+        "200":
+          description: Deletion result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResponse"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /tax-rates:
+    get:
+      tags: [Tax Rates]
+      operationId: listTaxRates
+      summary: List localized tax rates in priority order
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - name: languageCode
+          in: query
+          required: false
+          schema:
+            type: string
+            default: en
+            maxLength: 10
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: Tax rates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaxRateListResponse"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+        "500": { $ref: "#/components/responses/InternalError" }
+    post:
+      tags: [Tax Rates]
+      operationId: createTaxRate
+      summary: Create a tax rate
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTaxRateRequest"
+      responses:
+        "201":
+          description: Tax rate created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaxRate"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /tax-rates/exists:
+    get:
+      tags: [Tax Rates]
+      operationId: taxRateExists
+      summary: Check tax-rate code uniqueness
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - name: code
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      responses:
+        "200":
+          description: Existence result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExistsResponse"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /tax-rates/{id}:
+    parameters:
+      - $ref: "#/components/parameters/TenantId"
+      - $ref: "#/components/parameters/StoreId"
+      - $ref: "#/components/parameters/CorrelationId"
+      - $ref: "#/components/parameters/Authorization"
+      - $ref: "#/components/parameters/TaxRateId"
+    get:
+      tags: [Tax Rates]
+      operationId: getTaxRate
+      summary: Get a store-owned tax rate
+      responses:
+        "200":
+          description: Tax rate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaxRate"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/InternalError" }
+    put:
+      tags: [Tax Rates]
+      operationId: updateTaxRate
+      summary: Update a store-owned tax rate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTaxRateRequest"
+      responses:
+        "200":
+          description: Updated tax rate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaxRate"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+        "500": { $ref: "#/components/responses/InternalError" }
+    delete:
+      tags: [Tax Rates]
+      operationId: deleteTaxRate
+      summary: Delete a store-owned tax rate
+      responses:
+        "200":
+          description: Deletion result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResponse"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /tax-configuration:
+    get:
+      tags: [Tax Configuration]
+      operationId: getTaxConfiguration
+      summary: Get store tax configuration
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+      responses:
+        "200":
+          description: Tax configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaxConfiguration"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+        "500": { $ref: "#/components/responses/InternalError" }
+    put:
+      tags: [Tax Configuration]
+      operationId: updateTaxConfiguration
+      summary: Save store tax configuration
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTaxConfigurationRequest"
+      responses:
+        "200":
+          description: Saved tax configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaxConfiguration"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /tax-calculations:
+    post:
+      tags: [Tax Calculation]
+      operationId: calculateTax
+      summary: Calculate tax for item and shipping inputs
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CalculateTaxRequest"
+      responses:
+        "200":
+          description: Tax calculation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaxCalculationResponse"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+components:
+  parameters:
+    TenantId:
+      name: x-tenant-id
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    StoreId:
+      name: x-store-id
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    CorrelationId:
+      name: x-correlation-id
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    Authorization:
+      name: Authorization
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    Page:
+      name: page
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, default: 1 }
+    PageSize:
+      name: pageSize
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    TaxClassId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    TaxRateId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  schemas:
+    TaxClass:
+      type: object
+      required: [id, tenantId, storeId, code, title]
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string }
+        storeId: { type: string }
+        code: { type: string, minLength: 1, maxLength: 10 }
+        title: { type: string, minLength: 1, maxLength: 32 }
+
+    CreateTaxClassRequest:
+      type: object
+      required: [code, title]
+      properties:
+        code: { type: string, minLength: 1, maxLength: 10 }
+        title: { type: string, minLength: 1, maxLength: 32 }
+
+    UpdateTaxClassRequest:
+      type: object
+      required: [code, title]
+      properties:
+        code: { type: string, minLength: 1, maxLength: 10 }
+        title: { type: string, minLength: 1, maxLength: 32 }
+
+    TaxClassListResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/TaxClass" }
+        pagination: { $ref: "#/components/schemas/PaginationInfo" }
+
+    TaxRateDescription:
+      type: object
+      required: [languageCode, name]
+      properties:
+        id: { type: string, format: uuid }
+        languageCode: { type: string, minLength: 1, maxLength: 10 }
+        name: { type: string, minLength: 1, maxLength: 255 }
+        title: { type: string, maxLength: 255 }
+        description: { type: string }
+
+    TaxRate:
+      type: object
+      required:
+        - id
+        - tenantId
+        - storeId
+        - taxClassCode
+        - code
+        - rate
+        - priority
+        - piggyback
+        - countryCode
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string }
+        storeId: { type: string }
+        taxClassCode: { type: string, minLength: 1, maxLength: 10 }
+        code: { type: string, minLength: 1, maxLength: 100 }
+        rate: { type: number, minimum: 0, maximum: 100, multipleOf: 0.0001 }
+        priority: { type: integer, minimum: 0 }
+        piggyback: { type: boolean }
+        countryCode: { type: string, minLength: 2, maxLength: 3 }
+        zoneCode: { type: string, nullable: true }
+        stateProvince: { type: string, nullable: true, maxLength: 100 }
+        descriptions:
+          type: array
+          items: { $ref: "#/components/schemas/TaxRateDescription" }
+
+    CreateTaxRateRequest:
+      type: object
+      required:
+        - taxClassCode
+        - code
+        - rate
+        - priority
+        - piggyback
+        - countryCode
+        - descriptions
+      properties:
+        taxClassCode: { type: string, minLength: 1, maxLength: 10 }
+        code: { type: string, minLength: 1, maxLength: 100 }
+        rate: { type: number, minimum: 0, maximum: 100, multipleOf: 0.0001 }
+        priority: { type: integer, minimum: 0, default: 0 }
+        piggyback: { type: boolean, default: false }
+        countryCode: { type: string, minLength: 2, maxLength: 3 }
+        zoneCode: { type: string, nullable: true }
+        stateProvince: { type: string, nullable: true, maxLength: 100 }
+        descriptions:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/TaxRateDescription" }
+
+    UpdateTaxRateRequest:
+      allOf:
+        - $ref: "#/components/schemas/CreateTaxRateRequest"
+
+    TaxRateListResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/TaxRate" }
+        pagination: { $ref: "#/components/schemas/PaginationInfo" }
+
+    TaxConfiguration:
+      type: object
+      required:
+        - taxBasis
+        - collectTaxIfDifferentProvince
+        - differentCountryBehavior
+      properties:
+        taxBasis:
+          type: string
+          enum: [StoreAddress, ShippingAddress, BillingAddress]
+        collectTaxIfDifferentProvince:
+          type: boolean
+        differentCountryBehavior:
+          type: string
+          enum: [UseCustomerJurisdiction, UseStoreJurisdiction, NoTax]
+
+    UpdateTaxConfigurationRequest:
+      type: object
+      required:
+        - taxBasis
+        - collectTaxIfDifferentProvince
+        - differentCountryBehavior
+      properties:
+        taxBasis:
+          type: string
+          enum: [StoreAddress, ShippingAddress, BillingAddress]
+        collectTaxIfDifferentProvince:
+          type: boolean
+        differentCountryBehavior:
+          type: string
+          enum: [UseCustomerJurisdiction, UseStoreJurisdiction, NoTax]
+
+    AddressSnapshot:
+      type: object
+      required: [countryCode]
+      properties:
+        countryCode: { type: string, minLength: 2, maxLength: 3 }
+        zoneCode: { type: string, nullable: true }
+        stateProvince: { type: string, nullable: true, maxLength: 100 }
+
+    TaxCalculationItem:
+      type: object
+      required: [productId, quantity, unitAmount, taxClassCode]
+      properties:
+        productId: { type: string }
+        quantity: { type: integer, minimum: 1 }
+        unitAmount: { type: number, minimum: 0, multipleOf: 0.0001 }
+        taxClassCode: { type: string, minLength: 1, maxLength: 10 }
+
+    ShippingInput:
+      type: object
+      required: [shippingAmount, handlingAmount]
+      properties:
+        shippingAmount: { type: number, minimum: 0, multipleOf: 0.0001 }
+        handlingAmount: { type: number, minimum: 0, multipleOf: 0.0001 }
+
+    CalculateTaxRequest:
+      type: object
+      required: [currencyCode, billingAddress, items]
+      properties:
+        currencyCode:
+          type: string
+          pattern: "^[A-Z]{3}$"
+        customerId: { type: string, nullable: true }
+        orderId: { type: string, nullable: true }
+        billingAddress: { $ref: "#/components/schemas/AddressSnapshot" }
+        shippingAddress:
+          allOf:
+            - $ref: "#/components/schemas/AddressSnapshot"
+          nullable: true
+        items:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/TaxCalculationItem" }
+        shipping:
+          allOf:
+            - $ref: "#/components/schemas/ShippingInput"
+          nullable: true
+        languageCode:
+          type: string
+          default: en
+        idempotencyKey:
+          type: string
+          maxLength: 128
+
+    Jurisdiction:
+      type: object
+      required: [countryCode]
+      properties:
+        countryCode: { type: string }
+        zoneCode: { type: string, nullable: true }
+        stateProvince: { type: string, nullable: true }
+
+    TaxItem:
+      type: object
+      required:
+        - taxCode
+        - label
+        - taxRatePercent
+        - taxableAmount
+        - taxAmount
+        - piggyback
+        - priority
+      properties:
+        taxCode: { type: string }
+        label: { type: string }
+        taxClassCode: { type: string, nullable: true }
+        taxRatePercent: { type: number }
+        taxableAmount: { type: number }
+        taxAmount: { type: number }
+        piggyback: { type: boolean }
+        priority: { type: integer }
+
+    TaxCalculationResponse:
+      type: object
+      required:
+        - quoteId
+        - currencyCode
+        - jurisdiction
+        - taxableAmount
+        - totalTaxAmount
+        - taxItems
+      properties:
+        quoteId: { type: string, format: uuid }
+        currencyCode: { type: string }
+        jurisdiction: { $ref: "#/components/schemas/Jurisdiction" }
+        taxableAmount: { type: number }
+        totalTaxAmount: { type: number }
+        taxItems:
+          type: array
+          items: { $ref: "#/components/schemas/TaxItem" }
+
+    PaginationInfo:
+      type: object
+      required: [page, pageSize, totalItems, totalPages]
+      properties:
+        page: { type: integer }
+        pageSize: { type: integer }
+        totalItems: { type: integer }
+        totalPages: { type: integer }
+
+    ExistsResponse:
+      type: object
+      required: [exists]
+      properties:
+        exists: { type: boolean }
+
+    DeleteResponse:
+      type: object
+      required: [deleted, id]
+      properties:
+        deleted: { type: boolean }
+        id: { type: string, format: uuid }
+
+    ErrorResponse:
+      type: object
+      required: [error, message, statusCode, timestamp, correlationId]
+      properties:
+        error: { type: string }
+        message: { type: string }
+        statusCode: { type: integer }
+        timestamp: { type: string, format: date-time }
+        correlationId: { type: string }
+        details:
+          type: object
+          additionalProperties: true
+
+  responses:
+    BadRequest:
+      description: Malformed request
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Forbidden:
+      description: Store ownership or authorization violation
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    NotFound:
+      description: Resource not found in the authenticated store
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Conflict:
+      description: Uniqueness or dependency conflict
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    UnprocessableEntity:
+      description: Domain validation failure
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    InternalError:
+      description: Unexpected service error
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
