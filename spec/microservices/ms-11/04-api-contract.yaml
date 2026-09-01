@@ -1,0 +1,3501 @@
+openapi: 3.1.0
+info:
+  title: Content and Configuration API
+  version: 1.0.0
+  description: |
+    API contract for MS-11 Content and Configuration.
+    This contract is the single source of truth for paths, operation identifiers,
+    field names, request and response shapes, status codes, and error codes.
+    MS-11 owns CMS content, content-file metadata and orchestration, merchant
+    configuration state, public configuration projection, and integration-module
+    metadata. Payment and shipping provider execution remains outside this service.
+servers:
+  - url: http://localhost:{port}/api/v1
+    variables:
+      port:
+        default: "8111"
+x-service-id: MS-11
+x-service-name: Content and Configuration
+x-naming-conventions:
+  fieldNaming: camelCase
+  endpointNaming: kebab-case
+  headerNaming: kebab-case
+  enumValues: PascalCase
+  queryParams: camelCase
+x-global-headers:
+  - name: x-tenant-id
+    required: true
+    description: Tenant isolation key. Must be a valid UUID.
+    testValue: 00000000-0000-0000-0000-000000000001
+  - name: x-store-id
+    required: false
+    description: Store isolation key for store-scoped operations. Required by store-scoped operations and must belong to x-tenant-id.
+    testValue: 00000000-0000-0000-0000-000000000002
+  - name: x-correlation-id
+    required: true
+    description: Distributed tracing identifier.
+    testValue: 00000000-0000-0000-0000-000000000003
+  - name: Authorization
+    required: false
+    description: Bearer token required for private and administrative operations.
+    testValue: Bearer <test-admin-token>
+  - name: x-language
+    required: false
+    description: ISO language code used for localized content projections.
+    testValue: en
+  - name: Idempotency-Key
+    required: false
+    description: Idempotency key for retryable mutations. Required where stated by the operation.
+    testValue: ms11-test-idempotency-001
+
+tags:
+  - name: Content
+  - name: Content Files
+  - name: Folders
+  - name: Configuration
+  - name: Modules
+  - name: Legacy Compatibility
+
+paths:
+  /content/pages:
+    get:
+      tags:
+        - Content
+      operationId: listPublicPages
+      summary: List public page summaries
+      description: |
+        Lists page content for the selected tenant and store, ordered by ascending
+        sortOrder and projected for the requested language. When language is absent,
+        all available descriptions are returned.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/OptionalLanguageQuery'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/ContentPageCount'
+      responses:
+        '200':
+          description: Page list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /private/content/pages:
+    get:
+      tags:
+        - Content
+      operationId: listPrivatePages
+      summary: List page summaries for administration
+      description: Lists store-scoped page content for an authorized administrator.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/OptionalLanguageQuery'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/ContentPageCount'
+      responses:
+        '200':
+          description: Page list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /content/pages/{code}:
+    get:
+      tags:
+        - Content
+      operationId: getPublicPageByCode
+      summary: Read a public page by content code
+      description: |
+        Reads a page by code within the selected store. With x-language, the
+        response contains one localized description. Without x-language, it
+        contains all available descriptions. The stored visibility value is
+        returned; this code lookup does not apply the friendly-URL visibility
+        predicate.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/OptionalLanguageHeader'
+        - $ref: '#/components/parameters/ContentCode'
+      responses:
+        '200':
+          description: Page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/ContentNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /private/content/pages/{code}:
+    get:
+      tags:
+        - Content
+      operationId: getPrivatePageByCode
+      summary: Read a page by content code for administration
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/OptionalLanguageHeader'
+        - $ref: '#/components/parameters/ContentCode'
+      responses:
+        '200':
+          description: Page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/ContentNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /content/pages/name/{name}:
+    get:
+      tags:
+        - Content
+      operationId: getPublicPageByFriendlyUrl
+      summary: Read visible page content by localized friendly URL
+      description: |
+        Resolves a page by friendly URL for the selected language and store.
+        Only visible content is eligible. An invisible or unknown page is returned
+        as CONTENT_NOT_FOUND.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/RequiredLanguageHeader'
+        - name: name
+          in: path
+          required: true
+          description: Localized friendly URL.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 120
+      responses:
+        '200':
+          description: Visible page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/ContentNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /private/content/boxes:
+    get:
+      tags:
+        - Content
+      operationId: listPrivateContentBoxes
+      summary: List content boxes for administration
+      description: |
+        Lists store-scoped content boxes ordered by ascending sortOrder. A
+        language-specific response applies the box description formatting rule
+        that removes control characters and wraps the result in CDATA.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/OptionalLanguageQuery'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/ContentPageCount'
+      responses:
+        '200':
+          description: Content-box list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /content/boxes:
+    get:
+      tags:
+        - Content
+      operationId: listPublicContentBoxes
+      summary: List public content boxes
+      description: Lists store-scoped content boxes using the public projection.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/OptionalLanguageQuery'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/ContentPageCount'
+      responses:
+        '200':
+          description: Content-box list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /private/content/boxes/{code}:
+    get:
+      tags:
+        - Content
+      operationId: getPrivateContentBoxByCode
+      summary: Read a content box by code for administration
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/OptionalLanguageHeader'
+        - $ref: '#/components/parameters/ContentCode'
+      responses:
+        '200':
+          description: Content box
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/ContentNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /content/boxes/{code}:
+    get:
+      tags:
+        - Content
+      operationId: getPublicContentBoxByCode
+      summary: Read a public content box by code
+      description: |
+        Reads a content box by code. With x-language, the selected description
+        uses box-specific CDATA formatting. Without x-language, all descriptions
+        are returned without applying the single-language wrapper to each entry.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/OptionalLanguageHeader'
+        - $ref: '#/components/parameters/ContentCode'
+      responses:
+        '200':
+          description: Content box
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/ContentNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /private/content/page:
+    post:
+      tags:
+        - Content
+      operationId: createContentPage
+      summary: Create a content page
+      description: |
+        Creates a page in the selected store. The operation assigns PAGE as the
+        content type regardless of any compatibility field supplied by the client.
+        Content codes are unique across pages, boxes, and sections within the store.
+        Submitted descriptions replace the localized description collection.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePageRequest'
+      responses:
+        '201':
+          description: Page created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityIdResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/ContentCodeConflict'
+        '422':
+          $ref: '#/components/responses/LanguageNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /private/content/page/{contentId}:
+    put:
+      tags:
+        - Content
+      operationId: replaceContentPage
+      summary: Replace a content page
+      description: |
+        Replaces a page and its submitted localized descriptions in the selected
+        store. The operation always persists PAGE and does not accept a client
+        content type as a type-selection field. PUT is idempotent for the same
+        tenant, store, content identifier, and request representation.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/OptionalIdempotencyKey'
+        - $ref: '#/components/parameters/ContentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePageRequest'
+      responses:
+        '204':
+          description: Page replaced successfully. The response body is empty.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/ContentNotFound'
+        '422':
+          $ref: '#/components/responses/LanguageNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags:
+        - Content
+      operationId: deleteContentPage
+      summary: Delete a content page
+      description: Deletes a page only when its identifier belongs to the selected store.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/OptionalIdempotencyKey'
+        - $ref: '#/components/parameters/ContentId'
+      responses:
+        '204':
+          description: Page deleted
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/ContentNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /private/content/page/{code}/exists:
+    get:
+      tags:
+        - Content
+      operationId: pageCodeExists
+      summary: Check page-code existence
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ContentCode'
+      responses:
+        '200':
+          description: Existence result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityExistsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /private/content/box:
+    post:
+      tags:
+        - Content
+      operationId: createContentBox
+      summary: Create a content box
+      description: |
+        Creates a BOX item in the selected store. The operation ignores any
+        compatibility contentType field and assigns BOX. Content codes are unique
+        across all content types within the store.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBoxRequest'
+      responses:
+        '201':
+          description: Content box created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityIdResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/ContentCodeConflict'
+        '422':
+          $ref: '#/components/responses/LanguageNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /private/content/box/{contentId}:
+    put:
+      tags:
+        - Content
+      operationId: replaceContentBox
+      summary: Replace a content box
+      description: |
+        Replaces a BOX item and its submitted localized descriptions. Omitted
+        descriptions are removed from the submitted collection. PUT is idempotent
+        for the same tenant, store, content identifier, and request representation.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/OptionalIdempotencyKey'
+        - $ref: '#/components/parameters/ContentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBoxRequest'
+      responses:
+        '204':
+          description: Content box replaced successfully. The response body is empty.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/ContentNotFound'
+        '422':
+          $ref: '#/components/responses/LanguageNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags:
+        - Content
+      operationId: deleteContentBox
+      summary: Delete a content box
+      description: Deletes a content box only in its owning store.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/OptionalIdempotencyKey'
+        - $ref: '#/components/parameters/ContentId'
+      responses:
+        '204':
+          description: Content box deleted
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/ContentNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /private/content/box/{code}/exists:
+    get:
+      tags:
+        - Content
+      operationId: contentBoxCodeExists
+      summary: Check content-box code existence
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ContentCode'
+      responses:
+        '200':
+          description: Existence result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntityExistsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /private/content/files:
+    get:
+      tags:
+        - Content Files
+      operationId: listContentFiles
+      summary: List content files
+      description: |
+        Lists files in the selected store, content-type namespace, and folder.
+        The selected provider must support listing. Unsupported listing returns
+        PROVIDER_CAPABILITY_UNSUPPORTED rather than a fabricated empty list.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/RequiredFileContentType'
+        - $ref: '#/components/parameters/OptionalFolderPath'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/FilePageCount'
+      responses:
+        '200':
+          description: File list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '501':
+          $ref: '#/components/responses/ProviderCapabilityUnsupported'
+        '503':
+          $ref: '#/components/responses/ProviderUnavailable'
+
+    post:
+      tags:
+        - Content Files
+      operationId: uploadContentFile
+      summary: Upload a generic content file
+      description: |
+        Uploads one file using MIME-major-component classification when the
+        content type is omitted. Same-name writes replace the object in the same
+        store, content-type, and folder namespace.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GenericFileUploadRequest'
+      responses:
+        '201':
+          description: File uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '501':
+          $ref: '#/components/responses/ProviderCapabilityUnsupported'
+        '503':
+          $ref: '#/components/responses/ProviderUnavailable'
+
+  /private/content/list:
+    get:
+      tags:
+        - Content Files
+      operationId: listImageManagerFiles
+      summary: List file-manager images
+      description: |
+        Returns image entries for the selected store and IMAGE namespace,
+        including generated static-image paths.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/OptionalParentPath'
+      responses:
+        '200':
+          description: Image listing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageFileListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '501':
+          $ref: '#/components/responses/ProviderCapabilityUnsupported'
+        '503':
+          $ref: '#/components/responses/ProviderUnavailable'
+
+  /private/content/folder:
+    get:
+      tags:
+        - Content Files
+      operationId: getImageFolderProjection
+      summary: Read the image-folder projection
+      description: Returns the provider-backed image folder projection.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/OptionalFolderPath'
+      responses:
+        '200':
+          description: Image folder projection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentFolderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '501':
+          $ref: '#/components/responses/ProviderCapabilityUnsupported'
+        '503':
+          $ref: '#/components/responses/ProviderUnavailable'
+
+  /private/content/images/add:
+    post:
+      tags:
+        - Content Files
+      operationId: uploadFileManagerImage
+      summary: Upload a file-manager image
+      description: |
+        Validates qqfilename before invoking the storage boundary. Invalid names
+        are rejected with INVALID_FILENAME and preventRetry true.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ImageUploadRequest'
+      responses:
+        '201':
+          description: Upload status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileStatusResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/InvalidFilename'
+        '501':
+          $ref: '#/components/responses/ProviderCapabilityUnsupported'
+        '503':
+          $ref: '#/components/responses/ProviderUnavailable'
+
+  /private/file:
+    post:
+      tags:
+        - Content Files
+        - Legacy Compatibility
+      operationId: uploadLegacySingleFile
+      summary: Upload a file through the legacy single-file alias
+      description: |
+        Compatibility alias for generic single-file upload. The legacy alias
+        preserves MIME-based classification and does not apply qqfilename validation.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LegacySingleFileUploadRequest'
+      responses:
+        '201':
+          description: File uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '503':
+          $ref: '#/components/responses/ProviderUnavailable'
+
+  /private/files:
+    post:
+      tags:
+        - Content Files
+        - Legacy Compatibility
+      operationId: uploadLegacyFileBatch
+      summary: Upload multiple files through the legacy alias
+      description: Each multipart file is independently classified and stored in the selected store namespace.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LegacyMultiFileUploadRequest'
+      responses:
+        '201':
+          description: File batch uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileBatchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '503':
+          $ref: '#/components/responses/ProviderUnavailable'
+
+  /content/images/download:
+    get:
+      tags:
+        - Content Files
+        - Legacy Compatibility
+      operationId: downloadPublicImage
+      summary: Download a public image
+      description: |
+        Downloads an IMAGE object identified by the basename in path. The target
+        closes the legacy null-response defect by returning bytes or an explicit error.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - name: path
+          in: query
+          required: true
+          description: Image path; its basename identifies the image.
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Image bytes
+          content:
+            application/octet-stream:
+              schema:
+                $ref: '#/components/schemas/FileDownload'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/FileNotFound'
+        '501':
+          $ref: '#/components/responses/ProviderCapabilityUnsupported'
+        '503':
+          $ref: '#/components/responses/ProviderUnavailable'
+
+  /private/content/files/{fileName}/download:
+    get:
+      tags:
+        - Content Files
+      operationId: downloadContentFile
+      summary: Download a typed content file
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/FileName'
+        - $ref: '#/components/parameters/RequiredFileContentType'
+        - $ref: '#/components/parameters/OptionalFolderPath'
+      responses:
+        '200':
+          description: File bytes
+          content:
+            application/octet-stream:
+              schema:
+                $ref: '#/components/schemas/FileDownload'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/FileNotFound'
+        '501':
+          $ref: '#/components/responses/ProviderCapabilityUnsupported'
+        '503':
+          $ref: '#/components/responses/ProviderUnavailable'
+
+  /private/content/images/rename:
+    post:
+      tags:
+        - Content Files
+      operationId: renameImage
+      summary: Rename an image
+      description: |
+        Reads the original object, retains its bytes, MIME type, and IMAGE type,
+        removes the original object, and recreates it under newName. Provider
+        failure after removal is recoverable and must not be reported as success.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImageRenameRequest'
+      responses:
+        '200':
+          description: Image renamed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileStatusResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/FileNotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '503':
+          $ref: '#/components/responses/ProviderUnavailable'
+
+  /private/content/files/rename:
+    post:
+      tags:
+        - Content Files
+      operationId: renameContentFile
+      summary: Rename a typed content file
+      description: The original content type and MIME metadata are retained even when the new extension differs.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentFileRenameRequest'
+      responses:
+        '200':
+          description: File renamed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileStatusResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/FileNotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '503':
+          $ref: '#/components/responses/ProviderUnavailable'
+
+  /private/content/images/remove:
+    delete:
+      tags:
+        - Content Files
+      operationId: deleteImage
+      summary: Delete an image
+      description: |
+        Deletes one IMAGE object in the selected tenant, store, and provider
+        namespace. Deleting an absent image is idempotent success.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/OptionalIdempotencyKey'
+        - name: path
+          in: query
+          required: true
+          description: Image path; its basename identifies the image.
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '204':
+          description: Image deleted or already absent
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '503':
+          $ref: '#/components/responses/ProviderUnavailable'
+
+  /private/content/files/{fileName}:
+    delete:
+      tags:
+        - Content Files
+      operationId: deleteContentFile
+      summary: Delete a typed content file
+      description: |
+        Deletes exactly one file in the selected tenant, store, content type,
+        folder, and filename namespace. Deleting an absent file is idempotent success.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/OptionalIdempotencyKey'
+        - $ref: '#/components/parameters/FileName'
+        - $ref: '#/components/parameters/RequiredFileContentType'
+        - $ref: '#/components/parameters/OptionalFolderPath'
+      responses:
+        '204':
+          description: File deleted or already absent
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '503':
+          $ref: '#/components/responses/ProviderUnavailable'
+
+  /private/content/folders:
+    post:
+      tags:
+        - Folders
+      operationId: createContentFolder
+      summary: Create a content folder
+      description: |
+        Creates a folder using Linux-style paths. Folder creation is idempotent
+        for the same store and resulting folder path.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/OptionalIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFolderRequest'
+      responses:
+        '201':
+          description: Folder created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FolderResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/InvalidFolderPath'
+        '501':
+          $ref: '#/components/responses/ProviderCapabilityUnsupported'
+        '503':
+          $ref: '#/components/responses/ProviderUnavailable'
+
+    get:
+      tags:
+        - Folders
+      operationId: listContentFolders
+      summary: List content folders
+      description: |
+        Lists folders when the selected provider supports folder enumeration.
+        Unsupported providers return PROVIDER_CAPABILITY_UNSUPPORTED.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/OptionalFolderPath'
+      responses:
+        '200':
+          description: Folder list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FolderListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '501':
+          $ref: '#/components/responses/ProviderCapabilityUnsupported'
+        '503':
+          $ref: '#/components/responses/ProviderUnavailable'
+
+    delete:
+      tags:
+        - Folders
+      operationId: deleteContentFolder
+      summary: Delete a content folder
+      description: |
+        Removes a folder when the selected provider supports the requested
+        operation. The service does not report success for an unavailable or
+        non-portable recursive removal capability.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/OptionalIdempotencyKey'
+        - $ref: '#/components/parameters/OptionalFolderPath'
+        - name: folderName
+          in: query
+          required: true
+          description: Single folder segment.
+          schema:
+            type: string
+            minLength: 1
+            pattern: '^[A-Za-z0-9_-]+$'
+      responses:
+        '204':
+          description: Folder deleted or already absent
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/FolderNotFound'
+        '422':
+          $ref: '#/components/responses/InvalidFolderPath'
+        '501':
+          $ref: '#/components/responses/ProviderCapabilityUnsupported'
+        '503':
+          $ref: '#/components/responses/ProviderUnavailable'
+
+  /config:
+    get:
+      tags:
+        - Configuration
+      operationId: getPublicConfiguration
+      summary: Get the public configuration projection
+      description: |
+        Returns only public merchant configuration fields. Internal flags,
+        search paths, encrypted values, payment credentials, and shipping
+        credentials are never returned. Missing CONFIG state produces an explicit
+        platform-default projection.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200':
+          description: Public configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicConfiguration'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/ConfigurationUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /private/configuration:
+    get:
+      tags:
+        - Configuration
+      operationId: getMerchantConfiguration
+      summary: Get the typed merchant configuration
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+      responses:
+        '200':
+          description: Typed merchant configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MerchantConfigurationPayload'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/ConfigurationNotFound'
+        '422':
+          $ref: '#/components/responses/ConfigurationParseError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags:
+        - Configuration
+      operationId: saveMerchantConfiguration
+      summary: Save the typed merchant configuration
+      description: |
+        Creates or replaces the store-scoped CONFIG record. Boolean flags are
+        serialized as JSON booleans. Null map values and blank search paths are
+        omitted.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/OptionalIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MerchantConfigurationPayload'
+      responses:
+        '200':
+          description: Saved merchant configuration
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MerchantConfigurationPayload'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /private/configurations/{key}:
+    get:
+      tags:
+        - Configuration
+      operationId: getMerchantConfigurationRecord
+      summary: Get one merchant configuration record
+      description: |
+        Returns configuration metadata and value state. Encrypted values are
+        never returned as plaintext.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ConfigurationKey'
+      responses:
+        '200':
+          description: Merchant configuration record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MerchantConfigurationRecord'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/ConfigurationNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags:
+        - Configuration
+      operationId: saveMerchantConfigurationRecord
+      summary: Save one merchant configuration record
+      description: |
+        Creates or replaces a record identified by tenant, store, and key.
+        Sensitive integration values are serialized and encrypted before persistence.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/OptionalIdempotencyKey'
+        - $ref: '#/components/parameters/ConfigurationKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MerchantConfigurationRecordRequest'
+      responses:
+        '200':
+          description: Saved merchant configuration record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MerchantConfigurationRecord'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /private/modules/payment:
+    get:
+      tags:
+        - Modules
+      operationId: listPaymentModules
+      summary: List available payment modules
+      description: |
+        Discovers payment metadata available to the store, filters by country
+        or wildcard region, hydrates cached metadata, and appends runtime payment
+        starters. configured and active are distinct states.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+      responses:
+        '200':
+          description: Payment module summaries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentModuleSummaryListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/ProviderUnavailable'
+
+  /private/modules/payment/{code}:
+    get:
+      tags:
+        - Modules
+      operationId: getPaymentModule
+      summary: Get payment module details
+      description: |
+        Returns module metadata and the selected store's configuration state.
+        Sensitive values are masked or omitted and encrypted merchant values are
+        never serialized.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ModuleCode'
+      responses:
+        '200':
+          description: Payment module detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentModuleDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/ModuleNotFound'
+        '503':
+          $ref: '#/components/responses/ProviderUnavailable'
+
+    put:
+      tags:
+        - Modules
+      operationId: savePaymentModuleConfiguration
+      summary: Validate and save payment module configuration
+      description: |
+        Verifies module availability, invokes the MS-12 provider-validation
+        boundary, rejects invalid values before persistence, merges the module
+        into PAYMENT_MODULES, and encrypts the resulting configuration. This
+        operation does not authorize, capture, or execute a payment.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/OptionalIdempotencyKey'
+        - $ref: '#/components/parameters/ModuleCode'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModuleConfigurationRequest'
+      responses:
+        '200':
+          description: Payment module configuration saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentModuleDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/ModuleNotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ModuleConfigurationInvalid'
+        '503':
+          $ref: '#/components/responses/ProviderUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /private/modules/shipping:
+    get:
+      tags:
+        - Modules
+      operationId: listShippingModules
+      summary: List available shipping modules
+      description: |
+        Discovers shipping metadata available to the store, filtered by country
+        or wildcard region. Shipping discovery does not append payment starters.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+      responses:
+        '200':
+          description: Shipping module summaries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShippingModuleSummaryListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/ProviderUnavailable'
+
+  /private/modules/shipping/{code}:
+    get:
+      tags:
+        - Modules
+      operationId: getShippingModule
+      summary: Get shipping module details
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ModuleCode'
+      responses:
+        '200':
+          description: Shipping module detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShippingModuleDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/ModuleNotFound'
+        '503':
+          $ref: '#/components/responses/ProviderUnavailable'
+
+    put:
+      tags:
+        - Modules
+      operationId: saveShippingModuleConfiguration
+      summary: Validate and save shipping module configuration
+      description: |
+        Invokes the MS-12 shipping provider-validation boundary before saving
+        encrypted configuration under SHIPPING_MODULES. This operation does not
+        calculate a shipping quote or execute a carrier operation.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/OptionalIdempotencyKey'
+        - $ref: '#/components/parameters/ModuleCode'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModuleConfigurationRequest'
+      responses:
+        '200':
+          description: Shipping module configuration saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShippingModuleDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/ModuleNotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ModuleConfigurationInvalid'
+        '503':
+          $ref: '#/components/responses/ProviderUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /services/private/system/module:
+    post:
+      tags:
+        - Modules
+      operationId: replaceIntegrationModuleDefinition
+      summary: Replace a global integration-module definition
+      description: |
+        Replaces a global module definition by code, invalidates or versions the
+        affected discovery cache, and preserves config1 and config2 as distinct
+        environment fields. The operation stores metadata only and does not
+        execute payment or shipping provider operations. x-store-id is not required.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModuleReplacementRequest'
+          text/plain:
+            schema:
+              $ref: '#/components/schemas/ModuleReplacementRequest'
+      responses:
+        '200':
+          description: Module definition replaced
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModuleReplacementResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '503':
+          $ref: '#/components/responses/ProviderUnavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /private/content/any/{code}:
+    get:
+      tags:
+        - Content
+        - Legacy Compatibility
+      operationId: getDeprecatedFullContentByCode
+      summary: Read full content through the compatibility route
+      deprecated: true
+      description: Returns the deprecated full content projection for pages, boxes, or sections.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/OptionalLanguageHeader'
+        - $ref: '#/components/parameters/ContentCode'
+      responses:
+        '200':
+          description: Deprecated full content projection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeprecatedContentFull'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/ContentNotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /private/contents/any:
+    get:
+      tags:
+        - Content
+        - Legacy Compatibility
+      operationId: listDeprecatedFullContent
+      summary: List full content through the compatibility route
+      deprecated: true
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/ContentPageCount'
+      responses:
+        '200':
+          description: Deprecated full content list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeprecatedContentFullListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /content/summary:
+    get:
+      tags:
+        - Legacy Compatibility
+      operationId: getRetiredContentSummary
+      summary: Retired content summary operation
+      deprecated: true
+      description: The legacy method returned null and is retired.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '410':
+          $ref: '#/components/responses/LegacyOperationRetired'
+
+  /content/folder:
+    delete:
+      tags:
+        - Folders
+        - Legacy Compatibility
+      operationId: retireLegacyContentFolderDelete
+      summary: Retired legacy folder operation
+      deprecated: true
+      description: The legacy misnamed folder-create method was empty and is retired.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/OptionalIdempotencyKey'
+      responses:
+        '410':
+          $ref: '#/components/responses/LegacyOperationRetired'
+
+  /private/content/{contentId}:
+    put:
+      tags:
+        - Content
+        - Legacy Compatibility
+      operationId: retireLegacyGenericContentUpdate
+      summary: Retired generic content update
+      deprecated: true
+      description: The legacy operation changed the request identifier without persisting content.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/OptionalIdempotencyKey'
+        - $ref: '#/components/parameters/ContentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetiredOperationRequest'
+      responses:
+        '410':
+          $ref: '#/components/responses/LegacyOperationRetired'
+
+    delete:
+      tags:
+        - Content
+        - Legacy Compatibility
+      operationId: retireLegacyGenericContentDelete
+      summary: Retired generic content delete
+      deprecated: true
+      description: The generic legacy content delete route is not part of the target contract.
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/OptionalIdempotencyKey'
+        - $ref: '#/components/parameters/ContentId'
+      responses:
+        '410':
+          $ref: '#/components/responses/LegacyOperationRetired'
+
+  /private/configurations/payment:
+    get:
+      tags:
+        - Configuration
+        - Legacy Compatibility
+      operationId: retireLegacyPaymentConfigurationRead
+      summary: Retired legacy payment configuration read
+      deprecated: true
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+      responses:
+        '410':
+          $ref: '#/components/responses/LegacyOperationRetired'
+    post:
+      tags:
+        - Configuration
+        - Legacy Compatibility
+      operationId: retireLegacyPaymentConfigurationWrite
+      summary: Retired legacy payment configuration write
+      deprecated: true
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/OptionalIdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetiredOperationRequest'
+      responses:
+        '410':
+          $ref: '#/components/responses/LegacyOperationRetired'
+
+  /private/configurations/shipping:
+    get:
+      tags:
+        - Configuration
+        - Legacy Compatibility
+      operationId: retireLegacyShippingConfigurationRead
+      summary: Retired legacy shipping configuration read
+      deprecated: true
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+      responses:
+        '410':
+          $ref: '#/components/responses/LegacyOperationRetired'
+    post:
+      tags:
+        - Configuration
+        - Legacy Compatibility
+      operationId: retireLegacyShippingConfigurationWrite
+      summary: Retired legacy shipping configuration write
+      deprecated: true
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/OptionalIdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetiredOperationRequest'
+      responses:
+        '410':
+          $ref: '#/components/responses/LegacyOperationRetired'
+
+  /services/private/system/optin:
+    post:
+      tags:
+        - Legacy Compatibility
+      operationId: retireLegacyOptInCreate
+      summary: Retired legacy opt-in creation
+      deprecated: true
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetiredOperationRequest'
+      responses:
+        '410':
+          $ref: '#/components/responses/LegacyOperationRetired'
+
+  /services/private/system/optin/{code}:
+    delete:
+      tags:
+        - Legacy Compatibility
+      operationId: retireLegacyOptInDelete
+      summary: Retired legacy opt-in deletion
+      deprecated: true
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/OptionalIdempotencyKey'
+        - name: code
+          in: path
+          required: true
+          description: Legacy opt-in code.
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '410':
+          $ref: '#/components/responses/LegacyOperationRetired'
+
+  /services/private/system/optin/{code}/customer:
+    post:
+      tags:
+        - Legacy Compatibility
+      operationId: retireLegacyCustomerOptInCreate
+      summary: Retired legacy customer opt-in creation
+      deprecated: true
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: code
+          in: path
+          required: true
+          description: Legacy opt-in code.
+          schema:
+            type: string
+            minLength: 1
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetiredOperationRequest'
+      responses:
+        '410':
+          $ref: '#/components/responses/LegacyOperationRetired'
+
+components:
+  parameters:
+    TenantId:
+      name: x-tenant-id
+      in: header
+      required: true
+      description: Tenant isolation key.
+      schema:
+        type: string
+        format: uuid
+    StoreId:
+      name: x-store-id
+      in: header
+      required: true
+      description: Store isolation key within the tenant.
+      schema:
+        type: string
+        format: uuid
+    CorrelationId:
+      name: x-correlation-id
+      in: header
+      required: true
+      description: Distributed tracing identifier.
+      schema:
+        type: string
+        format: uuid
+    Authorization:
+      name: Authorization
+      in: header
+      required: true
+      description: Bearer token for authenticated operations.
+      schema:
+        type: string
+        pattern: '^Bearer .+$'
+    OptionalLanguageHeader:
+      name: x-language
+      in: header
+      required: false
+      description: ISO language code for a localized projection.
+      schema:
+        type: string
+        minLength: 2
+        maxLength: 10
+        pattern: '^[A-Za-z]{2,10}$'
+    RequiredLanguageHeader:
+      name: x-language
+      in: header
+      required: true
+      description: ISO language code required for friendly-URL lookup.
+      schema:
+        type: string
+        minLength: 2
+        maxLength: 10
+        pattern: '^[A-Za-z]{2,10}$'
+    OptionalIdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Optional key for safe replay of an idempotent mutation.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Required key for retryable creation, upload, rename, or replacement.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+    ContentId:
+      name: contentId
+      in: path
+      required: true
+      description: Content identifier.
+      schema:
+        type: string
+        format: uuid
+    ContentCode:
+      name: code
+      in: path
+      required: true
+      description: Store-scoped content code.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 100
+    ModuleCode:
+      name: code
+      in: path
+      required: true
+      description: Integration-module code.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 100
+    ConfigurationKey:
+      name: key
+      in: path
+      required: true
+      description: Merchant configuration key.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+    FileName:
+      name: fileName
+      in: path
+      required: true
+      description: Basename of the content file.
+      schema:
+        type: string
+        minLength: 1
+        pattern: '^(?!.*\.\.)[^/\\]+$'
+    Page:
+      name: page
+      in: query
+      required: false
+      description: Zero-based page index.
+      schema:
+        type: integer
+        format: int32
+        minimum: 0
+        default: 0
+    ContentPageCount:
+      name: count
+      in: query
+      required: false
+      description: Number of content items per page.
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        default: 20
+    FilePageCount:
+      name: count
+      in: query
+      required: false
+      description: Number of files per page.
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        default: 100
+    OptionalLanguageQuery:
+      name: language
+      in: query
+      required: false
+      description: Target language. When absent, all descriptions are returned.
+      schema:
+        type: string
+        minLength: 2
+        maxLength: 10
+        pattern: '^[A-Za-z]{2,10}$'
+    RequiredFileContentType:
+      name: contentType
+      in: query
+      required: true
+      description: File-content namespace.
+      schema:
+        $ref: '#/components/schemas/FileContentType'
+    OptionalFolderPath:
+      name: path
+      in: query
+      required: false
+      description: Linux-style folder path.
+      schema:
+        type: string
+        default: /
+        pattern: '^/$|^(/[A-Za-z0-9_-]+)+$'
+    OptionalParentPath:
+      name: parentPath
+      in: query
+      required: false
+      description: URL-encoded image path. Blank values resolve to the root path.
+      schema:
+        type: string
+        default: /
+    RetiredOperationRequest:
+      name: unused
+      in: query
+      required: false
+      schema:
+        type: string
+
+  responses:
+    BadRequest:
+      description: Invalid request context or payload.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Authentication required.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Caller is not authorized for the selected tenant or store.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ContentNotFound:
+      description: Content identifier, code, or friendly URL was not found in the selected store.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    FileNotFound:
+      description: File was not found in the selected namespace.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    FolderNotFound:
+      description: Folder was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ModuleNotFound:
+      description: Module is unavailable to the selected store.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ConfigurationNotFound:
+      description: Merchant configuration key was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ConfigurationUnavailable:
+      description: No usable merchant configuration is available.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ConfigurationParseError:
+      description: Merchant configuration could not be parsed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ContentCodeConflict:
+      description: Content code already exists in the selected store.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Mutation conflicts with existing state or an idempotency replay.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UnprocessableEntity:
+      description: Domain validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    LanguageNotFound:
+      description: Submitted language code does not resolve in shared reference data.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InvalidFilename:
+      description: File-manager filename validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InvalidFolderPath:
+      description: Folder path is not valid Linux-style directory syntax.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ModuleConfigurationInvalid:
+      description: Provider validation rejected module keys or options.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ProviderCapabilityUnsupported:
+      description: Selected provider does not support the requested operation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ProviderUnavailable:
+      description: Selected provider or provider-validation boundary is unavailable.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    LegacyOperationRetired:
+      description: Legacy operation was explicitly nonfunctional and is retired.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: Unexpected server error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+        - message
+        - statusCode
+        - timestamp
+        - correlationId
+      properties:
+        error:
+          type: string
+          description: Stable machine-readable error code.
+          enum:
+            - INVALID_REQUEST_CONTEXT
+            - INVALID_CONTENT_REQUEST
+            - INVALID_FILENAME
+            - INVALID_FOLDER_PATH
+            - LANGUAGE_NOT_FOUND
+            - CONTENT_CODE_CONFLICT
+            - CONTENT_NOT_FOUND
+            - FILE_NOT_FOUND
+            - FOLDER_NOT_FOUND
+            - MODULE_NOT_FOUND
+            - CONFIGURATION_NOT_FOUND
+            - CONFIGURATION_UNAVAILABLE
+            - CONFIGURATION_PARSE_ERROR
+            - MODULE_CONFIGURATION_INVALID
+            - PROVIDER_UNAVAILABLE
+            - PROVIDER_CAPABILITY_UNSUPPORTED
+            - LEGACY_OPERATION_RETIRED
+            - FORBIDDEN_STORE_SCOPE
+            - CONFLICT
+            - INTERNAL_ERROR
+        message:
+          type: string
+        statusCode:
+          type: integer
+          format: int32
+        timestamp:
+          type: string
+          format: date-time
+        correlationId:
+          type: string
+          format: uuid
+        details:
+          type: object
+          additionalProperties: true
+
+    PaginationInfo:
+      type: object
+      additionalProperties: false
+      required:
+        - page
+        - pageSize
+        - totalItems
+        - totalPages
+      properties:
+        page:
+          type: integer
+          format: int32
+          minimum: 0
+        pageSize:
+          type: integer
+          format: int32
+          minimum: 1
+        totalItems:
+          type: integer
+          format: int64
+          minimum: 0
+        totalPages:
+          type: integer
+          format: int32
+          minimum: 0
+
+    ContentDescription:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - language
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        language:
+          type: string
+          minLength: 2
+          maxLength: 10
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        title:
+          type: [string, "null"]
+          maxLength: 100
+        description:
+          type: [string, "null"]
+        friendlyUrl:
+          type: [string, "null"]
+          maxLength: 120
+        metaKeywords:
+          type: [string, "null"]
+        metaTitle:
+          type: [string, "null"]
+          maxLength: 100
+        metaDescription:
+          type: [string, "null"]
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        modifiedBy:
+          type: [string, "null"]
+          maxLength: 60
+          readOnly: true
+
+    ContentDescriptionInput:
+      type: object
+      additionalProperties: false
+      required:
+        - language
+        - name
+      properties:
+        language:
+          type: string
+          minLength: 2
+          maxLength: 10
+          pattern: '^[A-Za-z]{2,10}$'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        title:
+          type: [string, "null"]
+          maxLength: 100
+        description:
+          type: [string, "null"]
+        friendlyUrl:
+          type: [string, "null"]
+          maxLength: 120
+        metaKeywords:
+          type: [string, "null"]
+        metaDescription:
+          type: [string, "null"]
+
+    ContentItem:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - code
+        - contentType
+        - visible
+        - sortOrder
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          minLength: 1
+          maxLength: 100
+        contentType:
+          type: string
+          enum:
+            - Box
+            - Page
+            - Section
+        contentPosition:
+          type: [string, "null"]
+          enum:
+            - Left
+            - Right
+            - null
+        linkToMenu:
+          type: boolean
+        productGroup:
+          type: [string, "null"]
+        sortOrder:
+          type: integer
+          format: int32
+        visible:
+          type: boolean
+        description:
+          anyOf:
+            - $ref: '#/components/schemas/ContentDescription'
+            - type: "null"
+        descriptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContentDescription'
+        tenantId:
+          type: string
+          format: uuid
+          readOnly: true
+        storeId:
+          type: string
+          format: uuid
+          readOnly: true
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        modifiedBy:
+          type: [string, "null"]
+          maxLength: 60
+          readOnly: true
+
+    ContentListResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - page
+        - count
+        - number
+        - totalPages
+        - recordsTotal
+        - recordsFiltered
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContentItem'
+        page:
+          type: integer
+          format: int32
+          minimum: 0
+        count:
+          type: integer
+          format: int32
+          minimum: 1
+        number:
+          type: integer
+          format: int32
+          minimum: 0
+        totalPages:
+          type: integer
+          format: int32
+          minimum: 0
+        recordsTotal:
+          type: integer
+          format: int64
+          minimum: 0
+        recordsFiltered:
+          type: integer
+          format: int64
+          minimum: 0
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+
+    CreatePageRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - visible
+        - linkToMenu
+        - descriptions
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 100
+        visible:
+          type: boolean
+        linkToMenu:
+          type: boolean
+        sortOrder:
+          type: integer
+          format: int32
+          default: 0
+        contentPosition:
+          type: [string, "null"]
+          enum:
+            - Left
+            - Right
+            - null
+        productGroup:
+          type: [string, "null"]
+        descriptions:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ContentDescriptionInput'
+
+    UpdatePageRequest:
+      allOf:
+        - $ref: '#/components/schemas/CreatePageRequest'
+
+    CreateBoxRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - visible
+        - descriptions
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 100
+        visible:
+          type: boolean
+        sortOrder:
+          type: integer
+          format: int32
+          default: 0
+        contentPosition:
+          type: [string, "null"]
+          enum:
+            - Left
+            - Right
+            - null
+        productGroup:
+          type: [string, "null"]
+        descriptions:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ContentDescriptionInput'
+
+    UpdateBoxRequest:
+      allOf:
+        - $ref: '#/components/schemas/CreateBoxRequest'
+
+    EntityIdResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
+
+    EntityExistsResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - exists
+      properties:
+        exists:
+          type: boolean
+
+    FileContentType:
+      type: string
+      enum:
+        - StaticFile
+        - Image
+        - Logo
+        - Product
+        - ProductLg
+        - Property
+        - Variant
+        - Manufacturer
+        - ProductDigital
+        - ApiImage
+        - ApiFile
+
+    FileState:
+      type: string
+      enum:
+        - Pending
+        - Available
+        - RenamePending
+        - Deleted
+
+    ProviderName:
+      type: string
+      enum:
+        - Default
+        - Httpd
+        - Aws
+        - Gcp
+
+    ContentFile:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - tenantId
+        - storeId
+        - fileName
+        - fileContentType
+        - folderPath
+        - providerName
+        - providerKey
+        - state
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        storeId:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+          minLength: 1
+          pattern: '^(?!.*\.\.)[^/\\]+$'
+        mimeType:
+          type: [string, "null"]
+          maxLength: 255
+        fileContentType:
+          $ref: '#/components/schemas/FileContentType'
+        folderPath:
+          type: string
+          default: /
+          pattern: '^/$|^(/[A-Za-z0-9_-]+)+$'
+        providerName:
+          $ref: '#/components/schemas/ProviderName'
+        providerKey:
+          type: string
+          minLength: 1
+        state:
+          $ref: '#/components/schemas/FileState'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    FileResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - fileName
+        - contentType
+        - path
+        - provider
+        - state
+      properties:
+        id:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+          pattern: '^(?!.*\.\.)[^/\\]+$'
+        mimeType:
+          type: [string, "null"]
+        contentType:
+          $ref: '#/components/schemas/FileContentType'
+        path:
+          type: string
+        provider:
+          $ref: '#/components/schemas/ProviderName'
+        state:
+          $ref: '#/components/schemas/FileState'
+        downloadPath:
+          type: [string, "null"]
+
+    FileListResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - page
+        - count
+        - number
+        - totalPages
+        - recordsTotal
+        - recordsFiltered
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileResponse'
+        page:
+          type: integer
+          format: int32
+          minimum: 0
+        count:
+          type: integer
+          format: int32
+          minimum: 1
+        number:
+          type: integer
+          format: int32
+          minimum: 0
+        totalPages:
+          type: integer
+          format: int32
+          minimum: 0
+        recordsTotal:
+          type: integer
+          format: int64
+          minimum: 0
+        recordsFiltered:
+          type: integer
+          format: int64
+          minimum: 0
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+
+    FileStatusResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - success
+        - error
+        - preventRetry
+      properties:
+        success:
+          type: boolean
+        error:
+          type: [string, "null"]
+        preventRetry:
+          type: boolean
+
+    FileBatchResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/FileResponse'
+
+    ImageFile:
+      type: object
+      additionalProperties: false
+      required:
+        - url
+        - name
+        - dir
+        - path
+        - id
+      properties:
+        url:
+          type: string
+        name:
+          type: string
+        size:
+          type: [integer, "null"]
+          format: int64
+        dir:
+          type: boolean
+        path:
+          type: string
+        id:
+          type: string
+
+    ImageFileListResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/ImageFile'
+
+    PaymentModuleSummaryListResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/PaymentModuleSummary'
+
+    ShippingModuleSummaryListResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/ShippingModuleSummary'
+
+    DeprecatedContentFullListResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/DeprecatedContentFull'
+
+    ContentFolderEntry:
+      type: object
+      additionalProperties: false
+      required:
+        - name
+        - path
+      properties:
+        name:
+          type: string
+        path:
+          type: string
+
+    ContentFolderResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - path
+        - content
+      properties:
+        path:
+          type: string
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContentFolderEntry'
+
+    FolderResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - path
+      properties:
+        path:
+          type: string
+        created:
+          type: boolean
+
+    FolderListResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - path
+        - folders
+      properties:
+        path:
+          type: string
+        folders:
+          type: array
+          items:
+            type: string
+
+    GenericFileUploadRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - file
+      properties:
+        file:
+          type: string
+          format: binary
+        fileName:
+          type: [string, "null"]
+          pattern: '^(?!.*\.\.)[^/\\]+$'
+        contentType:
+          anyOf:
+            - $ref: '#/components/schemas/FileContentType'
+            - type: "null"
+        path:
+          type: string
+          default: /
+          pattern: '^/$|^(?!.*\.\.)(/[A-Za-z0-9_-]+)+$'
+
+    ImageUploadRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - qqfile
+        - qquuid
+        - qqfilename
+      properties:
+        qqfile:
+          type: string
+          format: binary
+        qquuid:
+          type: string
+          minLength: 1
+        qqfilename:
+          type: string
+          minLength: 1
+          pattern: '^(?!.*\.\.)[^/\\]+$'
+        qqtotalfilesize:
+          type: [integer, "null"]
+          format: int64
+          minimum: 0
+        parentPath:
+          type: [string, "null"]
+          pattern: '^/$|^(?!.*\.\.)(/[A-Za-z0-9_-]+)+$'
+        qqpartindex:
+          type: [integer, "null"]
+          format: int32
+          minimum: 0
+        qqtotalparts:
+          type: [integer, "null"]
+          format: int32
+          minimum: 1
+
+    LegacySingleFileUploadRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - file
+      properties:
+        file:
+          type: string
+          format: binary
+
+    LegacyMultiFileUploadRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - file
+      properties:
+        file:
+          type: array
+          items:
+            type: string
+            format: binary
+          minItems: 1
+
+    ImageRenameRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - path
+        - newName
+      properties:
+        path:
+          type: string
+          minLength: 1
+          pattern: '^(?!.*\.\.).+$'
+        newName:
+          type: string
+          minLength: 1
+          pattern: '^(?!.*\.\.)[^/\\]+$'
+
+    ContentFileRenameRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - fileName
+        - newName
+        - contentType
+      properties:
+        fileName:
+          type: string
+          minLength: 1
+          pattern: '^(?!.*\.\.)[^/\\]+$'
+        newName:
+          type: string
+          minLength: 1
+          pattern: '^(?!.*\.\.)[^/\\]+$'
+        contentType:
+          $ref: '#/components/schemas/FileContentType'
+        path:
+          type: string
+          default: /
+          pattern: '^/$|^(/[A-Za-z0-9_-]+)+$'
+
+    CreateFolderRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - folderName
+      properties:
+        path:
+          type: string
+          default: /
+          pattern: '^/$|^(/[A-Za-z0-9_-]+)+$'
+        folderName:
+          type: string
+          minLength: 1
+          pattern: '^[A-Za-z0-9_-]+$'
+
+    PublicConfiguration:
+      type: object
+      additionalProperties: false
+      required:
+        - allowOnlinePurchase
+        - displaySearchBox
+        - displayContactUs
+        - displayShipping
+        - displayCustomerSection
+        - displayAddToCartOnFeaturedItems
+        - displayCustomerAgreement
+        - displayPagesMenu
+      properties:
+        facebook:
+          type: [string, "null"]
+        pinterest:
+          type: [string, "null"]
+        ga:
+          type: [string, "null"]
+        instagram:
+          type: [string, "null"]
+        allowOnlinePurchase:
+          type: boolean
+        displaySearchBox:
+          type: boolean
+        displayContactUs:
+          type: boolean
+        displayShipping:
+          type: boolean
+        displayCustomerSection:
+          type: boolean
+        displayAddToCartOnFeaturedItems:
+          type: boolean
+        displayCustomerAgreement:
+          type: boolean
+        displayPagesMenu:
+          type: boolean
+
+    MerchantConfigurationPayload:
+      type: object
+      additionalProperties: false
+      required:
+        - displayCustomerSection
+      properties:
+        displayCustomerSection:
+          type: boolean
+          default: false
+        displayContactUs:
+          type: boolean
+          default: false
+        displayStoreAddress:
+          type: boolean
+          default: false
+        displayAddToCartOnFeaturedItems:
+          type: boolean
+          default: false
+        displayCustomerAgreement:
+          type: boolean
+          default: false
+        displayPagesMenu:
+          type: boolean
+          default: true
+        allowPurchaseItems:
+          type: boolean
+          default: true
+        displaySearchBox:
+          type: boolean
+          default: true
+        testMode:
+          type: boolean
+          default: false
+        debugMode:
+          type: boolean
+          default: false
+        useDefaultSearchConfig:
+          type: object
+          additionalProperties:
+            type: boolean
+        defaultSearchConfigPath:
+          type: object
+          additionalProperties:
+            type: string
+        socialValues:
+          type: object
+          additionalProperties:
+            type: string
+
+    MerchantConfigurationType:
+      type: string
+      enum:
+        - Integration
+        - Shop
+        - Config
+        - Social
+
+    ConfigurationValueState:
+      type: string
+      enum:
+        - Encrypted
+        - Present
+        - Absent
+
+    MerchantConfigurationRecord:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - key
+        - type
+        - active
+        - valueState
+      properties:
+        id:
+          type: string
+          format: uuid
+        key:
+          type: string
+        type:
+          $ref: '#/components/schemas/MerchantConfigurationType'
+        active:
+          type: boolean
+        value:
+          type: [string, "null"]
+          writeOnly: true
+        valueState:
+          $ref: '#/components/schemas/ConfigurationValueState'
+        tenantId:
+          type: string
+          format: uuid
+          readOnly: true
+        storeId:
+          type: string
+          format: uuid
+          readOnly: true
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+        modifiedBy:
+          type: [string, "null"]
+          readOnly: true
+
+    MerchantConfigurationRecordRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - active
+      properties:
+        type:
+          $ref: '#/components/schemas/MerchantConfigurationType'
+        active:
+          type: boolean
+        value:
+          type: object
+          additionalProperties: true
+
+    ModuleEnvironment:
+      type: object
+      additionalProperties: false
+      required:
+        - env
+      properties:
+        env:
+          type: string
+          enum:
+            - Test
+            - Prod
+            - Production
+        scheme:
+          type: [string, "null"]
+        host:
+          type: [string, "null"]
+        port:
+          type: [string, "null"]
+        uri:
+          type: [string, "null"]
+        config1:
+          type: [string, "null"]
+        config2:
+          type: [string, "null"]
+
+    ModuleConfigurationRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - active
+        - integrationKeys
+        - integrationOptions
+        - environment
+      properties:
+        active:
+          type: boolean
+        defaultSelected:
+          type: boolean
+          default: false
+        integrationKeys:
+          type: object
+          additionalProperties:
+            type: [string, "null"]
+        integrationOptions:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        environment:
+          type: string
+          enum:
+            - Test
+            - Production
+
+    PaymentModuleSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - active
+        - configured
+        - requiredKeys
+        - configurable
+      properties:
+        code:
+          type: string
+        active:
+          type: boolean
+        configured:
+          type: boolean
+        image:
+          type: [string, "null"]
+        binaryImage:
+          type: [string, "null"]
+        requiredKeys:
+          type: array
+          items:
+            type: string
+        configurable:
+          type: string
+          enum:
+            - "true"
+            - "false"
+
+    ShippingModuleSummary:
+      allOf:
+        - $ref: '#/components/schemas/PaymentModuleSummary'
+
+    PaymentModuleDetail:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - active
+        - defaultSelected
+        - requiredKeys
+        - integrationKeys
+        - integrationOptions
+        - environment
+        - secretsPresent
+      properties:
+        code:
+          type: string
+        configurable:
+          type: string
+          enum:
+            - "true"
+            - "false"
+        active:
+          type: boolean
+        configured:
+          type: boolean
+        defaultSelected:
+          type: boolean
+        requiredKeys:
+          type: array
+          items:
+            type: string
+        integrationKeys:
+          type: object
+          additionalProperties:
+            type: [string, "null"]
+        integrationOptions:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        environment:
+          type: string
+          enum:
+            - Test
+            - Production
+        secretsPresent:
+          type: boolean
+        image:
+          type: [string, "null"]
+
+    ShippingModuleDetail:
+      allOf:
+        - $ref: '#/components/schemas/PaymentModuleDetail'
+
+    ModuleConfiguration:
+      type: object
+      additionalProperties: false
+      required:
+        - moduleConfigurationId
+        - moduleFamily
+        - code
+        - customModule
+      properties:
+        moduleConfigurationId:
+          type: string
+          format: uuid
+        moduleFamily:
+          type: string
+        code:
+          type: string
+        regions:
+          type: array
+          items:
+            type: string
+        configuration:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModuleEnvironment'
+        details:
+          type: object
+          additionalProperties: true
+        moduleType:
+          type: [string, "null"]
+        image:
+          type: [string, "null"]
+        customModule:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        modifiedBy:
+          type: [string, "null"]
+
+    ModuleReplacementRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - module
+        - code
+      properties:
+        module:
+          type: string
+          minLength: 1
+        code:
+          type: string
+          minLength: 1
+          maxLength: 100
+        type:
+          type: [string, "null"]
+        image:
+          type: [string, "null"]
+        customModule:
+          type: boolean
+          default: false
+        regions:
+          type: array
+          items:
+            type: string
+        details:
+          type: object
+          additionalProperties: true
+        configuration:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModuleEnvironment'
+
+    ModuleReplacementResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - code
+        - replaced
+        - cacheInvalidated
+      properties:
+        status:
+          type: integer
+          format: int32
+        code:
+          type: string
+        replaced:
+          type: boolean
+        cacheInvalidated:
+          type: boolean
+
+    DeprecatedContentFull:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - code
+        - contentType
+        - visible
+        - displayedInMenu
+        - descriptions
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        contentType:
+          type: string
+          enum:
+            - Box
+            - Page
+            - Section
+        visible:
+          type: boolean
+        displayedInMenu:
+          type: boolean
+        descriptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContentDescription'
+
+    FileDownload:
+      type: string
+      format: binary
+
+    RetiredOperationRequest:
+      type: object
+      additionalProperties: true
+      required:
+        - legacyOperation
+      properties:
+        legacyOperation:
+          type: string
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
