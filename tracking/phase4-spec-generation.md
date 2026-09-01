@@ -10,7 +10,7 @@
 | In progress | 0 |
 | Blocked | 0 |
 | Started | 2026-09-01T12:52:17+04:00 |
-| Last updated | 2026-09-01T15:05:00+04:00 |
+| Last updated | 2026-09-01T15:45:00+04:00 |
 
 ## Tasks
 
@@ -23,7 +23,7 @@
 | 3 | Generate Catalog and Product specification (MS-02) | DONE | — | Agent | 2026-09-01T14:10:54+04:00 — 41 rules, 15 tables, 35 endpoint methods, OpenAPI 3.1 contract; graph import/check passed |
 | 4 | Generate Search specification (MS-03) | DONE | — | Agent | 2026-09-01T14:25:00+04:00 — 10 rules, 6 tables, 3 endpoint methods, OpenAPI 3.1 contract; graph import/check passed |
 | 5 | Generate Pricing and Promotions specification (MS-07) | DONE | — | Agent | 2026-09-01T15:05:00+04:00 — 13 rules, 5 tables, 13 endpoint methods, OpenAPI 3.1 contract; graph import/check passed |
-| 6 | Generate Tax specification (MS-08) | PENDING | — | Agent | Calculation provider |
+| 6 | Generate Tax specification (MS-08) | DONE | — | Agent | 2026-09-01T15:45:00+04:00 — 20 rules, 6 tables, 15 endpoint methods, OpenAPI 3.1 contract; graph import/check passed |
 | 7 | Generate Shipping specification (MS-09) | PENDING | — | Agent | Calculation provider and carrier integration boundary |
 | 8 | Generate Cart and Checkout specification (MS-04) | PENDING | — | Agent | Consumes customer, catalog, pricing, tax, and shipping contracts |
 | 9 | Generate Payments specification (MS-06) | PENDING | — | Agent | Provider/external boundary for order payment state |
