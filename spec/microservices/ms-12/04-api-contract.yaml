@@ -54,6 +54,10 @@ x-event-catalog:
       source: MS-12
       schema:
         $ref: "#/components/schemas/IntegrationDeliveryReplayRequested"
+    - name: ShippingAdapterExecutionRequested.v1
+      source: MS-09
+      schema:
+        $ref: "#/components/schemas/ShippingAdapterExecutionRequested"
   published:
     - name: IntegrationDeliveryQueued
       channel: integration-delivery
@@ -719,26 +723,19 @@ paths:
           $ref: "#/components/responses/UnprocessableEntity"
 
 components:
+  securitySchemes:
+    bearerAuth:
+      $ref: '../../shared/common-schemas.yaml#/components/securitySchemes/bearerAuth'
   parameters:
     TenantId:
-      name: x-tenant-id
-      in: header
-      required: true
-      schema:
-        type: string
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/TenantId'
     StoreId:
-      name: x-store-id
-      in: header
-      required: true
-      schema:
-        type: string
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/StoreId'
     CorrelationId:
-      name: x-correlation-id
-      in: header
-      required: true
-      schema:
-        type: string
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/CorrelationId'
     Authorization:
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/Authorization'
+    AuthorizationServiceProfile:
       name: Authorization
       in: header
       required: true
@@ -797,6 +794,8 @@ components:
           minimum: 1
           maximum: 10
     AdapterListResponse:
+      allOf:
+        - $ref: '../../shared/common-schemas.yaml#/components/schemas/ListEnvelope'
       type: object
       required: [items, pagination]
       properties:
@@ -1114,6 +1113,8 @@ components:
           type: string
           format: byte
     FileListResponse:
+      allOf:
+        - $ref: '../../shared/common-schemas.yaml#/components/schemas/ListEnvelope'
       type: object
       required: [items, pagination]
       properties:
@@ -1368,23 +1369,25 @@ components:
           type: string
           format: date-time
     EventMetadata:
-      type: object
-      required: [eventId, eventType, occurredAt, tenantId, storeId, correlationId]
-      properties:
-        eventId:
-          type: string
-          format: uuid
-        eventType:
-          type: string
-        occurredAt:
-          type: string
-          format: date-time
-        tenantId:
-          type: string
-        storeId:
-          type: string
-        correlationId:
-          type: string
+      $ref: '../../shared/common-schemas.yaml#/components/schemas/EventMetadata'
+    ShippingAdapterExecutionRequested:
+      allOf:
+        - $ref: '../../shared/common-schemas.yaml#/components/schemas/EventMetadata'
+        - type: object
+          required: [eventType, eventVersion, requestType, providerCode]
+          properties:
+            eventType: { const: ShippingAdapterExecutionRequested.v1 }
+            eventVersion: { const: 1 }
+            requestType: { type: string, enum: [CarrierQuote, Distance] }
+            providerCode: { type: string }
+            carrierQuote:
+              oneOf:
+                - $ref: "#/components/schemas/CarrierQuoteRequest"
+                - type: "null"
+            distance:
+              oneOf:
+                - $ref: "#/components/schemas/DistanceRequest"
+                - type: "null"
     BusinessIntegrationDeliveryRequested:
       allOf:
         - $ref: "#/components/schemas/EventMetadata"
@@ -1483,36 +1486,9 @@ components:
               type: string
               format: date-time
     PaginationInfo:
-      type: object
-      required: [page, pageSize, totalItems, totalPages]
-      properties:
-        page:
-          type: integer
-        pageSize:
-          type: integer
-        totalItems:
-          type: integer
-        totalPages:
-          type: integer
+      $ref: '../../shared/common-schemas.yaml#/components/schemas/PaginationInfo'
     ErrorResponse:
-      type: object
-      required: [error, message, statusCode, timestamp]
-      properties:
-        error:
-          type: string
-        message:
-          type: string
-        statusCode:
-          type: integer
-        timestamp:
-          type: string
-          format: date-time
-        correlationId:
-          type: string
-        fields:
-          type: array
-          items:
-            type: string
+      $ref: '../../shared/common-schemas.yaml#/components/schemas/ErrorResponse'
 
   responses:
     BadRequest:

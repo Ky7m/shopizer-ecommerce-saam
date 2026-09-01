@@ -174,6 +174,7 @@ or malformed requests.
 | `BusinessIntegrationDeliveryRequested` | MS-05 | Deduplicate and create operation/attempt state, then enqueue | At-least-once by `eventId` and tenant/idempotency key |
 | `ConfigurationReferenceChanged` | MS-11 | Refresh the opaque endpoint projection | At-least-once; latest version wins |
 | `IntegrationDeliveryReplayRequested` | MS-12 | Create a new attempt linked to the original | At-least-once |
+| `ShippingAdapterExecutionRequested.v1` | MS-09 | Execute the typed carrier or Maps adapter request and return normalized facts to MS-09 | At-least-once |
 
 ### Published
 
@@ -182,8 +183,9 @@ or malformed requests.
 | `IntegrationDeliveryQueued` | Operation and initial attempt are committed | MS-12 delivery worker |
 | `IntegrationDeliveryDeadLettered` | Retry budget is exhausted or failure is terminal | MS-05 and operations |
 
-Every event contains `eventId`, `eventType`, `occurredAt`, `tenantId`, `storeId`, and
-`correlationId`. Credentials, passwords, and unredacted secret material are excluded.
+Every event contains shared `eventId`, `eventType`, `eventVersion`, `occurredAt`, `tenantId`,
+`storeId`, and `correlationId`. Credentials, passwords, and unredacted secret material are
+excluded.
 
 ## Endpoint-to-rule coverage
 

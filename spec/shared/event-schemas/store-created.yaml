@@ -1,7 +1,20 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: StoreCreated
 type: object
-x-contract-status: GAP
-description: Candidate MS-10 event; publisher payload is not defined.
-additionalProperties: true
-
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion, storeId, code, name, emailAddress, defaultLanguageCode, supportedLanguageCodes]
+    properties:
+      eventType: {const: StoreCreated}
+      eventVersion: {const: 1}
+      storeId: {type: string, format: uuid}
+      code: {type: string}
+      name: {type: string}
+      emailAddress: {type: string, format: email}
+      defaultLanguageCode: {type: string}
+      supportedLanguageCodes: {type: array, items: {type: string}}
+      currencyCode: {type: string}
+      dimensionUnit: {type: string}
+      weightUnit: {type: string}
+      retailer: {type: boolean}

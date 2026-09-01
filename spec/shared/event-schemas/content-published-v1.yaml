@@ -1,6 +1,19 @@
 $schema: https://json-schema.org/draft/2020-12/schema
-title: ContentPublished
+title: ContentPublished.v1
 type: object
-x-contract-status: GAP
-description: Event is supplied by the target sequence and MS-11/MS-03 boundary; payload is not defined.
-additionalProperties: true
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion, contentId, code, contentType, visible]
+    properties:
+      eventType: {const: ContentPublished.v1}
+      eventVersion: {const: 1}
+      contentId: {type: string, format: uuid}
+      code: {type: string}
+      contentType: {type: string, enum: [Box, Page, Section]}
+      visible: {type: boolean}
+      storeId: {type: string}
+      descriptions:
+        type: array
+        items:
+          $ref: ../../microservices/ms-11/04-api-contract.yaml#/components/schemas/ContentDescription

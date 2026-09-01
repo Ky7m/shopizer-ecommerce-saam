@@ -580,40 +580,22 @@ paths:
           $ref: "#/components/responses/InternalError"
 
 components:
+  securitySchemes:
+    bearerAuth:
+      $ref: '../../shared/common-schemas.yaml#/components/securitySchemes/bearerAuth'
   parameters:
     TenantId:
-      name: x-tenant-id
-      in: header
-      required: true
-      description: Tenant isolation identifier
-      schema:
-        type: string
-        format: uuid
-      example: "2e6d7b63-5b1d-4f8a-8e12-8cf43c9f2001"
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/TenantId'
 
     StoreId:
-      name: x-store-id
-      in: header
-      required: true
-      description: Store isolation identifier
-      schema:
-        type: string
-        minLength: 1
-        maxLength: 120
-      example: store-us-east
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/StoreId'
 
     CorrelationId:
-      name: x-correlation-id
-      in: header
-      required: true
-      description: Distributed tracing identifier
-      schema:
-        type: string
-        minLength: 1
-        maxLength: 200
-      example: corr-20260901-000184
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/CorrelationId'
 
     Authorization:
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/Authorization'
+    AuthorizationServiceProfile:
       name: Authorization
       in: header
       required: true
@@ -1500,38 +1482,7 @@ components:
           minLength: 1
 
     ErrorResponse:
-      type: object
-      additionalProperties: false
-      required:
-        - error
-        - message
-        - statusCode
-        - timestamp
-        - correlationId
-        - details
-      properties:
-        error:
-          type: string
-          minLength: 1
-        message:
-          type: string
-          minLength: 1
-        statusCode:
-          type: integer
-          format: int32
-          minimum: 400
-          maximum: 599
-        timestamp:
-          type: string
-          format: date-time
-        correlationId:
-          type: string
-          minLength: 1
-          maxLength: 200
-        details:
-          type: array
-          items:
-            $ref: "#/components/schemas/ErrorDetail"
+      $ref: '../../shared/common-schemas.yaml#/components/schemas/ErrorResponse'
 
   responses:
     BadRequest:

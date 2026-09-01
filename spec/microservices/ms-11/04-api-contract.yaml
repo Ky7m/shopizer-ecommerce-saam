@@ -47,6 +47,18 @@ x-global-headers:
     required: false
     description: Idempotency key for retryable mutations. Required where stated by the operation.
     testValue: ms11-test-idempotency-001
+x-compatibility:
+  contentPagination:
+    response: [items, page, count, number, totalPages, recordsTotal, recordsFiltered]
+    rationale: Existing CMS consumers require the zero-based legacy envelope; new cross-service projections use shared pagination.
+x-event-catalog:
+  published:
+    - name: ContentPublished.v1
+      schema:
+        $ref: '#/components/schemas/ContentPublished'
+    - name: ConfigurationReferenceChanged
+      schema:
+        $ref: '#/components/schemas/ConfigurationReferenceChanged'
 
 tags:
   - name: Content
@@ -1529,7 +1541,7 @@ paths:
     get:
       tags:
         - Modules
-      operationId: listShippingModules
+      operationId: listConfiguredShippingModules
       summary: List available shipping modules
       description: |
         Discovers shipping metadata available to the store, filtered by country
@@ -1559,7 +1571,7 @@ paths:
     get:
       tags:
         - Modules
-      operationId: getShippingModule
+      operationId: getConfiguredShippingModule
       summary: Get shipping module details
       parameters:
         - $ref: '#/components/parameters/TenantId'
@@ -1977,13 +1989,7 @@ paths:
 components:
   parameters:
     TenantId:
-      name: x-tenant-id
-      in: header
-      required: true
-      description: Tenant isolation key.
-      schema:
-        type: string
-        format: uuid
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/TenantId'
     StoreId:
       name: x-store-id
       in: header
@@ -1993,14 +1999,10 @@ components:
         type: string
         format: uuid
     CorrelationId:
-      name: x-correlation-id
-      in: header
-      required: true
-      description: Distributed tracing identifier.
-      schema:
-        type: string
-        format: uuid
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/CorrelationId'
     Authorization:
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/Authorization'
+    AuthorizationServiceProfile:
       name: Authorization
       in: header
       required: true
@@ -2029,23 +2031,9 @@ components:
         maxLength: 10
         pattern: '^[A-Za-z]{2,10}$'
     OptionalIdempotencyKey:
-      name: Idempotency-Key
-      in: header
-      required: false
-      description: Optional key for safe replay of an idempotent mutation.
-      schema:
-        type: string
-        minLength: 1
-        maxLength: 255
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/OptionalIdempotencyKey'
     IdempotencyKey:
-      name: Idempotency-Key
-      in: header
-      required: true
-      description: Required key for retryable creation, upload, rename, or replacement.
-      schema:
-        type: string
-        minLength: 1
-        maxLength: 255
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/IdempotencyKey'
     ContentId:
       name: contentId
       in: path
@@ -2291,79 +2279,11 @@ components:
 
   schemas:
     ErrorResponse:
-      type: object
-      additionalProperties: false
-      required:
-        - error
-        - message
-        - statusCode
-        - timestamp
-        - correlationId
-      properties:
-        error:
-          type: string
-          description: Stable machine-readable error code.
-          enum:
-            - INVALID_REQUEST_CONTEXT
-            - INVALID_CONTENT_REQUEST
-            - INVALID_FILENAME
-            - INVALID_FOLDER_PATH
-            - LANGUAGE_NOT_FOUND
-            - CONTENT_CODE_CONFLICT
-            - CONTENT_NOT_FOUND
-            - FILE_NOT_FOUND
-            - FOLDER_NOT_FOUND
-            - MODULE_NOT_FOUND
-            - CONFIGURATION_NOT_FOUND
-            - CONFIGURATION_UNAVAILABLE
-            - CONFIGURATION_PARSE_ERROR
-            - MODULE_CONFIGURATION_INVALID
-            - PROVIDER_UNAVAILABLE
-            - PROVIDER_CAPABILITY_UNSUPPORTED
-            - LEGACY_OPERATION_RETIRED
-            - FORBIDDEN_STORE_SCOPE
-            - CONFLICT
-            - INTERNAL_ERROR
-        message:
-          type: string
-        statusCode:
-          type: integer
-          format: int32
-        timestamp:
-          type: string
-          format: date-time
-        correlationId:
-          type: string
-          format: uuid
-        details:
-          type: object
-          additionalProperties: true
+      $ref: '../../shared/common-schemas.yaml#/components/schemas/ErrorResponse'
 
     PaginationInfo:
-      type: object
-      additionalProperties: false
-      required:
-        - page
-        - pageSize
-        - totalItems
-        - totalPages
-      properties:
-        page:
-          type: integer
-          format: int32
-          minimum: 0
-        pageSize:
-          type: integer
-          format: int32
-          minimum: 1
-        totalItems:
-          type: integer
-          format: int64
-          minimum: 0
-        totalPages:
-          type: integer
-          format: int32
-          minimum: 0
+      description: Legacy content pagination is intentionally not used by compatibility endpoints.
+      $ref: '../../shared/common-schemas.yaml#/components/schemas/PaginationInfo'
 
     ContentDescription:
       type: object
@@ -3494,8 +3414,37 @@ components:
         legacyOperation:
           type: string
 
+    ContentPublished:
+      allOf:
+        - $ref: '../../shared/common-schemas.yaml#/components/schemas/EventMetadata'
+        - type: object
+          required: [eventType, eventVersion, contentId, code, contentType, visible]
+          properties:
+            eventType: { const: ContentPublished.v1 }
+            eventVersion: { const: 1 }
+            contentId: { type: string, format: uuid }
+            code: { type: string }
+            contentType: { type: string, enum: [Box, Page, Section] }
+            visible: { type: boolean }
+            descriptions:
+              type: array
+              items:
+                $ref: '#/components/schemas/ContentDescription'
+
+    ConfigurationReferenceChanged:
+      allOf:
+        - $ref: '../../shared/common-schemas.yaml#/components/schemas/EventMetadata'
+        - type: object
+          required: [eventType, eventVersion, moduleType, code, environment, configurationRef, version]
+          properties:
+            eventType: { const: ConfigurationReferenceChanged }
+            eventVersion: { const: 1 }
+            moduleType: { type: string }
+            code: { type: string }
+            environment: { type: string }
+            configurationRef: { type: string }
+            version: { type: string }
+
   securitySchemes:
     bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+      $ref: '../../shared/common-schemas.yaml#/components/securitySchemes/bearerAuth'

@@ -24,7 +24,7 @@
 | MS-01 | Customer, User, Address, PermissionGroup | Accounts, credentials metadata, addresses, roles, sessions, consent | OIDC provider; publishes `CustomerRegistered` |
 | MS-02 | Product, Category, Manufacturer, AttributeSet | Product facts, category tree, variants, catalog status | MS-10 for store scope; publishes `ProductChanged` |
 | MS-03 | SearchIndex, SearchDocument | Search documents, index metadata, rebuild jobs | Consumes MS-02 and MS-11 events |
-| MS-04 | Cart, CheckoutSession | Cart lines, checkout state, submitted snapshots, idempotency keys | MS-01, MS-02, MS-07, MS-08, MS-09; publishes `OrderSubmitted` |
+| MS-04 | Cart, CheckoutSession | Cart lines, checkout state, submitted snapshots, idempotency keys | MS-01, MS-02, MS-07, MS-08, MS-09; publishes `OrderSubmitted.v1` |
 | MS-05 | Order, FulfillmentOrder, Invoice | Order snapshots, lifecycle state, totals, invoice references | Consumes MS-04 and MS-06 events; publishes order lifecycle events |
 | MS-06 | PaymentIntent, PaymentTransaction, Refund | Provider references, authorization/capture/refund states, callback records | External payment providers; publishes payment events |
 | MS-07 | PriceList, Promotion, Coupon | Prices, promotion definitions, coupon redemption reservations | MS-10 store scope; publishes promotion changes |
@@ -65,4 +65,3 @@ in the knowledge graph. REST dependencies are limited to short-lived queries and
 - MS-10 owns tenant and store lifecycle; all other services reference tenant/store IDs.
 - MS-03 and MS-12 are derived/supporting contexts and must tolerate replayed events.
 - No service uses a cross-service foreign key or writes another service's schema.
-

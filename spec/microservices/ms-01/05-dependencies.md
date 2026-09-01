@@ -14,7 +14,9 @@ neither has a provider contract in this repository.
 - **Triggered by:** BR-CUS-002 (registration persists a customer and starts authentication)
 - **Channel:** RabbitMQ domain-events exchange; routing key `CustomerRegistered`
 - **Schema:** `spec/shared/event-schemas/customer-registered.yaml`
-- **Payload status:** GAP — the approved artifacts name the event but do not define its payload.
+- **Payload:** `customerId`, `loginName`, `emailAddress`, and `status`, plus shared event metadata;
+  the fields are copied from the MS-01 `Customer` contract.
+- **Status:** DEAD/UNCONSUMED — no consumer is confirmed in the approved service composition.
 - **Guarantees:** transactional outbox, at-least-once delivery, `eventId` deduplication by consumers
 - **Ordering:** by customer aggregate
 
@@ -35,4 +37,3 @@ neither has a provider contract in this repository.
 Internal event publication uses the confirmed RabbitMQ outbox/inbox pattern. Delivery is
 at-least-once with bounded exponential backoff and dead-letter handling. External OIDC and email
 parameters remain a preservation/spec GAP because no provider contract exists.
-

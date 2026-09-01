@@ -1,14 +1,18 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: OrderAccepted
 type: object
-required: [eventId, eventType, eventVersion, tenantId, storeId, orderId, occurredAt]
-properties:
-  eventId: {type: string}
-  eventType: {const: OrderAccepted}
-  eventVersion: {type: integer}
-  tenantId: {type: string}
-  storeId: {type: string}
-  orderId: {type: integer}
-  occurredAt: {type: string, format: date-time}
-x-contract-status: GAP
-
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion, orderId, status, currency, total, lines]
+    properties:
+      eventType: {const: OrderAccepted}
+      eventVersion: {const: 1}
+      orderId: {type: integer}
+      status: {const: Ordered}
+      currency: {type: string}
+      total: {type: number, minimum: 0}
+      lines:
+        type: array
+        items:
+          $ref: ../../microservices/ms-05/04-api-contract.yaml#/components/schemas/OrderLine

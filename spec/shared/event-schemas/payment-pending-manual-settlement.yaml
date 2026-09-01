@@ -2,6 +2,15 @@ $schema: https://json-schema.org/draft/2020-12/schema
 title: PaymentPendingManualSettlement
 type: object
 x-contract-status: GAP
-description: Rules-only event variant; absent from the MS-06 API-design event catalog.
-additionalProperties: true
-
+description: Rules-only variant; the approved payment API catalog does not define a consumer or final publication policy.
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion, paymentIntentId, orderId, amount, currency]
+    properties:
+      eventType: {const: PaymentPendingManualSettlement}
+      eventVersion: {const: 1}
+      paymentIntentId: {type: string}
+      orderId: {type: string}
+      amount: {type: string}
+      currency: {type: string}

@@ -6,7 +6,7 @@
 
 ### Cart and Checkout (MS-04) (async events)
 
-#### Consumes: `OrderSubmitted`
+#### Consumes: `OrderSubmitted.v1`
 - **Triggered by:** BR-OR-SUB-001, BR-OR-SUB-002, BR-OR-SUB-003, BR-OR-SUB-004
 - **Channel:** RabbitMQ domain-events exchange; source MS-04
 - **Schema:** `spec/shared/event-schemas/order-submitted-v1.yaml`
@@ -30,7 +30,8 @@
 - **Schema:** `spec/shared/event-schemas/shipment-status-updated.yaml`
 - **Action:** update fulfillment state and, where legal, order delivery state.
 - **Idempotency:** inbox uniqueness on `eventId` and shipment reference.
-- **Status:** GAP — neither provider contract defines this payload.
+- **Status:** GAP — the concrete consumer payload is compiled, but neither MS-09 nor MS-12
+  provides publisher evidence or a transport binding for it.
 
 ### Catalog and Product (MS-02) (async event)
 
@@ -40,13 +41,14 @@
 - **Schema:** `spec/shared/event-schemas/inventory-reservation-released.yaml`
 - **Action:** reconcile cancellation/compensation tracking.
 - **Idempotency:** inbox uniqueness on `eventId` and reservation ID.
-- **Status:** GAP — MS-02 API design names reservation operations but does not define this event.
+- **Status:** RECONCILED — `reservationId`, `reservationKey`, `productId`, `quantity`, and
+  terminal `Released` state are defined in the shared schema.
 
 ## Events Published
 
-The following events are declared by MS-05 `01-business-rules.md` and `03-api-design.md`; each
-uses the common metadata stated in that service (`eventId`, `eventType`, `eventVersion`,
-`tenantId`, `storeId`, `orderId`, `occurredAt`) and is at-least-once via an outbox.
+The following events are declared by MS-05 `01-business-rules.md` and `03-api-design.md`.
+Each uses the shared event metadata (`eventId`, `eventType`, `eventVersion`, `occurredAt`,
+`tenantId`, `storeId`, `correlationId`) and is at-least-once via an outbox.
 
 | Event | Triggered by | Schema | Consumers |
 |---|---|---|---|
@@ -70,6 +72,10 @@ uses the common metadata stated in that service (`eventId`, `eventType`, `eventV
 - **Consumers:** MS-12
 - **Status:** The provider schema is authoritative and defines required `idempotencyKey`,
   `deliveryType`, `endpointCode`, and `payload`, plus common `EventMetadata`.
+
+The MS-05-only order lifecycle events have concrete schemas. Their named consumers in the
+legacy-derived event list are not backed by corresponding consumer artifacts in this repository;
+those consumer bindings remain explicit GAPs in the shared event index.
 
 ## Resilience
 

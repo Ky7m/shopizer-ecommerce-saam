@@ -27,12 +27,11 @@ not as graph-backed calls. No endpoint is invented here.
 ## Events Consumed
 
 No event consumer is declared by the MS-07 API design or rules. Product/variant availability
-resolution is represented as a data dependency in the pricing request and must not become a
-cross-service table read.
+resolution is represented as a data dependency in the pricing request and must remain
+contract-mediated.
 
 ## Resilience
 
 Published pricing events use outbox/inbox, at-least-once delivery, bounded exponential backoff,
 and dead-letter handling. Synchronous quote calls are documented in MS-04's dependency artifact
 and use the exact MS-07 provider paths.
-

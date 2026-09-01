@@ -1,7 +1,18 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: ShippingQuoteCalculated.v1
 type: object
-x-contract-status: GAP
-description: Recommended MS-09 target event only; not an approved publisher contract.
-additionalProperties: true
-
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion, shipping, handling, freeShipping, taxOnShipping, shippingOptions]
+    properties:
+      eventType: {const: ShippingQuoteCalculated.v1}
+      eventVersion: {const: 1}
+      shipping: {type: number}
+      handling: {type: number}
+      freeShipping: {type: boolean}
+      taxOnShipping: {type: boolean}
+      shippingOptions:
+        type: array
+        items:
+          $ref: ../../microservices/ms-09/04-api-contract.yaml#/components/schemas/ShippingOption

@@ -1,7 +1,12 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: ProviderConfigurationChanged.v1
 type: object
-x-contract-status: GAP
-description: MS-06 names this consumed event, but MS-11 does not define its publisher.
-additionalProperties: true
-
+x-contract-status: DEAD/UNCONSUMED
+description: Retired configuration-event alias. ConfigurationReferenceChanged is canonical for MS-06 and MS-12.
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion]
+    properties:
+      eventType: {const: ProviderConfigurationChanged.v1}
+      eventVersion: {const: 1}

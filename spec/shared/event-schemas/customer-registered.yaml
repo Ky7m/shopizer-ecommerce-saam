@@ -1,7 +1,16 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: CustomerRegistered
 type: object
-x-contract-status: GAP
-description: Approved event name from the service composition; publisher payload is not defined.
-additionalProperties: true
-
+x-contract-status: DEAD/UNCONSUMED
+description: The approved customer registration capability has no confirmed consumer.
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion, customerId, loginName, emailAddress, status]
+    properties:
+      eventType: {const: CustomerRegistered}
+      eventVersion: {const: 1}
+      customerId: {type: string, format: uuid}
+      loginName: {type: string}
+      emailAddress: {type: string, format: email}
+      status: {type: string, enum: [Pending, Active, Suspended, Deleted]}

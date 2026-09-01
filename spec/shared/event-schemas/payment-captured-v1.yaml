@@ -1,13 +1,15 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: PaymentCaptured.v1
 type: object
-required: [eventId, eventType]
-properties:
-  eventId: {type: string}
-  eventType: {const: PaymentCaptured.v1}
-  paymentIntentId: {type: string}
-  orderId: {type: string}
-  amount: {type: number}
-  currency: {type: string}
-  providerReference: {type: string}
-x-contract-status: GAP
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion, paymentIntentId, orderId, amount, currency, providerReference]
+    properties:
+      eventType: {const: PaymentCaptured.v1}
+      eventVersion: {const: 1}
+      paymentIntentId: {type: string}
+      orderId: {type: string}
+      amount: {type: string}
+      currency: {type: string}
+      providerReference: {type: string}

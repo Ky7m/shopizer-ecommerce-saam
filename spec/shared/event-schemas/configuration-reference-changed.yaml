@@ -1,18 +1,15 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: ConfigurationReferenceChanged
 type: object
-required: [eventId, eventType, occurredAt, tenantId, storeId, correlationId, moduleType, code, environment, configurationRef, version]
-properties:
-  eventId: {type: string}
-  eventType: {type: string}
-  occurredAt: {type: string, format: date-time}
-  tenantId: {type: string}
-  storeId: {type: string}
-  correlationId: {type: string}
-  moduleType: {type: string}
-  code: {type: string}
-  environment: {type: string}
-  configurationRef: {type: string}
-  version: {type: string}
-x-contract-status: GAP
-
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion, moduleType, code, environment, configurationRef, version]
+    properties:
+      eventType: {const: ConfigurationReferenceChanged}
+      eventVersion: {const: 1}
+      moduleType: {type: string, enum: [Email, Shipping, Maps, Storage, Adapter]}
+      code: {type: string}
+      environment: {type: string}
+      configurationRef: {type: string}
+      version: {type: string}

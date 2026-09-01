@@ -190,12 +190,12 @@ Cart checkout, cart totals, shipping quotes, and payment initialization are deli
 
 ## Event Contracts
 
-### Consumed `OrderSubmitted`
+### Consumed `OrderSubmitted.v1`
 
 ```json
 {
   "eventId": "evt-submit-70001",
-  "eventType": "OrderSubmitted",
+  "eventType": "OrderSubmitted.v1",
   "eventVersion": 1,
   "tenantId": "tenant-a",
   "storeId": "store-12",

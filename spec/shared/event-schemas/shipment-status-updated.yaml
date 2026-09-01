@@ -2,6 +2,16 @@ $schema: https://json-schema.org/draft/2020-12/schema
 title: ShipmentStatusUpdated
 type: object
 x-contract-status: GAP
-description: Consumed by MS-05 in its API design; provider payload is not defined.
-additionalProperties: true
-
+description: The fulfillment consumer defines these fields, but the MS-09/MS-12 publisher and transport mapping are not evidenced.
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion, orderId, fulfillmentId, status, lastUpdatedAt]
+    properties:
+      eventType: {const: ShipmentStatusUpdated}
+      eventVersion: {const: 1}
+      orderId: {type: integer}
+      fulfillmentId: {type: string, format: uuid}
+      status: {type: string, enum: [NotRequested, Requested, InProgress, Shipped, Delivered, Canceled]}
+      carrierReference: {type: [string, "null"]}
+      lastUpdatedAt: {type: string, format: date-time}

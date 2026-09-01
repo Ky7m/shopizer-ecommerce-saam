@@ -1,7 +1,14 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: OrderCompensationRequired
 type: object
-x-contract-status: GAP
-description: Event is named by MS-05; compensation payload is not defined.
-additionalProperties: true
-
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion, compensationType, reason]
+    properties:
+      eventType: {const: OrderCompensationRequired}
+      eventVersion: {const: 1}
+      orderId: {type: [integer, "null"]}
+      submissionId: {type: [string, "null"]}
+      compensationType: {type: string, enum: [InventoryReservationRelease, PaymentVoid, PaymentRefund]}
+      reason: {type: string}

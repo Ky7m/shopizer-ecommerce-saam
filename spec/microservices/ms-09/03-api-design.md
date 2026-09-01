@@ -77,6 +77,13 @@ The package, module, and expedition endpoints are retained for API compatibility
 writes must be routed to MS-11 configuration ownership. The resulting normalized policy
 projection is consumed by MS-09.
 
+### Internal adapter event
+
+MS-09 publishes `ShippingAdapterExecutionRequested.v1` to MS-12 for carrier quote and distance
+adapter execution. Its typed `carrierQuote` or `distance` payload is defined in
+`spec/shared/event-schemas/shipping-adapter-execution-requested-v1.yaml`; credentials do not
+cross the service boundary.
+
 ## Error Catalogue
 
 | Code | HTTP status | Meaning |

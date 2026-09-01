@@ -5,6 +5,24 @@ info:
   description: Provider-neutral search, autocomplete, and asynchronous index rebuild contract for MS-03.
 servers:
   - url: http://localhost:8103/api/v1
+x-global-headers:
+  - name: x-tenant-id
+    required: true
+    description: Tenant context.
+    testValue: test-tenant-001
+  - name: x-store-id
+    required: true
+    description: Store context.
+    testValue: test-store-001
+  - name: x-correlation-id
+    required: true
+    description: Correlation context.
+    testValue: corr-ms03-0001
+x-compatibility:
+  searchPagination:
+    request: count/start
+    response: offset/limit
+    rationale: Search-provider pagination is intentionally distinct from shared page/pageSize pagination.
 paths:
   /search:
     post:
@@ -79,32 +97,20 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '500': { $ref: '#/components/responses/InternalError' }
 components:
+  securitySchemes:
+    bearerAuth:
+      $ref: '../../shared/common-schemas.yaml#/components/securitySchemes/bearerAuth'
   parameters:
     TenantId:
-      name: x-tenant-id
-      in: header
-      required: true
-      schema: { type: string, format: uuid }
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/TenantId'
     StoreId:
-      name: x-store-id
-      in: header
-      required: true
-      schema: { type: string, minLength: 1, maxLength: 120 }
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/StoreId'
     CorrelationId:
-      name: x-correlation-id
-      in: header
-      required: true
-      schema: { type: string, minLength: 1, maxLength: 200 }
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/CorrelationId'
     Authorization:
-      name: Authorization
-      in: header
-      required: true
-      schema: { type: string, pattern: '^Bearer\s+.+' }
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/Authorization'
     IdempotencyKey:
-      name: idempotency-key
-      in: header
-      required: true
-      schema: { type: string, minLength: 1, maxLength: 200 }
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/IdempotencyKey'
   schemas:
     SearchRequest:
       type: object
@@ -184,14 +190,7 @@ components:
       type: string
       enum: [Requested, Running, Succeeded, Failed, Cancelled]
     ErrorResponse:
-      type: object
-      required: [error, message, statusCode, timestamp, correlationId]
-      properties:
-        error: { type: string }
-        message: { type: string }
-        statusCode: { type: integer }
-        timestamp: { type: string, format: date-time }
-        correlationId: { type: string }
+      $ref: '../../shared/common-schemas.yaml#/components/schemas/ErrorResponse'
   responses:
     BadRequest:
       description: Malformed request or missing context

@@ -1,7 +1,15 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: SearchIndexingFailed.v1
 type: object
-x-contract-status: GAP
-description: Operational event name is defined; payload fields are not defined.
-additionalProperties: true
-
+x-contract-status: DEAD/UNCONSUMED
+description: Operational failure event; no business consumer is confirmed in the repository.
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion, failureCode]
+    properties:
+      eventType: {const: SearchIndexingFailed.v1}
+      eventVersion: {const: 1}
+      productId: {type: [string, "null"]}
+      rebuildId: {type: [string, "null"], format: uuid}
+      failureCode: {type: string}

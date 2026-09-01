@@ -35,6 +35,11 @@ x-global-headers:
     required: false
     description: Distributed tracing identifier.
     testValue: corr-ms09-001
+x-event-catalog:
+  published:
+    - name: ShippingAdapterExecutionRequested.v1
+      schema:
+        $ref: '#/components/schemas/ShippingAdapterExecutionRequested'
 
 paths:
   /auth/cart/{cart}/shipping:
@@ -500,28 +505,19 @@ paths:
           $ref: "#/components/responses/InternalError"
 
 components:
+  securitySchemes:
+    bearerAuth:
+      $ref: '../../shared/common-schemas.yaml#/components/securitySchemes/bearerAuth'
   parameters:
     TenantId:
-      name: x-tenant-id
-      in: header
-      required: true
-      schema:
-        type: string
-        minLength: 1
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/TenantId'
     StoreId:
-      name: x-store-id
-      in: header
-      required: true
-      schema:
-        type: string
-        minLength: 1
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/StoreId'
     CorrelationId:
-      name: x-correlation-id
-      in: header
-      required: false
-      schema:
-        type: string
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/CorrelationIdOptional'
     Authorization:
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/Authorization'
+    AuthorizationServiceProfile:
       name: Authorization
       in: header
       required: true
@@ -529,6 +525,8 @@ components:
         type: string
         pattern: "^Bearer .+$"
     AuthorizationOptional:
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/AuthorizationOptional'
+    AuthorizationOptionalServiceProfile:
       name: Authorization
       in: header
       required: false
@@ -956,25 +954,27 @@ components:
           type: string
           nullable: true
 
+    ShippingAdapterExecutionRequested:
+      allOf:
+        - $ref: '../../shared/common-schemas.yaml#/components/schemas/EventMetadata'
+        - type: object
+          required: [eventType, eventVersion, requestType, providerCode]
+          properties:
+            eventType: { const: ShippingAdapterExecutionRequested.v1 }
+            eventVersion: { const: 1 }
+            requestType: { type: string, enum: [CarrierQuote, Distance] }
+            providerCode: { type: string }
+            carrierQuote:
+              oneOf:
+                - $ref: '../../microservices/ms-12/04-api-contract.yaml#/components/schemas/CarrierQuoteRequest'
+                - type: "null"
+            distance:
+              oneOf:
+                - $ref: '../../microservices/ms-12/04-api-contract.yaml#/components/schemas/DistanceRequest'
+                - type: "null"
+
     ErrorResponse:
-      type: object
-      required: [error, message, statusCode, timestamp]
-      properties:
-        error:
-          type: string
-        message:
-          type: string
-        statusCode:
-          type: integer
-        timestamp:
-          type: string
-          format: date-time
-        correlationId:
-          type: string
-          nullable: true
-        details:
-          type: object
-          additionalProperties: true
+      $ref: '../../shared/common-schemas.yaml#/components/schemas/ErrorResponse'
 
   responses:
     BadRequest:

@@ -24,6 +24,16 @@ MS-11 does **not**:
 
 Payment and shipping configuration mutations invoke an MS-12 provider-validation boundary before MS-11 persists configuration state.
 
+## Events
+
+### Published
+
+`ContentPublished.v1` is emitted after a content item becomes visible and publishable; its payload
+uses the `ContentItem` identity, type, localized descriptions, and publication timestamp.
+`ConfigurationReferenceChanged` is emitted after a payment or shipping module configuration
+reference is persisted. Its payload is limited to module type, code, environment,
+`configurationRef`, and version. Both schemas are under `spec/shared/event-schemas/`.
+
 ## Request context
 
 ### Required headers

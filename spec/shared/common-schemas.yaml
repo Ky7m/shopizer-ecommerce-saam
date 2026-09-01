@@ -1,0 +1,187 @@
+openapi: 3.1.0
+info:
+  title: Shared Commerce Contract Components
+  version: 1.0.0
+  description: |
+    Shared contract components compiled during SAAM Phase 4 Stage 1.5.
+    Service contracts reference these components; domain-specific schemas remain
+    owned by their service.
+
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error, message, statusCode, timestamp]
+      properties:
+        error:
+          type: string
+          description: Stable machine-readable error code.
+        message:
+          type: string
+        statusCode:
+          type: integer
+          format: int32
+        timestamp:
+          type: string
+          format: date-time
+        correlationId:
+          type: [string, "null"]
+          description: Correlation identifier when one is available.
+        details:
+          oneOf:
+            - type: object
+              additionalProperties: true
+            - type: array
+              items: {}
+
+    PaginationInfo:
+      type: object
+      additionalProperties: false
+      required: [page, pageSize, totalItems, totalPages]
+      properties:
+        page:
+          type: integer
+          format: int32
+          minimum: 1
+          description: One-based page number.
+        pageSize:
+          type: integer
+          format: int32
+          minimum: 1
+        totalItems:
+          type: integer
+          format: int64
+          minimum: 0
+        totalPages:
+          type: integer
+          format: int32
+          minimum: 0
+
+    ListEnvelope:
+      type: object
+      additionalProperties: false
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          description: Service-owned resource items.
+          items: {}
+        pagination:
+          $ref: "#/components/schemas/PaginationInfo"
+
+    EventMetadata:
+      type: object
+      required: [eventId, eventType, eventVersion, occurredAt, tenantId, storeId, correlationId]
+      properties:
+        eventId:
+          type: string
+        eventType:
+          type: string
+          description: Versioned routing name, for example ProductChanged.v1.
+        eventVersion:
+          type: integer
+          minimum: 1
+        occurredAt:
+          type: string
+          format: date-time
+        tenantId:
+          type: string
+        storeId:
+          type: string
+        correlationId:
+          type: string
+
+  parameters:
+    TenantId:
+      name: x-tenant-id
+      in: header
+      required: true
+      description: Tenant isolation context.
+      schema:
+        type: string
+        minLength: 1
+    StoreId:
+      name: x-store-id
+      in: header
+      required: true
+      description: Store context within the tenant.
+      schema:
+        type: string
+        minLength: 1
+    CorrelationId:
+      name: x-correlation-id
+      in: header
+      required: true
+      description: Distributed tracing and request correlation context.
+      schema:
+        type: string
+        minLength: 1
+    CorrelationIdOptional:
+      name: x-correlation-id
+      in: header
+      required: false
+      description: Optional correlation context for deliberately public operations.
+      schema:
+        type: string
+        minLength: 1
+    Authorization:
+      name: Authorization
+      in: header
+      required: true
+      description: OAuth2 bearer access token for protected operations.
+      schema:
+        type: string
+        pattern: "^Bearer\\s+.+$"
+    AuthorizationOptional:
+      name: Authorization
+      in: header
+      required: false
+      description: OAuth2 bearer access token when a protected operation requires it.
+      schema:
+        type: string
+        pattern: "^Bearer\\s+.+$"
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Client key used to replay a retryable command safely.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+    OptionalIdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Optional replay key for a mutation that is idempotent by operation semantics.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+    Page:
+      name: page
+      in: query
+      required: false
+      description: One-based page number.
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        default: 1
+    PageSize:
+      name: pageSize
+      in: query
+      required: false
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        maximum: 200
+        default: 20
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

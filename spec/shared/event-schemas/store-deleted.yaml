@@ -2,6 +2,13 @@ $schema: https://json-schema.org/draft/2020-12/schema
 title: StoreDeleted
 type: object
 x-contract-status: GAP
-description: Candidate MS-10 event; publisher payload is not defined.
-additionalProperties: true
-
+description: Candidate event has no confirmed publisher or consumer in the approved artifacts.
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion, storeId, code]
+    properties:
+      eventType: {const: StoreDeleted}
+      eventVersion: {const: 1}
+      storeId: {type: string}
+      code: {type: string}

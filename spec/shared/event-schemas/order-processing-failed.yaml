@@ -1,7 +1,14 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: OrderProcessingFailed
 type: object
-x-contract-status: GAP
-description: Rules-only MS-05 event; payload is not defined in the API design.
-additionalProperties: true
-
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion, failureCode]
+    properties:
+      eventType: {const: OrderProcessingFailed}
+      eventVersion: {const: 1}
+      orderId: {type: [integer, "null"]}
+      submissionId: {type: [string, "null"]}
+      failureCode: {type: string}
+      message: {type: string}

@@ -11,7 +11,9 @@
 - **Method:** GET
 - **Path:** `/stores/{storeCode}` (MS-10 `04-api-contract.yaml`, `getStore`)
 - **Path parameter:** `storeCode` is the store identifier from the catalog request context.
-- **Headers:** None are declared on this MS-10 operation. This is a convention GAP because MS-02 requires `x-tenant-id`, `x-store-id`, and `x-correlation-id`.
+- **Headers:** `x-tenant-id`, `x-store-id`, and `x-correlation-id` are the shared request-context
+  parameters. MS-10's provider contract now exposes the shared tenant/correlation components;
+  `storeCode` remains the provider path identifier.
 - **Request body:** none
 - **Success response:** `200`, `#/components/schemas/Store`
 - **Response shape:** `Store` with required `id`, `tenantId`, `code`, `name`, `emailAddress`, `phone`, `city`, `postalCode`, `countryCode`, `defaultLanguageCode`, `currencyCode`, `dimensionUnit`, `weightUnit`, `retailer`, and `status`.
@@ -59,12 +61,18 @@
 - **Guarantees:** transactional outbox, at-least-once delivery
 - **Ordering:** by reservation aggregate
 
+### `InventoryReservationReleased.v1`
+- **Triggered by:** BR-CAT-039 and the reservation release operation
+- **Channel:** RabbitMQ domain-events exchange; routing key `InventoryReservationReleased.v1`
+- **Schema:** `spec/shared/event-schemas/inventory-reservation-released.yaml`
+- **Consumers:** MS-05
+- **Guarantees:** transactional outbox, at-least-once delivery
+
 ## Events Consumed
 
-No inbound event is declared for MS-02 in the approved service rules or API design. The
-repository also contains MS-05 references to `OrderCanceled` and `OrderCompensationRequired`
-with MS-02 listed as a consumer; that is a cross-service reconciliation GAP, not silently added
-as an inbound contract here.
+`OrderCanceled` and `OrderCompensationRequired` remain unbound to an MS-02 consumer contract.
+The MS-05 event table names MS-02, but no MS-02 rule or API artifact defines an inbound handler;
+this is retained as a GAP rather than inventing one.
 
 ## Integration reconciliation
 
@@ -72,4 +80,3 @@ The rules' integration dimensions identify MS-10 scope validation and downstream
 availability, and event boundaries. The graph contributes one REST edge, resolved above. The
 MS-05 cancellation/compensation references require a graph edge and payload contract before they
 can be treated as implemented dependencies.
-

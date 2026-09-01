@@ -276,7 +276,8 @@ Deletes media and publishes a projection change.
 | `MediaChanged.v1` | Media create/update/delete | MS-03 Search; MS-12 media delivery |
 | `InventoryReservationChanged.v1` | Reservation held/committed/released/expired | MS-04 Cart; MS-05 Order |
 
-Events use an outbox, include `eventId`, `eventType`, `aggregateId`, `aggregateVersion`, `tenantId`, `storeId`, and `occurredAt`.
+Events use an outbox and include shared `eventId`, `eventType`, `eventVersion`, `occurredAt`,
+`tenantId`, `storeId`, and `correlationId`, plus the aggregate identity/version and event payload.
 
 ## Events consumed
 

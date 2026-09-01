@@ -6,7 +6,7 @@
 
 ### Order Management (MS-05) (async events)
 
-#### Consumes: `OrderSubmitted`
+#### Consumes: `OrderSubmitted.v1`
 - **Triggered by:** BR-ORD-015 and BR-PA-020
 - **Channel:** RabbitMQ domain-events exchange; source MS-04 via MS-05 order acceptance
 - **Schema:** `spec/shared/event-schemas/order-submitted-v1.yaml`
@@ -21,13 +21,14 @@
 - **Action:** begin the configured authorization or capture workflow.
 - **Idempotency:** payment operation idempotency key and inbox uniqueness on `eventId`.
 
-#### Consumes: `ProviderConfigurationChanged.v1`
+#### Consumes: `ConfigurationReferenceChanged`
 - **Triggered by:** BR-EXT-001
 - **Channel:** RabbitMQ configuration exchange; source MS-11
-- **Schema:** `spec/shared/event-schemas/provider-configuration-changed-v1.yaml`
+- **Schema:** `spec/shared/event-schemas/configuration-reference-changed.yaml`
 - **Action:** refresh future-operation configuration; never mutate configuration pinned to an existing intent.
 - **Idempotency:** configuration version guard.
-- **Status:** GAP — MS-11's approved artifacts do not name this event; MS-12 names a different `ConfigurationReferenceChanged` event.
+- **Status:** RECONCILED — the MS-11 publication and the MS-12 adapter projection use the same
+  event name and schema. MS-06 consumes the canonical name rather than the retired alias.
 
 ## Events Published
 
@@ -47,8 +48,8 @@ variants in the shared index and are not silently treated as confirmed contracts
 
 | Event | Triggered by | Schema | Status |
 |---|---|---|---|
-| `PaymentRefundFailed` | BR-EXT-003 | `payment-refund-failed.yaml` | GAP — rules-only variant; consumer not defined |
-| `PaymentPendingManualSettlement` | BR-EXT-009 | `payment-pending-manual-settlement.yaml` | GAP — rules-only variant; consumer not defined |
+| `PaymentRefundFailed` | BR-EXT-003 | `payment-refund-failed.yaml` | GAP — rules-only variant; consumer and final publication policy not defined |
+| `PaymentPendingManualSettlement` | BR-EXT-009 | `payment-pending-manual-settlement.yaml` | GAP — rules-only variant; consumer and final publication policy not defined |
 
 ## External Dependencies
 

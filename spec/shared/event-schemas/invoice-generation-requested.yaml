@@ -1,7 +1,24 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: InvoiceGenerationRequested
 type: object
-x-contract-status: GAP
-description: Event is named by MS-05; invoice request payload is not defined.
-additionalProperties: true
-
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion, orderId, orderDate, billingSnapshot, lines, acceptedTotals, currency]
+    properties:
+      eventType: {const: InvoiceGenerationRequested}
+      eventVersion: {const: 1}
+      orderId: {type: integer}
+      requestId: {type: string}
+      orderDate: {type: string, format: date-time}
+      billingSnapshot:
+        $ref: ../../microservices/ms-05/04-api-contract.yaml#/components/schemas/AddressSnapshot
+      lines:
+        type: array
+        items:
+          $ref: ../../microservices/ms-05/04-api-contract.yaml#/components/schemas/OrderLine
+      acceptedTotals:
+        type: array
+        items:
+          $ref: ../../microservices/ms-05/04-api-contract.yaml#/components/schemas/OrderTotal
+      currency: {type: string}

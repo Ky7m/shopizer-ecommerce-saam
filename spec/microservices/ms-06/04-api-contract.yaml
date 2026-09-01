@@ -278,7 +278,7 @@ paths:
   /payment-intents/{paymentIntentId}/transactions:
     get:
       tags: [Payment Intents]
-      operationId: listPaymentTransactions
+      operationId: listPaymentIntentTransactions
       summary: List chronological payment transactions
       parameters:
         - $ref: "#/components/parameters/TenantId"
@@ -390,32 +390,20 @@ paths:
         "500": { $ref: "#/components/responses/InternalError" }
 
 components:
+  securitySchemes:
+    bearerAuth:
+      $ref: '../../shared/common-schemas.yaml#/components/securitySchemes/bearerAuth'
   parameters:
     TenantId:
-      name: x-tenant-id
-      in: header
-      required: true
-      schema: { type: string, minLength: 1 }
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/TenantId'
     StoreId:
-      name: x-store-id
-      in: header
-      required: true
-      schema: { type: string, minLength: 1 }
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/StoreId'
     CorrelationId:
-      name: x-correlation-id
-      in: header
-      required: true
-      schema: { type: string, minLength: 1 }
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/CorrelationId'
     Authorization:
-      name: Authorization
-      in: header
-      required: true
-      schema: { type: string, minLength: 1 }
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/Authorization'
     IdempotencyKey:
-      name: Idempotency-Key
-      in: header
-      required: true
-      schema: { type: string, minLength: 8, maxLength: 255 }
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/IdempotencyKey'
     PaymentMethodCode:
       name: code
       in: path
@@ -437,15 +425,9 @@ components:
       required: true
       schema: { type: string, format: uuid }
     Page:
-      name: page
-      in: query
-      required: false
-      schema: { type: integer, minimum: 1, default: 1 }
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/Page'
     PageSize:
-      name: pageSize
-      in: query
-      required: false
-      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/PageSize'
 
   schemas:
     Money:
@@ -660,15 +642,11 @@ components:
         providerCode: { type: string }
 
     PaginationInfo:
-      type: object
-      required: [page, pageSize, totalItems, totalPages]
-      properties:
-        page: { type: integer }
-        pageSize: { type: integer }
-        totalItems: { type: integer }
-        totalPages: { type: integer }
+      $ref: '../../shared/common-schemas.yaml#/components/schemas/PaginationInfo'
 
     PaymentMethodListResponse:
+      allOf:
+        - $ref: '../../shared/common-schemas.yaml#/components/schemas/ListEnvelope'
       type: object
       required: [items, pagination]
       properties:
@@ -678,6 +656,8 @@ components:
         pagination: { $ref: "#/components/schemas/PaginationInfo" }
 
     PaymentTransactionListResponse:
+      allOf:
+        - $ref: '../../shared/common-schemas.yaml#/components/schemas/ListEnvelope'
       type: object
       required: [items, pagination]
       properties:
@@ -687,6 +667,8 @@ components:
         pagination: { $ref: "#/components/schemas/PaginationInfo" }
 
     CapturablePaymentListResponse:
+      allOf:
+        - $ref: '../../shared/common-schemas.yaml#/components/schemas/ListEnvelope'
       type: object
       required: [items, pagination]
       properties:
@@ -696,14 +678,7 @@ components:
         pagination: { $ref: "#/components/schemas/PaginationInfo" }
 
     ErrorResponse:
-      type: object
-      required: [error, message, statusCode, timestamp]
-      properties:
-        error: { type: string }
-        message: { type: string }
-        statusCode: { type: integer }
-        timestamp: { type: string, format: date-time }
-        correlationId: { type: string, nullable: true }
+      $ref: '../../shared/common-schemas.yaml#/components/schemas/ErrorResponse'
 
   responses:
     BadRequest:

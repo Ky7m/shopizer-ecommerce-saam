@@ -1,7 +1,15 @@
 $schema: https://json-schema.org/draft/2020-12/schema
-title: InventoryReservationReleased
+title: InventoryReservationReleased.v1
 type: object
-x-contract-status: GAP
-description: Consumed by MS-05; MS-02 does not define this event payload.
-additionalProperties: true
-
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion, reservationId, reservationKey, productId, quantity, state]
+    properties:
+      eventType: {const: InventoryReservationReleased.v1}
+      eventVersion: {const: 1}
+      reservationId: {type: string}
+      reservationKey: {type: string}
+      productId: {type: string}
+      quantity: {type: integer, minimum: 1}
+      state: {const: Released}

@@ -1,0 +1,20 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+title: ShippingAdapterExecutionRequested.v1
+type: object
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion, requestType, providerCode]
+    properties:
+      eventType: {const: ShippingAdapterExecutionRequested.v1}
+      eventVersion: {const: 1}
+      requestType: {type: string, enum: [CarrierQuote, Distance]}
+      providerCode: {type: string}
+      carrierQuote:
+        oneOf:
+          - $ref: ../../microservices/ms-12/04-api-contract.yaml#/components/schemas/CarrierQuoteRequest
+          - type: "null"
+      distance:
+        oneOf:
+          - $ref: ../../microservices/ms-12/04-api-contract.yaml#/components/schemas/DistanceRequest
+          - type: "null"

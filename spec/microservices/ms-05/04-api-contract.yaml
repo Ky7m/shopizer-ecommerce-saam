@@ -564,45 +564,29 @@ paths:
         "503": { $ref: "#/components/responses/Unavailable" }
 
 components:
+  securitySchemes:
+    bearerAuth:
+      $ref: '../../shared/common-schemas.yaml#/components/securitySchemes/bearerAuth'
   parameters:
     Authorization:
-      name: Authorization
-      in: header
-      required: true
-      schema: { type: string }
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/Authorization'
     TenantId:
-      name: x-tenant-id
-      in: header
-      required: true
-      schema: { type: string, minLength: 1 }
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/TenantId'
     StoreId:
-      name: x-store-id
-      in: header
-      required: true
-      schema: { type: string, minLength: 1 }
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/StoreId'
     CorrelationId:
-      name: x-correlation-id
-      in: header
-      required: true
-      schema: { type: string, minLength: 1 }
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/CorrelationId'
     IdempotencyKey:
-      name: Idempotency-Key
-      in: header
-      required: true
-      schema: { type: string, minLength: 1, maxLength: 255 }
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/IdempotencyKey'
     OrderId:
       name: orderId
       in: path
       required: true
       schema: { type: integer, format: int64, minimum: 1 }
     Page:
-      name: page
-      in: query
-      schema: { type: integer, format: int32, minimum: 1, default: 1 }
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/Page'
     PageSize:
-      name: pageSize
-      in: query
-      schema: { type: integer, format: int32, minimum: 1, maximum: 100, default: 20 }
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/PageSize'
 
   schemas:
     OrderStatus:
@@ -767,15 +751,11 @@ components:
         expiresAt: { type: string, format: date-time, nullable: true }
 
     PaginationInfo:
-      type: object
-      required: [page, pageSize, totalItems, totalPages]
-      properties:
-        page: { type: integer, format: int32 }
-        pageSize: { type: integer, format: int32 }
-        totalItems: { type: integer, format: int64 }
-        totalPages: { type: integer, format: int32 }
+      $ref: '../../shared/common-schemas.yaml#/components/schemas/PaginationInfo'
 
     OrderListResponse:
+      allOf:
+        - $ref: '../../shared/common-schemas.yaml#/components/schemas/ListEnvelope'
       type: object
       required: [items, pagination]
       properties:
@@ -914,14 +894,7 @@ components:
         generatedAt: { type: string, format: date-time, nullable: true }
 
     ErrorResponse:
-      type: object
-      required: [error, message, statusCode, timestamp]
-      properties:
-        error: { type: string }
-        message: { type: string }
-        statusCode: { type: integer, format: int32 }
-        timestamp: { type: string, format: date-time }
-        correlationId: { type: string, nullable: true }
+      $ref: '../../shared/common-schemas.yaml#/components/schemas/ErrorResponse'
 
   responses:
     Unauthorized:

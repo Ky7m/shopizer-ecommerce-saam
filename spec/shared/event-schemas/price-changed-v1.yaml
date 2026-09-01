@@ -1,7 +1,18 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: PriceChanged.v1
 type: object
-x-contract-status: GAP
-description: Event is named by MS-07; price-change payload is not defined.
-additionalProperties: true
-
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion, productSku, priceId, changeType, amount, priceType, defaultPrice]
+    properties:
+      eventType: {const: PriceChanged.v1}
+      eventVersion: {const: 1}
+      productSku: {type: string}
+      variantSku: {type: [string, "null"]}
+      priceId: {type: string, format: uuid}
+      changeType: {type: string, enum: [Created, Updated, Deleted]}
+      amount: {type: number, minimum: 0}
+      priceType: {type: string, enum: [OneTime, Monthly]}
+      defaultPrice: {type: boolean}
+      specialAmount: {type: [number, "null"], minimum: 0}

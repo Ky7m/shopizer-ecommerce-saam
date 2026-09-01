@@ -1,7 +1,15 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: StoreConfigured
 type: object
-x-contract-status: GAP
-description: Sequence-only event name; payload and naming reconciliation are not defined.
-additionalProperties: true
-
+x-contract-status: DEAD/UNCONSUMED
+description: Retired alias from the sequence artifact. Store creation is represented by StoreCreated.
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion, storeId, code, status]
+    properties:
+      eventType: {const: StoreConfigured}
+      eventVersion: {const: 1}
+      storeId: {type: string}
+      code: {type: string}
+      status: {type: string}

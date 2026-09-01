@@ -106,8 +106,8 @@ sequenceDiagram
     participant MQ as RabbitMQ
     Client->>Cart: POST /checkout/submit with idempotency key
     Cart->>Cart: Validate snapshot and freeze checkout
-    Cart-->>MQ: OrderSubmitted
-    MQ-->>Orders: OrderSubmitted
+    Cart-->>MQ: OrderSubmitted.v1
+    MQ-->>Orders: OrderSubmitted.v1
     Orders->>Orders: Create order aggregate and status PendingPayment
     Orders-->>MQ: PaymentRequested
     MQ-->>Payments: PaymentRequested
@@ -213,4 +213,3 @@ sequenceDiagram
     Search->>Search: Upsert document idempotently
     Search-->>Search: Record index freshness
 ```
-

@@ -136,7 +136,7 @@ paths:
               type: array
               minItems: 1
               items:
-                $ref: "#/components/schemas<MultiCartItemRequest>"
+                $ref: "#/components/schemas/MultiCartItemRequest"
       responses:
         "200":
           description: Updated cart
@@ -551,42 +551,20 @@ paths:
           $ref: "#/components/responses/ServiceUnavailable"
 
 components:
+  securitySchemes:
+    bearerAuth:
+      $ref: '../../shared/common-schemas.yaml#/components/securitySchemes/bearerAuth'
   parameters:
     TenantId:
-      name: x-tenant-id
-      in: header
-      required: true
-      schema:
-        type: string
-        format: uuid
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/TenantId'
     StoreId:
-      name: x-store-id
-      in: header
-      required: true
-      schema:
-        type: string
-        format: uuid
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/StoreId'
     CorrelationId:
-      name: x-correlation-id
-      in: header
-      required: true
-      schema:
-        type: string
-        format: uuid
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/CorrelationId'
     Authorization:
-      name: Authorization
-      in: header
-      required: true
-      schema:
-        type: string
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/Authorization'
     IdempotencyKey:
-      name: idempotency-key
-      in: header
-      required: true
-      schema:
-        type: string
-        minLength: 8
-        maxLength: 255
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/IdempotencyKey'
     CartCode:
       name: code
       in: path
@@ -1419,28 +1397,7 @@ components:
           format: date-time
 
     ErrorResponse:
-      type: object
-      required:
-        - error
-        - message
-        - statusCode
-        - timestamp
-      properties:
-        error:
-          type: string
-        message:
-          type: string
-        statusCode:
-          type: integer
-        timestamp:
-          type: string
-          format: date-time
-        correlationId:
-          type: string
-          format: uuid
-        details:
-          type: object
-          additionalProperties: true
+      $ref: '../../shared/common-schemas.yaml#/components/schemas/ErrorResponse'
 
   responses:
     BadRequest:

@@ -115,7 +115,7 @@
 
 ## Events Published
 
-### `OrderSubmitted`
+### `OrderSubmitted.v1`
 - **Triggered by:** BR-CO-ORC-019
 - **Channel:** RabbitMQ domain-events exchange; routing key `OrderSubmitted.v1`
 - **Schema:** `spec/shared/event-schemas/order-submitted-v1.yaml`

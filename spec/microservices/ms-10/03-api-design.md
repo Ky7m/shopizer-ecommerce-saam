@@ -117,3 +117,11 @@
 ## API-to-rule coverage
 
 All non-CRUD operations have driving rules. `GET /stores/{storeCode}` is a standard scoped read but retains context rules; no endpoint is intentionally left without a rule or explicit CRUD classification.
+
+## Events
+
+### Published
+
+`StoreCreated` is published after the store and store-language transaction commits. Its payload
+is defined by `spec/shared/event-schemas/store-created.yaml`. `StoreConfigured` is a retired
+sequence alias and is not published.

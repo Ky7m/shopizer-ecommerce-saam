@@ -4,6 +4,25 @@ info:
   version: 1.0.0
 servers:
   - url: /api/v1
+x-global-headers:
+  - name: x-tenant-id
+    required: true
+    description: Tenant isolation context.
+    testValue: test-tenant-001
+  - name: x-correlation-id
+    required: true
+    description: Distributed tracing context.
+    testValue: corr-ms10-0001
+  - name: x-store-id
+    required: false
+    description: Required for store-scoped operations; the store code in the path remains the
+      authoritative human-facing store identifier.
+    testValue: test-store-001
+x-event-catalog:
+  published:
+    - name: StoreCreated
+      schema:
+        $ref: '#/components/schemas/StoreCreated'
 paths:
   /stores:
     get:
@@ -26,7 +45,11 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/UnprocessableEntity' }
   /stores/{storeCode}:
-    parameters: [{ $ref: '#/components/parameters/StoreCode' }]
+    parameters:
+      - $ref: '#/components/parameters/StoreCode'
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
     get:
       operationId: getStore
       responses:
@@ -149,14 +172,24 @@ paths:
         '410': { $ref: '#/components/responses/Gone' }
 components:
   securitySchemes:
-    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+    bearerAuth:
+      $ref: '../../shared/common-schemas.yaml#/components/securitySchemes/bearerAuth'
   parameters:
-    TenantId: { name: x-tenant-id, in: header, required: true, schema: { type: string } }
+    TenantId:
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/TenantId'
+    StoreId:
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/StoreId'
+    CorrelationId:
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/CorrelationId'
+    Authorization:
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/Authorization'
     StoreCode: { name: storeCode, in: path, required: true, schema: { type: string } }
     MerchantCode: { name: merchantCode, in: path, required: true, schema: { type: string } }
     Token: { name: token, in: path, required: true, schema: { type: string } }
-    Page: { name: page, in: query, required: false, schema: { type: integer, minimum: 0, default: 0 } }
-    PageSize: { name: pageSize, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 200, default: 20 } }
+    Page:
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/Page'
+    PageSize:
+      $ref: '../../shared/common-schemas.yaml#/components/parameters/PageSize'
   responses:
     Unauthorized: { description: Unauthorized, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
     Forbidden: { description: Forbidden, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
@@ -167,14 +200,7 @@ components:
     ServiceUnavailable: { description: Provider unavailable, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
   schemas:
     ErrorResponse:
-      type: object
-      required: [error, message, statusCode, timestamp]
-      properties:
-        error: { type: string }
-        message: { type: string }
-        statusCode: { type: integer }
-        timestamp: { type: string, format: date-time }
-        correlationId: { type: string, format: uuid }
+      $ref: '../../shared/common-schemas.yaml#/components/schemas/ErrorResponse'
     Address:
       type: object
       required: [city, postalCode, countryCode]
@@ -248,14 +274,23 @@ components:
       required: [exists]
       properties: { exists: { type: boolean } }
     PaginationInfo:
-      type: object
-      required: [page, pageSize, totalItems, totalPages]
-      properties:
-        page: { type: integer }
-        pageSize: { type: integer }
-        totalItems: { type: integer }
-        totalPages: { type: integer }
+      $ref: '../../shared/common-schemas.yaml#/components/schemas/PaginationInfo'
+    StoreCreated:
+      allOf:
+        - $ref: '../../shared/common-schemas.yaml#/components/schemas/EventMetadata'
+        - type: object
+          required: [eventType, eventVersion, code, name, emailAddress, defaultLanguageCode, supportedLanguageCodes]
+          properties:
+            eventType: { const: StoreCreated }
+            eventVersion: { const: 1 }
+            code: { type: string }
+            name: { type: string }
+            emailAddress: { type: string, format: email }
+            defaultLanguageCode: { type: string }
+            supportedLanguageCodes: { type: array, items: { type: string } }
     StoreListResponse:
+      allOf:
+        - $ref: '../../shared/common-schemas.yaml#/components/schemas/ListEnvelope'
       type: object
       required: [items, pagination]
       properties:

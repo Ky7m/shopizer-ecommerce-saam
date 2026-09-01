@@ -1,7 +1,14 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: SearchRebuildCompleted.v1
 type: object
-x-contract-status: GAP
-description: Operational event name is defined; payload fields are not defined.
-additionalProperties: true
-
+x-contract-status: DEAD/UNCONSUMED
+description: Operational completion event; no business consumer is confirmed in the repository.
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion, rebuildId, status]
+    properties:
+      eventType: {const: SearchRebuildCompleted.v1}
+      eventVersion: {const: 1}
+      rebuildId: {type: string, format: uuid}
+      status: {const: Succeeded}

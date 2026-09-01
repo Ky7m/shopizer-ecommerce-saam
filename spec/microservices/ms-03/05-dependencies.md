@@ -36,7 +36,8 @@
 - **Schema:** `spec/shared/event-schemas/content-published-v1.yaml`
 - **Action:** Reindex published searchable content when enabled.
 - **Idempotency:** Inbox uniqueness on `eventId`.
-- **Status:** GAP — publisher rule and payload are not defined.
+- **Status:** RECONCILED — the MS-11 contract publishes `ContentPublished.v1` with content
+  identity, type, visibility, event occurrence time, and localized descriptions.
 
 ## Events Published
 
@@ -58,4 +59,3 @@ Event handlers use inbox deduplication, bounded exponential backoff, and dead-le
 The source/API artifacts do not identify any business consumer for either published search event;
 both are explicitly listed as intentionally unconsumed operational events in
 `spec/shared/event-schemas/index.md`.
-

@@ -160,7 +160,7 @@ Payment-mutating operations additionally require `Idempotency-Key`, represented 
 |---|---|---|
 | `OrderSubmitted.v1` | MS-04 | Create or bind immutable amount/currency payment context |
 | `PaymentRequested.v1` | MS-05 | Begin authorization or capture workflow using the order snapshot |
-| `ProviderConfigurationChanged.v1` | MS-11 | Refresh future-operation configuration; never mutate existing intent configuration |
+| `ConfigurationReferenceChanged` | MS-11 | Refresh future-operation configuration; never mutate existing intent configuration |
 
 ## Resilience
 

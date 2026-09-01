@@ -20,6 +20,14 @@ provider schema; it does not mean that unrelated convention drift has been norma
 | MS-10 | MS-01 | GET /users/me | no body | `#/components/schemas/Administrator` (200) | RECONCILED |
 
 No synchronous graph edge is hidden as an event. The MS-09 -> MS-12 graph edge is protocol
-`Event`, and its missing internal event contract is recorded as a GAP in the MS-09 dependency
-artifact rather than placed in this synchronous table.
+`Event` and is bound to `ShippingAdapterExecutionRequested.v1` in the MS-09/MS-12 dependency
+artifacts; it is therefore intentionally not placed in this synchronous table.
 
+## Shared convention binding
+
+All request-context, idempotency, pagination, and error shapes in the provider contracts are
+bound to `spec/shared/common-schemas.yaml`. The table above intentionally records only the
+business request/response shape for each REST edge; common headers are supplied by the referenced
+`TenantId`, `StoreId`, `CorrelationId`, `Authorization`, and idempotency parameter components.
+MS-03 search pagination and MS-11 legacy content envelopes are explicit compatibility
+exceptions documented in `spec/shared/auth-config.md` and their service contracts.

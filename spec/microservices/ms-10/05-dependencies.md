@@ -18,16 +18,15 @@
 
 ## Events Published
 
-The completion summary names store-created, store-updated, and store-deleted events as
-**candidates**, while the approved sequence diagram names `StoreConfigured`. None has a
-publisher contract or payload in the MS-10 contract.
+The approved reconciliation selects `StoreCreated` as the canonical post-commit store event.
+`StoreConfigured` is retained only as a retired sequence alias.
 
 | Event | Triggered by | Schema | Status |
 |---|---|---|---|
-| `StoreCreated` | BR-MSA-VAL-003 | `store-created.yaml` | GAP — candidate only |
-| `StoreConfigured` | BR-MER-005 and BR-MSA-VAL-003 | `store-configured.yaml` | GAP — sequence-only name; conflicts with candidate naming |
-| `StoreUpdated` | BR-MER-005 | `store-updated.yaml` | GAP — candidate only |
-| `StoreDeleted` | BR-MER-006 and BR-MER-009 | `store-deleted.yaml` | GAP — candidate only |
+| `StoreCreated` | BR-MSA-VAL-003 | `store-created.yaml` | RECONCILED — published after the create transaction commits |
+| `StoreConfigured` | sequence artifact alias | `store-configured.yaml` | DEAD/UNCONSUMED — retired; use `StoreCreated` |
+| `StoreUpdated` | BR-MER-005 | `store-updated.yaml` | GAP — candidate has no approved publisher or consumer |
+| `StoreDeleted` | BR-MER-006 and BR-MER-009 | `store-deleted.yaml` | GAP — candidate has no approved publisher or consumer |
 
 ## External/reference dependencies
 
@@ -38,7 +37,5 @@ MS-11 endpoint.
 
 ## Resilience
 
-The MS-01 identity call uses the REST policy above. Event publication, if approved, must use the
-transactional outbox and at-least-once delivery; exact event routing and payloads require human
-reconciliation.
-
+The MS-01 identity call uses the REST policy above. `StoreCreated` uses the transactional outbox
+and at-least-once delivery. No publisher is claimed for the retired/candidate events.

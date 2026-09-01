@@ -1,7 +1,19 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: PromotionChanged.v1
 type: object
-x-contract-status: GAP
-description: Event is named by MS-07; promotion-change payload is not defined.
-additionalProperties: true
-
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion, promotionId, changeType]
+    properties:
+      eventType: {const: PromotionChanged.v1}
+      eventVersion: {const: 1}
+      promotionId: {type: string}
+      promoCode: {type: [string, "null"]}
+      changeType: {type: string, enum: [Created, Updated, Enabled, Disabled, Deleted]}
+      name: {type: [string, "null"]}
+      ruleKey: {type: [string, "null"]}
+      discountRate: {type: [number, "null"], minimum: 0, maximum: 1}
+      validFrom: {type: [string, "null"], format: date}
+      validUntil: {type: [string, "null"], format: date}
+      isEnabled: {type: [boolean, "null"]}

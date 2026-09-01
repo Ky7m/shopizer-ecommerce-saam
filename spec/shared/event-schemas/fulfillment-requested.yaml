@@ -1,7 +1,18 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: FulfillmentRequested
 type: object
-x-contract-status: GAP
-description: Event is named by MS-05; delivery snapshot payload is not defined.
-additionalProperties: true
-
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion, orderId, fulfillmentId, lines, deliverySnapshot]
+    properties:
+      eventType: {const: FulfillmentRequested}
+      eventVersion: {const: 1}
+      orderId: {type: integer}
+      fulfillmentId: {type: string, format: uuid}
+      lines:
+        type: array
+        items:
+          $ref: ../../microservices/ms-05/04-api-contract.yaml#/components/schemas/OrderLine
+      deliverySnapshot:
+        $ref: ../../microservices/ms-05/04-api-contract.yaml#/components/schemas/AddressSnapshot

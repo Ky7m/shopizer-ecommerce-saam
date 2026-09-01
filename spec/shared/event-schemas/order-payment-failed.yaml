@@ -1,7 +1,14 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: OrderPaymentFailed
 type: object
-x-contract-status: GAP
-description: Rules-only MS-05 event; payload is not defined in the API design.
-additionalProperties: true
-
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion, orderId, paymentIntentId, errorCode]
+    properties:
+      eventType: {const: OrderPaymentFailed}
+      eventVersion: {const: 1}
+      orderId: {type: integer}
+      paymentIntentId: {type: string}
+      errorCode: {type: string}
+      paymentReference: {type: [string, "null"]}

@@ -4,13 +4,26 @@
 
 ## Services Consumed
 
+### Shipping (MS-09) (async event boundary)
+
+#### Consumes: `ShippingAdapterExecutionRequested.v1`
+- **Triggered by:** MS-09 shipping quote adapter boundary
+- **Channel:** RabbitMQ integration exchange
+- **Schema:** `spec/shared/event-schemas/shipping-adapter-execution-requested-v1.yaml`
+- **Required shape:** shared event metadata plus `requestType`, `providerCode`, and the typed
+  `carrierQuote` or `distance` request.
+- **Action:** execute the selected carrier or Maps adapter and return normalized facts through
+  the MS-09 integration boundary.
+- **Idempotency:** inbox uniqueness on `eventId` and provider request identity.
+- **Status:** RECONCILED.
+
 ### Order Management (MS-05) (async events)
 
 #### Consumes: `BusinessIntegrationDeliveryRequested`
 - **Triggered by:** BR-INT-MS12-016, BR-INT-MS12-017, and the MS-05 invoice/entitlement boundaries
 - **Channel:** RabbitMQ integration-delivery exchange
 - **Schema:** `#/components/schemas/BusinessIntegrationDeliveryRequested` in the MS-12 contract and `spec/shared/event-schemas/business-integration-delivery-requested.yaml`
-- **Required shape:** common `EventMetadata` (`eventId`, `eventType`, `occurredAt`, `tenantId`, `storeId`, `correlationId`) plus required `idempotencyKey`, `deliveryType`, `endpointCode`, and `payload`; optional `businessReference`.
+- **Required shape:** common `EventMetadata` (`eventId`, `eventType`, `eventVersion`, `occurredAt`, `tenantId`, `storeId`, `correlationId`) plus required `idempotencyKey`, `deliveryType`, `endpointCode`, and `payload`; optional `businessReference`.
 - **Action:** resolve the configured endpoint and create a durable integration operation/attempt.
 - **Idempotency:** unique `idempotencyKey`; inbox/event ID deduplication.
 
@@ -23,7 +36,8 @@
 - **Required shape:** `EventMetadata` plus required `moduleType`, `code`, `environment`, `configurationRef`, and `version`.
 - **Action:** refresh the safe adapter projection; existing operation configuration remains pinned.
 - **Idempotency:** configuration version guard and inbox event ID.
-- **Status:** GAP — MS-11 does not publish the event in its contract.
+- **Status:** RECONCILED — MS-11 publishes the same event and schema after configuration
+  reference persistence.
 
 ### MS-12 (async event)
 
@@ -65,4 +79,3 @@ MS-12 `04-api-contract.yaml`.
 Durable operations use the MS-12 contract's operation/attempt state, idempotency key, replay, and
 dead-letter model. Provider workers use bounded retries and per-provider circuit breakers. A
 completed attempt is never resubmitted as the same attempt.
-

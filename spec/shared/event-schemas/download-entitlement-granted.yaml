@@ -1,7 +1,16 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: DownloadEntitlementGranted
 type: object
-x-contract-status: GAP
-description: Event is named by MS-05; entitlement payload is not defined.
-additionalProperties: true
-
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion, orderId, downloadId, productName, fileName, downloadExpiryDays]
+    properties:
+      eventType: {const: DownloadEntitlementGranted}
+      eventVersion: {const: 1}
+      orderId: {type: integer}
+      downloadId: {type: integer}
+      productName: {type: string}
+      fileName: {type: string}
+      downloadExpiryDays: {type: integer, minimum: 1}
+      expiresAt: {type: [string, "null"], format: date-time}

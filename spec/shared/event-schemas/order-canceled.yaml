@@ -1,7 +1,15 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: OrderCanceled
 type: object
-x-contract-status: GAP
-description: Event is named by MS-05; cancellation payload is not defined.
-additionalProperties: true
-
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion, orderId, previousStatus, status, reason, compensationState]
+    properties:
+      eventType: {const: OrderCanceled}
+      eventVersion: {const: 1}
+      orderId: {type: integer}
+      previousStatus: {type: string, enum: [Ordered, Processed]}
+      status: {const: Canceled}
+      reason: {type: string}
+      compensationState: {type: string, enum: [Pending, Completed, Failed]}

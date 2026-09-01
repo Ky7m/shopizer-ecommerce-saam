@@ -1,7 +1,16 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: OrderRefundApplied
 type: object
-x-contract-status: GAP
-description: Event is named by MS-05; refund reconciliation payload is not defined.
-additionalProperties: true
-
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion, orderId, refundId, amount, currency, status]
+    properties:
+      eventType: {const: OrderRefundApplied}
+      eventVersion: {const: 1}
+      orderId: {type: integer}
+      refundId: {type: string}
+      amount: {type: number, minimum: 0}
+      currency: {type: string}
+      remainingRefundable: {type: number, minimum: 0}
+      status: {const: Applied}

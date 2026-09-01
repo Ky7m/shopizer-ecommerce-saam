@@ -1,7 +1,19 @@
 $schema: https://json-schema.org/draft/2020-12/schema
 title: ShippingConfigurationChanged.v1
 type: object
-x-contract-status: GAP
-description: Recommended MS-09 target event only; not an approved publisher contract.
-additionalProperties: true
-
+allOf:
+  - $ref: ../common-schemas.yaml#/components/schemas/EventMetadata
+  - type: object
+    required: [eventType, eventVersion, configurationType, configurationId, changeType]
+    properties:
+      eventType: {const: ShippingConfigurationChanged.v1}
+      eventVersion: {const: 1}
+      configurationType: {type: string, enum: [Module, Origin, Package, Zone]}
+      configurationId: {type: string}
+      changeType: {type: string, enum: [Created, Updated, Deleted]}
+      configuration:
+        oneOf:
+          - $ref: ../../microservices/ms-09/04-api-contract.yaml#/components/schemas/ShippingConfiguration
+          - $ref: ../../microservices/ms-09/04-api-contract.yaml#/components/schemas/ShippingModuleConfiguration
+          - $ref: ../../microservices/ms-09/04-api-contract.yaml#/components/schemas/ShippingOrigin
+          - $ref: ../../microservices/ms-09/04-api-contract.yaml#/components/schemas/ShippingPackage

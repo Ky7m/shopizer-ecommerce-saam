@@ -118,7 +118,7 @@ flowchart LR
     Cart -->|REST quotes| Pricing[MS-07 Pricing and Promotions]
     Cart -->|REST quotes| Tax[MS-08 Tax]
     Cart -->|REST quotes| Shipping[MS-09 Shipping]
-    Cart -->|OrderSubmitted event| Orders
+    Cart -->|OrderSubmitted.v1 event| Orders
     Orders -->|PaymentRequested event| Payments[MS-06 Payments]
     Catalog -->|ProductChanged event| Search
     Orders -->|Integration events| Integrations[MS-12 Platform Integrations]
@@ -131,4 +131,3 @@ flowchart LR
     Redis[(Redis)] --- Gateway
     Redis --- Catalog
 ```
-
