@@ -1,0 +1,311 @@
+openapi: 3.1.0
+info:
+  title: Merchant and Store Administration API
+  version: 1.0.0
+servers:
+  - url: /api/v1
+paths:
+  /stores:
+    get:
+      operationId: listStores
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200': { description: Store page, content: { application/json: { schema: { $ref: '#/components/schemas/StoreListResponse' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      operationId: createStore
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CreateStoreRequest' } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Store' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /stores/{storeCode}:
+    parameters: [{ $ref: '#/components/parameters/StoreCode' }]
+    get:
+      operationId: getStore
+      responses:
+        '200': { description: Store, content: { application/json: { schema: { $ref: '#/components/schemas/Store' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      operationId: updateStore
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/UpdateStoreRequest' } } }
+      responses:
+        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/Store' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+    delete:
+      operationId: deleteStore
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204': { description: Deleted }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /stores/uniqueness:
+    get:
+      operationId: checkStoreCode
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/TenantId' }
+        - name: code
+          in: query
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 100 }
+      responses:
+        '200': { description: Existence, content: { application/json: { schema: { $ref: '#/components/schemas/EntityExistsResponse' } } } }
+  /stores/names:
+    get:
+      operationId: listStoreNames
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Authorized names, content: { application/json: { schema: { $ref: '#/components/schemas/StoreNameListResponse' } } } }
+  /merchants/{merchantCode}/stores:
+    get:
+      operationId: listMerchantStores
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/MerchantCode' }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PageSize' }
+      responses:
+        '200': { description: Store page, content: { application/json: { schema: { $ref: '#/components/schemas/StoreListResponse' } } } }
+  /merchants/{merchantCode}/children:
+    get:
+      operationId: listChildStores
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/MerchantCode' }
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PageSize' }
+      responses:
+        '200': { description: Children, content: { application/json: { schema: { $ref: '#/components/schemas/StoreListResponse' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /stores/{storeCode}/languages:
+    get:
+      operationId: listStoreLanguages
+      responses:
+        '200': { description: Languages, content: { application/json: { schema: { $ref: '#/components/schemas/LanguageListResponse' } } } }
+    put:
+      operationId: replaceStoreLanguages
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ReplaceLanguagesRequest' } } }
+      responses:
+        '200': { description: Updated store, content: { application/json: { schema: { $ref: '#/components/schemas/Store' } } } }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /stores/{storeCode}/branding:
+    get:
+      operationId: getStoreBranding
+      responses:
+        '200': { description: Branding, content: { application/json: { schema: { $ref: '#/components/schemas/Branding' } } } }
+    put:
+      operationId: updateStoreBranding
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/BrandingRequest' } } }
+      responses:
+        '200': { description: Branding, content: { application/json: { schema: { $ref: '#/components/schemas/Branding' } } } }
+  /stores/{storeCode}/branding/logo:
+    post:
+      operationId: uploadStoreLogo
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content: { multipart/form-data: { schema: { $ref: '#/components/schemas/LogoUploadRequest' } } }
+      responses:
+        '201': { description: Branding, content: { application/json: { schema: { $ref: '#/components/schemas/Branding' } } } }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+    delete:
+      operationId: deleteStoreLogo
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204': { description: Deleted }
+  /stores/signup:
+    post:
+      operationId: createStoreSignup
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CreateStoreRequest' } } }
+      responses:
+        '202': { description: Signup accepted, content: { application/json: { schema: { $ref: '#/components/schemas/SignupResponse' } } } }
+  /stores/{storeCode}/signup/{token}:
+    get:
+      operationId: verifyStoreSignup
+      parameters:
+        - { $ref: '#/components/parameters/StoreCode' }
+        - { $ref: '#/components/parameters/Token' }
+      responses:
+        '200': { description: Verification, content: { application/json: { schema: { $ref: '#/components/schemas/SignupVerificationResponse' } } } }
+        '410': { $ref: '#/components/responses/Gone' }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    TenantId: { name: x-tenant-id, in: header, required: true, schema: { type: string } }
+    StoreCode: { name: storeCode, in: path, required: true, schema: { type: string } }
+    MerchantCode: { name: merchantCode, in: path, required: true, schema: { type: string } }
+    Token: { name: token, in: path, required: true, schema: { type: string } }
+    Page: { name: page, in: query, required: false, schema: { type: integer, minimum: 0, default: 0 } }
+    PageSize: { name: pageSize, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 200, default: 20 } }
+  responses:
+    Unauthorized: { description: Unauthorized, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+    Forbidden: { description: Forbidden, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+    NotFound: { description: Not found, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+    Conflict: { description: Conflict, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+    UnprocessableEntity: { description: Validation failure, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+    Gone: { description: Gone, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+    ServiceUnavailable: { description: Provider unavailable, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error, message, statusCode, timestamp]
+      properties:
+        error: { type: string }
+        message: { type: string }
+        statusCode: { type: integer }
+        timestamp: { type: string, format: date-time }
+        correlationId: { type: string, format: uuid }
+    Address:
+      type: object
+      required: [city, postalCode, countryCode]
+      properties:
+        streetAddress: { type: string }
+        city: { type: string }
+        postalCode: { type: string }
+        countryCode: { type: string }
+        stateProvince: { type: string }
+        zoneCode: { type: string }
+    Store:
+      type: object
+      required: [id, tenantId, code, name, emailAddress, phone, city, postalCode, countryCode, defaultLanguageCode, currencyCode, dimensionUnit, weightUnit, retailer, status]
+      properties:
+        id: { type: string, format: uuid }
+        tenantId: { type: string }
+        code: { type: string }
+        name: { type: string }
+        emailAddress: { type: string, format: email }
+        phone: { type: string }
+        address: { $ref: '#/components/schemas/Address' }
+        defaultLanguageCode: { type: string }
+        supportedLanguageCodes: { type: array, items: { type: string } }
+        currencyCode: { type: string }
+        dimensionUnit: { type: string }
+        weightUnit: { type: string }
+        retailer: { type: boolean }
+        parentStoreCode: { type: string }
+        templateCode: { type: string }
+        logoUri: { type: string, format: uri }
+        status: { type: string, enum: [Active, Suspended, Deleted] }
+    CreateStoreRequest:
+      type: object
+      required: [code, name, emailAddress, phone, address, defaultLanguageCode, supportedLanguageCodes]
+      properties:
+        code: { type: string, minLength: 1, maxLength: 100, pattern: '^[A-Za-z0-9_]+$' }
+        name: { type: string, minLength: 1 }
+        emailAddress: { type: string, format: email }
+        phone: { type: string, minLength: 1 }
+        address: { $ref: '#/components/schemas/Address' }
+        parentStoreCode: { type: string }
+        retailer: { type: boolean }
+        defaultLanguageCode: { type: string }
+        supportedLanguageCodes: { type: array, minItems: 1, items: { type: string } }
+        currencyCode: { type: string }
+        dimensionUnit: { type: string }
+        weightUnit: { type: string }
+    UpdateStoreRequest:
+      type: object
+      minProperties: 1
+      anyOf:
+        - required: [name]
+        - required: [emailAddress]
+        - required: [phone]
+        - required: [address]
+        - required: [defaultLanguageCode]
+        - required: [currencyCode]
+        - required: [dimensionUnit]
+        - required: [weightUnit]
+      properties:
+        name: { type: string }
+        emailAddress: { type: string, format: email }
+        phone: { type: string }
+        address: { $ref: '#/components/schemas/Address' }
+        defaultLanguageCode: { type: string }
+        currencyCode: { type: string }
+        dimensionUnit: { type: string }
+        weightUnit: { type: string }
+    EntityExistsResponse:
+      type: object
+      required: [exists]
+      properties: { exists: { type: boolean } }
+    PaginationInfo:
+      type: object
+      required: [page, pageSize, totalItems, totalPages]
+      properties:
+        page: { type: integer }
+        pageSize: { type: integer }
+        totalItems: { type: integer }
+        totalPages: { type: integer }
+    StoreListResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Store' } }
+        pagination: { $ref: '#/components/schemas/PaginationInfo' }
+    StoreName:
+      type: object
+      required: [code, name]
+      properties: { code: { type: string }, name: { type: string } }
+    StoreNameListResponse:
+      type: object
+      required: [items]
+      properties: { items: { type: array, items: { $ref: '#/components/schemas/StoreName' } } }
+    LanguageListResponse:
+      type: object
+      required: [items]
+      properties: { items: { type: array, items: { type: string } } }
+    ReplaceLanguagesRequest:
+      type: object
+      required: [defaultLanguageCode, supportedLanguageCodes]
+      properties:
+        defaultLanguageCode: { type: string }
+        supportedLanguageCodes: { type: array, minItems: 1, items: { type: string } }
+    Branding:
+      type: object
+      required: [storeCode]
+      properties:
+        storeCode: { type: string }
+        templateCode: { type: string }
+        logoUri: { type: string, format: uri }
+    BrandingRequest:
+      type: object
+      anyOf:
+        - required: [templateCode]
+        - required: [logoUri]
+      properties:
+        templateCode: { type: string }
+        logoUri: { type: string, format: uri }
+    LogoUploadRequest:
+      type: object
+      required: [file]
+      properties:
+        file: { type: string, format: binary }
+    SignupResponse:
+      type: object
+      required: [signupId, status]
+      properties:
+        signupId: { type: string, format: uuid }
+        status: { type: string, enum: [PendingVerification] }
+    SignupVerificationResponse:
+      type: object
+      required: [verified]
+      properties: { verified: { type: boolean } }
