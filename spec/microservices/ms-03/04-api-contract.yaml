@@ -1,0 +1,230 @@
+openapi: 3.1.0
+info:
+  title: Search Service API
+  version: 1.0.0
+  description: Provider-neutral search, autocomplete, and asynchronous index rebuild contract for MS-03.
+servers:
+  - url: http://localhost:8103/api/v1
+paths:
+  /search:
+    post:
+      operationId: searchProducts
+      summary: Search indexed products
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchRequest'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResultsResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /search/autocomplete:
+    post:
+      operationId: autocompleteSearchTerms
+      summary: Return search suggestions
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutocompleteRequest'
+      responses:
+        '200':
+          description: Autocomplete suggestions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutocompleteResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /private/system/search/index:
+    post:
+      operationId: requestSearchIndexRebuild
+      summary: Start an administrative search-index rebuild
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/StoreId'
+        - $ref: '#/components/parameters/CorrelationId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '202':
+          description: Rebuild accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RebuildAcceptedResponse'
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+components:
+  parameters:
+    TenantId:
+      name: x-tenant-id
+      in: header
+      required: true
+      schema: { type: string, format: uuid }
+    StoreId:
+      name: x-store-id
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 120 }
+    CorrelationId:
+      name: x-correlation-id
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 200 }
+    Authorization:
+      name: Authorization
+      in: header
+      required: true
+      schema: { type: string, pattern: '^Bearer\s+.+' }
+    IdempotencyKey:
+      name: idempotency-key
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 200 }
+  schemas:
+    SearchRequest:
+      type: object
+      additionalProperties: false
+      required: [query]
+      properties:
+        query: { type: string, minLength: 1, maxLength: 500 }
+        count: { type: integer, minimum: 1, maximum: 100, default: 100 }
+        start: { type: integer, minimum: 0, default: 0 }
+    AutocompleteRequest:
+      type: object
+      additionalProperties: false
+      required: [query]
+      properties:
+        query: { type: string, minLength: 1, maxLength: 500 }
+    SearchResultsResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/SearchResultItem' }
+        pagination: { $ref: '#/components/schemas/PaginationInfo' }
+    SearchResultItem:
+      type: object
+      required: [productId, locale, name, inventory]
+      properties:
+        productId: { type: integer, format: int64 }
+        locale: { type: string, minLength: 1, maxLength: 16 }
+        name: { type: string }
+        description: { type: [string, 'null'] }
+        productLink: { type: [string, 'null'] }
+        brandName: { type: [string, 'null'] }
+        categoryName: { type: [string, 'null'] }
+        imageUrl: { type: [string, 'null'] }
+        reviewAverage: { type: [number, 'null'], minimum: 0, maximum: 5 }
+        inventory:
+          type: array
+          items: { $ref: '#/components/schemas/SearchInventoryEntry' }
+    SearchInventoryEntry:
+      type: object
+      required: [sku, quantity, price, optionValues]
+      properties:
+        sku: { type: string }
+        variantSku: { type: [string, 'null'] }
+        quantity: { type: number, minimum: 0 }
+        price: { type: number, minimum: 0 }
+        discountedPrice: { type: [number, 'null'], minimum: 0 }
+        optionValues:
+          type: object
+          additionalProperties: { type: string }
+    PaginationInfo:
+      type: object
+      required: [offset, limit, totalItems, totalPages]
+      properties:
+        offset: { type: integer, minimum: 0 }
+        limit: { type: integer, minimum: 1, maximum: 100 }
+        totalItems: { type: [integer, 'null'], minimum: 0 }
+        totalPages: { type: [integer, 'null'], minimum: 0 }
+    AutocompleteResponse:
+      type: object
+      required: [suggestions]
+      properties:
+        suggestions:
+          type: array
+          maxItems: 15
+          items: { type: string }
+    RebuildAcceptedResponse:
+      type: object
+      required: [rebuildId, status, accepted, acceptedAt]
+      properties:
+        rebuildId: { type: string, format: uuid }
+        status: { $ref: '#/components/schemas/RebuildStatus' }
+        accepted: { type: boolean }
+        acceptedAt: { type: string, format: date-time }
+    RebuildStatus:
+      type: string
+      enum: [Requested, Running, Succeeded, Failed, Cancelled]
+    ErrorResponse:
+      type: object
+      required: [error, message, statusCode, timestamp, correlationId]
+      properties:
+        error: { type: string }
+        message: { type: string }
+        statusCode: { type: integer }
+        timestamp: { type: string, format: date-time }
+        correlationId: { type: string }
+  responses:
+    BadRequest:
+      description: Malformed request or missing context
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    ValidationError:
+      description: Search validation failure
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Caller lacks store scope
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: Current indexing state conflicts with the request
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    ServiceUnavailable:
+      description: Search is disabled or provider unavailable
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    InternalError:
+      description: Unexpected service failure
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
