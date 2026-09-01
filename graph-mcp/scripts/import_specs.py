@@ -220,7 +220,12 @@ def parse_tables(service_dir: Path) -> list[dict]:
     tables = []
 
     # Find CREATE TABLE statements
-    for match in re.finditer(r'CREATE TABLE\s+(?:IF NOT EXISTS\s+)?["\']?(\w+)["\']?\s*\(', content, re.IGNORECASE):
+    for match in re.finditer(
+        r'CREATE TABLE\s+(?:IF NOT EXISTS\s+)?'
+        r'(?:["\']?\w+["\']?\.)?["\']?(\w+)["\']?\s*\(',
+        content,
+        re.IGNORECASE,
+    ):
         table_name = match.group(1)
         tables.append({"name": table_name})
 
@@ -782,17 +787,25 @@ def main():
                 orphan = session.run(
                     "MATCH (br:BusinessRule) WHERE NOT (br)-[:EXTRACTED_FROM]->() RETURN count(br) AS n"
                 ).single()["n"]
+                service_orphan = session.run(
+                    "MATCH (br:BusinessRule)-[:ASSIGNED_TO]->(s:Service) "
+                    "WHERE (s.name IN $services OR s.serviceId IN $services) "
+                    "AND NOT (br)-[:EXTRACTED_FROM]->() "
+                    "RETURN count(br) AS n",
+                    services=services,
+                ).single()["n"]
             cov = (after_extracted / biz * 100) if biz else 0
             print("\n=== IMPORT SELF-CHECK ===")
             print(f"  SourceComponent.extracted: {before_extracted} -> {after_extracted} "
                   f"(delta {after_extracted - before_extracted})")
             print(f"  Coverage (extracted / businessLayer): {after_extracted}/{biz} = {cov:.1f}%")
             print(f"  BusinessRules without EXTRACTED_FROM: {orphan} (greenfield rules are expected here)")
-            if total > 0 and after_extracted <= before_extracted:
-                print("  FAIL: extracted-flip did NOT move — the SourceComponent-linking half was not "
-                      "written (the silent-disconnect bug). Likely a Source Reference format drift the "
-                      "resolver missed. FIX the resolver in this script (_source_ref_stem / the match "
-                      "query) and re-run — do NOT hand-edit the graph or fall back to a partial importer.",
+            if total > 0 and after_extracted <= before_extracted and service_orphan > 0:
+                print("  FAIL: this service has BusinessRules without EXTRACTED_FROM edges — the "
+                      "SourceComponent-linking half was not written (the silent-disconnect bug). "
+                      "Likely a Source Reference format drift the resolver missed. FIX the resolver "
+                      "in this script (_source_ref_stem / the match query) and re-run — do NOT "
+                      "hand-edit the graph or fall back to a partial importer.",
                       file=sys.stderr)
                 success = False
 

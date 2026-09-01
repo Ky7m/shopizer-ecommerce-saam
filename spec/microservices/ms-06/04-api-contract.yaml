@@ -1,0 +1,753 @@
+openapi: "3.1.0"
+info:
+  title: Payments API
+  version: "1.0.0"
+  description: |
+    API contract for MS-06 Payments.
+    This contract is the single source of truth for endpoint paths,
+    field names, request shapes, response shapes, and status codes.
+servers:
+  - url: http://localhost:{port}/api/v1
+    variables:
+      port:
+        default: "8106"
+
+x-naming-conventions:
+  fieldNaming: camelCase
+  endpointNaming: kebab-case
+  headerNaming: kebab-case
+  enumValues: PascalCase
+  queryParams: camelCase
+
+x-global-headers:
+  - name: x-tenant-id
+    in: header
+    required: true
+    description: Tenant isolation context.
+    testValue: test-tenant-001
+  - name: x-store-id
+    in: header
+    required: true
+    description: Store isolation context.
+    testValue: test-store-001
+  - name: x-correlation-id
+    in: header
+    required: true
+    description: Distributed tracing identifier.
+    testValue: corr-ms06-001
+  - name: Authorization
+    in: header
+    required: true
+    description: Bearer access token.
+    testValue: Bearer test-token
+
+tags:
+  - name: Payment Methods
+  - name: Payment Intents
+  - name: Payment Operations
+  - name: Callbacks
+  - name: Reconciliation
+
+paths:
+  /payment-methods:
+    get:
+      tags: [Payment Methods]
+      operationId: listPaymentMethods
+      summary: List store-eligible payment methods
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: Payment methods
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentMethodListResponse"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /payment-methods/{code}:
+    get:
+      tags: [Payment Methods]
+      operationId: getPaymentMethod
+      summary: Get a payment method projection
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/PaymentMethodCode"
+      responses:
+        "200":
+          description: Payment method
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentMethod"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /payment-methods/{code}/configuration:
+    put:
+      tags: [Payment Methods]
+      operationId: configurePaymentMethod
+      summary: Validate and submit provider configuration
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/PaymentMethodCode"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigurePaymentMethodRequest"
+      responses:
+        "200":
+          description: Configured provider projection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentMethod"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "502": { $ref: "#/components/responses/ProviderError" }
+
+  /payment-intents:
+    post:
+      tags: [Payment Intents]
+      operationId: createPaymentIntent
+      summary: Create a payment intent
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePaymentIntentRequest"
+      responses:
+        "201":
+          description: Payment intent created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentIntent"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "502": { $ref: "#/components/responses/ProviderError" }
+
+  /payment-intents/{paymentIntentId}:
+    get:
+      tags: [Payment Intents]
+      operationId: getPaymentIntent
+      summary: Get a payment intent
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/PaymentIntentId"
+      responses:
+        "200":
+          description: Payment intent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentIntent"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /payment-intents/{paymentIntentId}/authorize:
+    post:
+      tags: [Payment Intents]
+      operationId: authorizePayment
+      summary: Authorize a payment intent
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/PaymentIntentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthorizePaymentRequest"
+      responses:
+        "201":
+          description: Authorization operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentOperation"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "402": { $ref: "#/components/responses/PaymentDeclined" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "502": { $ref: "#/components/responses/ProviderError" }
+
+  /payment-intents/{paymentIntentId}/capture:
+    post:
+      tags: [Payment Intents]
+      operationId: capturePayment
+      summary: Capture an authorized payment
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/PaymentIntentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CapturePaymentRequest"
+      responses:
+        "201":
+          description: Capture operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentOperation"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "402": { $ref: "#/components/responses/PaymentDeclined" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "502": { $ref: "#/components/responses/ProviderError" }
+
+  /payment-intents/{paymentIntentId}/refunds:
+    post:
+      tags: [Payment Intents]
+      operationId: refundPayment
+      summary: Create a full or partial refund
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/PaymentIntentId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefundPaymentRequest"
+      responses:
+        "201":
+          description: Refund
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Refund"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "402": { $ref: "#/components/responses/PaymentDeclined" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "502": { $ref: "#/components/responses/ProviderError" }
+
+  /payment-intents/{paymentIntentId}/transactions:
+    get:
+      tags: [Payment Intents]
+      operationId: listPaymentTransactions
+      summary: List chronological payment transactions
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/PaymentIntentId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: Transaction history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentTransactionListResponse"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /payment-operations/{paymentOperationId}:
+    get:
+      tags: [Payment Operations]
+      operationId: getPaymentOperation
+      summary: Get a payment operation
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/PaymentOperationId"
+      responses:
+        "200":
+          description: Payment operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentOperation"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /callbacks/{providerCode}:
+    post:
+      tags: [Callbacks]
+      operationId: receiveProviderCallback
+      summary: Receive a provider callback
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/ProviderCode"
+        - name: x-provider-signature
+          in: header
+          required: false
+          schema: { type: string }
+        - name: x-provider-event-id
+          in: header
+          required: false
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProviderCallbackRequest"
+      responses:
+        "202":
+          description: Callback accepted for verification and processing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CallbackReceipt"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /reconciliation/capturable:
+    get:
+      tags: [Reconciliation]
+      operationId: listCapturablePayments
+      summary: List payment intents requiring capture or reconciliation
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - name: from
+          in: query
+          required: false
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          required: false
+          schema: { type: string, format: date-time }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: Capturable payment intents
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CapturablePaymentListResponse"
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+components:
+  parameters:
+    TenantId:
+      name: x-tenant-id
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    StoreId:
+      name: x-store-id
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    CorrelationId:
+      name: x-correlation-id
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    Authorization:
+      name: Authorization
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, maxLength: 255 }
+    PaymentMethodCode:
+      name: code
+      in: path
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 64 }
+    ProviderCode:
+      name: providerCode
+      in: path
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 64 }
+    PaymentIntentId:
+      name: paymentIntentId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    PaymentOperationId:
+      name: paymentOperationId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    Page:
+      name: page
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, default: 1 }
+    PageSize:
+      name: pageSize
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+
+  schemas:
+    Money:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount: { type: string, pattern: "^[0-9]+\\.[0-9]{2,4}$" }
+        currency: { type: string, pattern: "^[A-Z]{3}$" }
+
+    PaymentMethod:
+      type: object
+      required: [code, providerCode, eligible, active, defaultSelected, environment]
+      properties:
+        code: { type: string }
+        providerCode: { type: string }
+        eligible: { type: boolean }
+        active: { type: boolean }
+        defaultSelected: { type: boolean }
+        configurable: { type: boolean }
+        environment:
+          type: string
+          enum: [Test, Production]
+        configurationVersion: { type: integer, format: int64 }
+        publicConfiguration:
+          type: object
+          additionalProperties: { type: string }
+
+    ConfigurePaymentMethodRequest:
+      type: object
+      required: [active, defaultSelected, environment, publicConfiguration, secretReference]
+      properties:
+        active: { type: boolean }
+        defaultSelected: { type: boolean }
+        environment:
+          type: string
+          enum: [Test, Production]
+        publicConfiguration:
+          type: object
+          additionalProperties: { type: string }
+        secretReference:
+          type: string
+          minLength: 1
+          description: Reference managed by MS-11/MS-12; never a raw credential.
+        configurationVersion:
+          type: integer
+          format: int64
+
+    CreatePaymentIntentRequest:
+      type: object
+      required: [checkoutSessionId, paymentMethodCode, amount, currency]
+      properties:
+        checkoutSessionId: { type: string, minLength: 1, maxLength: 100 }
+        orderId: { type: string, maxLength: 100 }
+        paymentMethodCode: { type: string, minLength: 1, maxLength: 64 }
+        amount: { type: string, pattern: "^[0-9]+\\.[0-9]{2,4}$" }
+        currency: { type: string, pattern: "^[A-Z]{3}$" }
+        paymentToken: { type: string, writeOnly: true }
+        amountSnapshotVersion: { type: integer, format: int64 }
+
+    AuthorizePaymentRequest:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount: { type: string, pattern: "^[0-9]+\\.[0-9]{2,4}$" }
+        currency: { type: string, pattern: "^[A-Z]{3}$" }
+        paymentToken: { type: string, writeOnly: true }
+        payerReference: { type: string, writeOnly: true }
+        providerIntentReference: { type: string }
+        metadata:
+          type: object
+          additionalProperties: { type: string }
+
+    CapturePaymentRequest:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount: { type: string, pattern: "^[0-9]+\\.[0-9]{2,4}$" }
+        currency: { type: string, pattern: "^[A-Z]{3}$" }
+
+    RefundPaymentRequest:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount: { type: string, pattern: "^[0-9]+\\.[0-9]{2,4}$" }
+        currency: { type: string, pattern: "^[A-Z]{3}$" }
+        reason: { type: string, maxLength: 255 }
+
+    PaymentIntent:
+      type: object
+      required: [paymentIntentId, tenantId, storeId, checkoutSessionId, providerCode, amount, currency, status, createdAt, updatedAt]
+      properties:
+        paymentIntentId: { type: string, format: uuid }
+        tenantId: { type: string }
+        storeId: { type: string }
+        checkoutSessionId: { type: string }
+        orderId: { type: string, nullable: true }
+        providerCode: { type: string }
+        providerConfigVersion: { type: integer, format: int64 }
+        amount: { type: string }
+        currency: { type: string, pattern: "^[A-Z]{3}$" }
+        status:
+          type: string
+          enum: [Created, RequiresAction, Authorized, CapturePending, Captured, PartiallyRefunded, Refunded, Failed, Cancelled, Expired, PendingManualSettlement, ReconciliationRequired]
+        authorizedAmount: { type: string }
+        capturedAmount: { type: string }
+        refundableAmount:
+          type: string
+          description: "Computed: capturedAmount - successfulRefunds - reservedRefunds."
+        clientSecretReference: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        createdBy: { type: string, nullable: true }
+        correlationId: { type: string, nullable: true }
+
+    PaymentOperation:
+      type: object
+      required: [paymentOperationId, paymentIntentId, operationType, status, requestedAmount, currency, idempotencyKey, createdAt]
+      properties:
+        paymentOperationId: { type: string, format: uuid }
+        paymentIntentId: { type: string, format: uuid }
+        operationType:
+          type: string
+          enum: [Initialize, Authorize, Capture, Refund]
+        status:
+          type: string
+          enum: [Requested, InProgress, Succeeded, Failed, ReconciliationRequired]
+        requestedAmount: { type: string }
+        currency: { type: string, pattern: "^[A-Z]{3}$" }
+        idempotencyKey: { type: string }
+        providerAttemptId: { type: string, format: uuid, nullable: true }
+        providerReference: { type: string, nullable: true }
+        failureCode: { type: string, nullable: true }
+        failureMessage: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time, nullable: true }
+        correlationId: { type: string, nullable: true }
+
+    Refund:
+      type: object
+      required: [refundId, paymentIntentId, amount, currency, status, requestedAt]
+      properties:
+        refundId: { type: string, format: uuid }
+        paymentIntentId: { type: string, format: uuid }
+        amount: { type: string }
+        currency: { type: string, pattern: "^[A-Z]{3}$" }
+        status:
+          type: string
+          enum: [Reserved, Succeeded, Failed, Released]
+        providerReference: { type: string, nullable: true }
+        requestedAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time, nullable: true }
+        correlationId: { type: string, nullable: true }
+
+    PaymentTransaction:
+      type: object
+      required: [paymentTransactionId, paymentIntentId, operationType, status, amount, currency, providerCode, occurredAt, sequenceNo]
+      properties:
+        paymentTransactionId: { type: string, format: uuid }
+        paymentIntentId: { type: string, format: uuid }
+        paymentOperationId: { type: string, format: uuid, nullable: true }
+        operationType:
+          type: string
+          enum: [Initialize, Authorize, Capture, Refund]
+        status:
+          type: string
+          enum: [Succeeded, Failed, Pending, ReconciliationRequired]
+        amount: { type: string }
+        currency: { type: string, pattern: "^[A-Z]{3}$" }
+        providerCode: { type: string }
+        providerReference: { type: string, nullable: true }
+        providerStatus: { type: string, nullable: true }
+        providerCorrelationId: { type: string, nullable: true }
+        providerDetails:
+          type: object
+          additionalProperties: true
+        occurredAt: { type: string, format: date-time }
+        sequenceNo: { type: integer, format: int64 }
+        createdAt: { type: string, format: date-time }
+        correlationId: { type: string, nullable: true }
+
+    ProviderCallbackRequest:
+      type: object
+      required: [eventType, payload]
+      properties:
+        eventId: { type: string }
+        providerReference: { type: string }
+        eventType: { type: string }
+        payload:
+          type: object
+          additionalProperties: true
+
+    CallbackReceipt:
+      type: object
+      required: [callbackId, status]
+      properties:
+        callbackId: { type: string, format: uuid }
+        status:
+          type: string
+          enum: [Accepted, Duplicate, Rejected, Processing]
+        paymentIntentId: { type: string, format: uuid, nullable: true }
+
+    CapturablePayment:
+      type: object
+      required: [paymentIntentId, orderId, amount, currency, status, authorizedAt]
+      properties:
+        paymentIntentId: { type: string, format: uuid }
+        orderId: { type: string }
+        amount: { type: string }
+        currency: { type: string }
+        status: { type: string }
+        authorizedAt: { type: string, format: date-time }
+        providerCode: { type: string }
+
+    PaginationInfo:
+      type: object
+      required: [page, pageSize, totalItems, totalPages]
+      properties:
+        page: { type: integer }
+        pageSize: { type: integer }
+        totalItems: { type: integer }
+        totalPages: { type: integer }
+
+    PaymentMethodListResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/PaymentMethod" }
+        pagination: { $ref: "#/components/schemas/PaginationInfo" }
+
+    PaymentTransactionListResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/PaymentTransaction" }
+        pagination: { $ref: "#/components/schemas/PaginationInfo" }
+
+    CapturablePaymentListResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/CapturablePayment" }
+        pagination: { $ref: "#/components/schemas/PaginationInfo" }
+
+    ErrorResponse:
+      type: object
+      required: [error, message, statusCode, timestamp]
+      properties:
+        error: { type: string }
+        message: { type: string }
+        statusCode: { type: integer }
+        timestamp: { type: string, format: date-time }
+        correlationId: { type: string, nullable: true }
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Forbidden:
+      description: Insufficient permission
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Conflict:
+      description: State or idempotency conflict
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    ValidationError:
+      description: Business validation failure
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    PaymentDeclined:
+      description: Provider declined the payment operation
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    ProviderError:
+      description: Provider integration failure
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
