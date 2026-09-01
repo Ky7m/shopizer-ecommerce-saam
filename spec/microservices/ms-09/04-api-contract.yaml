@@ -1,0 +1,1045 @@
+openapi: "3.1.0"
+info:
+  title: Shipping API
+  version: "1.0.0"
+  description: |
+    API contract for MS-09 Shipping.
+    Generated from the Phase 4 source-derived specification.
+    This is the single source of truth for field names, paths, response shapes, and status codes.
+    Carrier, Maps, credential, retry, and external-response normalization responsibilities are
+    delegated to MS-12 Platform Integrations.
+
+servers:
+  - url: http://localhost:{port}/api/v1
+    variables:
+      port:
+        default: "8109"
+
+x-naming-conventions:
+  fieldNaming: camelCase
+  endpointNaming: kebab-case
+  headerNaming: kebab-case
+  enumValues: PascalCase
+  queryParams: camelCase
+
+x-global-headers:
+  - name: x-tenant-id
+    required: true
+    description: Multi-tenancy isolation.
+    testValue: test-tenant-001
+  - name: x-store-id
+    required: true
+    description: Store isolation within the tenant.
+    testValue: test-store-001
+  - name: x-correlation-id
+    required: false
+    description: Distributed tracing identifier.
+    testValue: corr-ms09-001
+
+paths:
+  /auth/cart/{cart}/shipping:
+    get:
+      operationId: getAuthenticatedCartShipping
+      summary: Calculate shipping for an authenticated customer cart.
+      tags: [Quotes]
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/CartPath"
+        - $ref: "#/components/parameters/Language"
+      responses:
+        "200":
+          description: Shipping summary.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShippingSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/CartNotFound"
+        "422":
+          $ref: "#/components/responses/ShippingPolicyError"
+        "502":
+          $ref: "#/components/responses/ProviderError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /cart/{cart}/shipping:
+    post:
+      operationId: calculateCartShipping
+      summary: Calculate shipping for a cart destination.
+      tags: [Quotes]
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/AuthorizationOptional"
+        - $ref: "#/components/parameters/CartPath"
+        - $ref: "#/components/parameters/Language"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShippingAddressRequest"
+      responses:
+        "200":
+          description: Calculated shipping summary.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShippingSummary"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/CartNotFound"
+        "422":
+          $ref: "#/components/responses/ShippingPolicyError"
+        "502":
+          $ref: "#/components/responses/ProviderError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /private/configurations/shipping:
+    get:
+      operationId: getShippingConfiguration
+      summary: Read effective shipping configuration.
+      tags: [Configuration]
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+      responses:
+        "200":
+          description: Shipping configuration.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShippingConfiguration"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /private/modules/shipping:
+    get:
+      operationId: listShippingModules
+      summary: List shipping modules available to the store.
+      tags: [Modules]
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+      responses:
+        "200":
+          description: Shipping module list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShippingModuleSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: configureShippingModule
+      summary: Save a shipping module configuration projection.
+      tags: [Modules]
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShippingModuleConfigurationRequest"
+      responses:
+        "200":
+          description: Saved module configuration.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShippingModuleConfiguration"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/ModuleNotFound"
+        "422":
+          $ref: "#/components/responses/ShippingPolicyError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /private/modules/shipping/{module}:
+    get:
+      operationId: getShippingModule
+      summary: Read one shipping module configuration projection.
+      tags: [Modules]
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/ModulePath"
+      responses:
+        "200":
+          description: Shipping module configuration.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShippingModuleConfiguration"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/ModuleNotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /private/shipping/origin:
+    get:
+      operationId: getShippingOrigin
+      summary: Read the configured shipping origin.
+      tags: [Origin]
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+      responses:
+        "200":
+          description: Shipping origin.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShippingOrigin"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/OriginNotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: saveShippingOrigin
+      summary: Create or update the configured shipping origin.
+      tags: [Origin]
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShippingOriginRequest"
+      responses:
+        "200":
+          description: Saved shipping origin.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShippingOrigin"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ShippingPolicyError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /private/shipping/packages:
+    get:
+      operationId: listShippingPackages
+      summary: List configured package definitions.
+      tags: [Packages]
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+      responses:
+        "200":
+          description: Package definitions.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShippingPackage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /private/shipping/package/{package}:
+    get:
+      operationId: getShippingPackage
+      summary: Read one package definition.
+      tags: [Packages]
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/PackagePath"
+      responses:
+        "200":
+          description: Package definition.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShippingPackage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/PackageNotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    put:
+      operationId: updateShippingPackage
+      summary: Replace one package definition.
+      tags: [Packages]
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/PackagePath"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShippingPackageRequest"
+      responses:
+        "200":
+          description: Updated package definition.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShippingPackage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/PackageNotFound"
+        "422":
+          $ref: "#/components/responses/ShippingPolicyError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      operationId: deleteShippingPackage
+      summary: Delete one package definition.
+      tags: [Packages]
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/PackagePath"
+      responses:
+        "200":
+          description: Package deleted.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActionResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/PackageNotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /private/shipping/package:
+    post:
+      operationId: createShippingPackage
+      summary: Create a package definition.
+      tags: [Packages]
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShippingPackageRequest"
+      responses:
+        "200":
+          description: Created package definition.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShippingPackage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ShippingPolicyError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /private/shipping/expedition:
+    get:
+      operationId: getExpeditionConfiguration
+      summary: Read destination and shipping-tax configuration.
+      tags: [Expedition]
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+      responses:
+        "200":
+          description: Expedition configuration.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpeditionConfiguration"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: saveExpeditionConfiguration
+      summary: Save destination and shipping-tax configuration.
+      tags: [Expedition]
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpeditionConfigurationRequest"
+      responses:
+        "200":
+          description: Saved expedition configuration.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExpeditionConfiguration"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ShippingPolicyError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /shipping/country:
+    get:
+      operationId: listShippingCountries
+      summary: List eligible translated shipping countries.
+      tags: [Expedition]
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Language"
+      responses:
+        "200":
+          description: Eligible countries.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShippingCountry"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+components:
+  parameters:
+    TenantId:
+      name: x-tenant-id
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    StoreId:
+      name: x-store-id
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    CorrelationId:
+      name: x-correlation-id
+      in: header
+      required: false
+      schema:
+        type: string
+    Authorization:
+      name: Authorization
+      in: header
+      required: true
+      schema:
+        type: string
+        pattern: "^Bearer .+$"
+    AuthorizationOptional:
+      name: Authorization
+      in: header
+      required: false
+      schema:
+        type: string
+        pattern: "^Bearer .+$"
+    CartPath:
+      name: cart
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    ModulePath:
+      name: module
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    PackagePath:
+      name: package
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    Language:
+      name: lang
+      in: query
+      required: false
+      schema:
+        type: string
+        default: en
+        pattern: "^[a-z]{2}$"
+
+  schemas:
+    ShippingAddressRequest:
+      type: object
+      required: [countryCode, postalCode]
+      properties:
+        countryCode:
+          type: string
+          pattern: "^[A-Z]{2}$"
+          example: CA
+        postalCode:
+          type: string
+          minLength: 1
+          maxLength: 20
+          example: H2X1Y4
+        address:
+          type: string
+          maxLength: 256
+        city:
+          type: string
+          maxLength: 100
+        state:
+          type: string
+          maxLength: 100
+        zoneCode:
+          type: string
+          maxLength: 32
+
+    ShippingSummary:
+      type: object
+      required: [shipping, handling, freeShipping, taxOnShipping, shippingOptions]
+      properties:
+        shipping:
+          type: number
+          format: double
+          description: Selected shipping price; computed from selected option.
+        handling:
+          type: number
+          format: double
+          description: Configured handling amount.
+        shippingModule:
+          type: string
+          nullable: true
+        shippingOption:
+          type: string
+          nullable: true
+        freeShipping:
+          type: boolean
+        taxOnShipping:
+          type: boolean
+        shippingQuote:
+          type: boolean
+        shippingText:
+          type: string
+        handlingText:
+          type: string
+        delivery:
+          $ref: "#/components/schemas/DeliveryAddress"
+        selectedShippingOption:
+          allOf:
+            - $ref: "#/components/schemas/ShippingOption"
+          nullable: true
+        shippingOptions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShippingOption"
+        quoteInformations:
+          type: object
+          additionalProperties:
+            type: string
+
+    ShippingOption:
+      type: object
+      required: [optionPrice, optionCode, optionId, shippingModuleCode]
+      properties:
+        optionPrice:
+          type: number
+          format: double
+        optionPriceText:
+          type: string
+        optionName:
+          type: string
+        optionCode:
+          type: string
+        optionId:
+          type: string
+        optionDeliveryDate:
+          type: string
+          format: date-time
+          nullable: true
+        optionShippingDate:
+          type: string
+          format: date-time
+          nullable: true
+        description:
+          type: string
+        shippingModuleCode:
+          type: string
+        note:
+          type: string
+        estimatedNumberOfDays:
+          type: integer
+          minimum: 0
+          nullable: true
+        shippingQuoteOptionId:
+          type: string
+          format: uuid
+          nullable: true
+
+    DeliveryAddress:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        company:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        postalCode:
+          type: string
+        state:
+          type: string
+        countryCode:
+          type: string
+          pattern: "^[A-Z]{2}$"
+        zoneCode:
+          type: string
+        latitude:
+          type: number
+          format: double
+          nullable: true
+        longitude:
+          type: number
+          format: double
+          nullable: true
+
+    ShippingOriginRequest:
+      type: object
+      required: [address, city, postalCode, countryCode, active]
+      properties:
+        address:
+          type: string
+          maxLength: 256
+        city:
+          type: string
+          maxLength: 100
+        postalCode:
+          type: string
+          maxLength: 20
+        state:
+          type: string
+          maxLength: 100
+        countryCode:
+          type: string
+          pattern: "^[A-Z]{2}$"
+        zoneCode:
+          type: string
+          maxLength: 32
+        active:
+          type: boolean
+
+    ShippingOrigin:
+      allOf:
+        - $ref: "#/components/schemas/ShippingOriginRequest"
+        - type: object
+          required: [id, tenantId, storeId]
+          properties:
+            id:
+              type: string
+              format: uuid
+            tenantId:
+              type: string
+            storeId:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+
+    ShippingConfiguration:
+      type: object
+      required:
+        - shippingType
+        - shippingBasisType
+        - shippingOptionPriceType
+        - shippingPackageType
+        - freeShippingEnabled
+        - taxOnShipping
+      properties:
+        shippingType:
+          type: string
+          enum: [National, International]
+        shippingBasisType:
+          type: string
+          enum: [Shipping, Billing]
+        shippingOptionPriceType:
+          type: string
+          enum: [All, Least, Highest]
+        shippingPackageType:
+          type: string
+          enum: [Item, Box]
+        shippingDescription:
+          type: string
+          enum: [ShortDescription, LongDescription]
+        freeShippingType:
+          type: string
+          enum: [National, International]
+          nullable: true
+        boxWidth:
+          type: integer
+          minimum: 0
+        boxHeight:
+          type: integer
+          minimum: 0
+        boxLength:
+          type: integer
+          minimum: 0
+        boxWeight:
+          type: number
+          format: double
+          minimum: 0
+        maxWeight:
+          type: number
+          format: double
+          minimum: 0
+        freeShippingEnabled:
+          type: boolean
+        orderTotalFreeShipping:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+        handlingFees:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+        taxOnShipping:
+          type: boolean
+        packages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShippingPackage"
+
+    ShippingPackageRequest:
+      type: object
+      required: [code, type, shippingWidth, shippingHeight, shippingLength, shippingWeight, shippingMaxWeight]
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 100
+        shippingWidth:
+          type: number
+          format: double
+          minimum: 0
+        shippingHeight:
+          type: number
+          format: double
+          minimum: 0
+        shippingLength:
+          type: number
+          format: double
+          minimum: 0
+        shippingWeight:
+          type: number
+          format: double
+          minimum: 0
+        shippingMaxWeight:
+          type: number
+          format: double
+          minimum: 0
+        treshold:
+          type: integer
+          minimum: 0
+        type:
+          type: string
+          enum: [Item, Box]
+        defaultPackaging:
+          type: boolean
+
+    ShippingPackage:
+      allOf:
+        - $ref: "#/components/schemas/ShippingPackageRequest"
+        - type: object
+          required: [id]
+          properties:
+            id:
+              type: string
+              format: uuid
+
+    ShippingModuleConfigurationRequest:
+      type: object
+      required: [moduleCode, active, defaultSelected, environment]
+      properties:
+        moduleCode:
+          type: string
+          minLength: 1
+        active:
+          type: boolean
+        defaultSelected:
+          type: boolean
+        environment:
+          type: string
+          enum: [Test, Production]
+        integrationKeys:
+          type: object
+          additionalProperties:
+            type: string
+        integrationOptions:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+    ShippingModuleConfiguration:
+      allOf:
+        - $ref: "#/components/schemas/ShippingModuleConfigurationRequest"
+        - type: object
+          properties:
+            configured:
+              type: boolean
+            providerCode:
+              type: string
+
+    ShippingModuleSummary:
+      type: object
+      required: [code, configured, active]
+      properties:
+        code:
+          type: string
+        image:
+          type: string
+          nullable: true
+        configured:
+          type: boolean
+        active:
+          type: boolean
+
+    ExpeditionConfigurationRequest:
+      type: object
+      required: [internationalShipping, taxOnShipping, shipToCountry]
+      properties:
+        internationalShipping:
+          type: boolean
+        taxOnShipping:
+          type: boolean
+        shipToCountry:
+          type: array
+          items:
+            type: string
+            pattern: "^[A-Z]{2}$"
+
+    ExpeditionConfiguration:
+      allOf:
+        - $ref: "#/components/schemas/ExpeditionConfigurationRequest"
+        - type: object
+          properties:
+            updatedAt:
+              type: string
+              format: date-time
+
+    ShippingCountry:
+      type: object
+      required: [code, name]
+      properties:
+        code:
+          type: string
+          pattern: "^[A-Z]{2}$"
+        name:
+          type: string
+        language:
+          type: string
+
+    ActionResult:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [Created, Updated, Deleted, Accepted]
+        resourceId:
+          type: string
+          nullable: true
+
+    ErrorResponse:
+      type: object
+      required: [error, message, statusCode, timestamp]
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        statusCode:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+        correlationId:
+          type: string
+          nullable: true
+        details:
+          type: object
+          additionalProperties: true
+
+  responses:
+    BadRequest:
+      description: Invalid request.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Authentication required.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: Shipping administration permission required.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: Configuration conflict.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    CartNotFound:
+      description: Cart not found or not owned by the caller.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ModuleNotFound:
+      description: Shipping module not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    PackageNotFound:
+      description: Package not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    OriginNotFound:
+      description: Shipping origin not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ShippingPolicyError:
+      description: Shipping policy or input validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ProviderError:
+      description: External provider adapter failed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InternalError:
+      description: Unexpected server failure.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
