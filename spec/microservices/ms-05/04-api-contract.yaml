@@ -1,0 +1,966 @@
+openapi: "3.1.0"
+info:
+  title: Order Management API
+  version: "1.0.0"
+  description: |
+    API contract for MS-05 Order Management.
+    Cart and checkout submission remain owned by MS-04.
+    Payment-provider execution remains owned by MS-06.
+    Pricing, tax, shipping, catalog, inventory, and external delivery remain
+    owned by their respective services.
+servers:
+  - url: http://localhost:{port}/api/v1
+    variables:
+      port:
+        default: "8105"
+
+x-naming-conventions:
+  fieldNaming: camelCase
+  endpointNaming: kebab-case
+  headerNaming: kebab-case
+  enumValues: PascalCase
+  queryParams: camelCase
+
+x-global-headers:
+  - name: Authorization
+    in: header
+    required: true
+    description: "Bearer access token."
+    testValue: "Bearer test-token"
+  - name: x-tenant-id
+    in: header
+    required: true
+    description: "Tenant isolation context."
+    testValue: "tenant-a"
+  - name: x-store-id
+    in: header
+    required: true
+    description: "Store isolation context."
+    testValue: "store-12"
+  - name: x-correlation-id
+    in: header
+    required: true
+    description: "Distributed tracing identifier."
+    testValue: "corr-ms05-001"
+
+tags:
+  - name: Orders
+  - name: Customer Orders
+  - name: History
+  - name: Payments
+  - name: Fulfillment
+  - name: Invoice
+
+paths:
+  /orders:
+    get:
+      tags: [Orders]
+      operationId: listOrders
+      summary: List administrative orders
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/OrderStatus"
+        - name: customerName
+          in: query
+          schema: { type: string }
+        - name: email
+          in: query
+          schema: { type: string, format: email }
+        - name: phone
+          in: query
+          schema: { type: string }
+        - name: orderId
+          in: query
+          schema: { type: integer, format: int64 }
+      responses:
+        "200":
+          description: Order list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderListResponse"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /orders/{orderId}:
+    get:
+      tags: [Orders]
+      operationId: getOrder
+      summary: Get an administrative order detail
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/OrderId"
+      responses:
+        "200":
+          description: Order detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /me/orders:
+    get:
+      tags: [Customer Orders]
+      operationId: listMyOrders
+      summary: List orders belonging to the authenticated customer
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/OrderStatus"
+      responses:
+        "200":
+          description: Customer order list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderListResponse"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /me/orders/{orderId}:
+    get:
+      tags: [Customer Orders]
+      operationId: getMyOrder
+      summary: Get an order belonging to the authenticated customer
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/OrderId"
+      responses:
+        "200":
+          description: Customer order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerOrder"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /customers/{customerId}/orders:
+    get:
+      tags: [Customer Orders]
+      operationId: listCustomerOrders
+      summary: List orders for a customer
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - name: customerId
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: Customer order list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderListResponse"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /orders/{orderId}/history:
+    get:
+      tags: [History]
+      operationId: listOrderHistory
+      summary: Read order lifecycle history
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/OrderId"
+      responses:
+        "200":
+          description: Order history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderHistoryResponse"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/InternalError" }
+    post:
+      tags: [History]
+      operationId: appendOrderHistory
+      summary: Append an administrative order-history entry
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/OrderId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppendHistoryRequest"
+      responses:
+        "201":
+          description: History entry created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderHistoryEntry"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /orders/{orderId}/status:
+    put:
+      tags: [Orders]
+      operationId: transitionOrderStatus
+      summary: Perform a legal order-status transition
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/OrderId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransitionOrderStatusRequest"
+      responses:
+        "200":
+          description: Updated order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /orders/{orderId}/customer-snapshot:
+    patch:
+      tags: [Orders]
+      operationId: updateCustomerSnapshot
+      summary: Correct the customer and address snapshots on an order
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/OrderId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerSnapshotUpdateRequest"
+      responses:
+        "200":
+          description: Updated order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /orders/{orderId}/payment/next-action:
+    get:
+      tags: [Payments]
+      operationId: getNextPaymentAction
+      summary: Determine the next administrative payment action
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/OrderId"
+      responses:
+        "200":
+          description: Next action
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NextPaymentAction"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /orders/{orderId}/payment-transactions:
+    get:
+      tags: [Payments]
+      operationId: listPaymentTransactions
+      summary: List the payment outcome projection for an order
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/OrderId"
+      responses:
+        "200":
+          description: Payment transactions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentTransactionListResponse"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /orders/capturable:
+    get:
+      tags: [Payments]
+      operationId: listCapturableOrders
+      summary: List orders with an authorization and no capture
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - name: startDate
+          in: query
+          schema: { type: string, format: date }
+        - name: endDate
+          in: query
+          schema: { type: string, format: date }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: Capturable orders
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderListResponse"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /orders/{orderId}/capture:
+    post:
+      tags: [Payments]
+      operationId: requestCapture
+      summary: Request capture through the payment service
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/OrderId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentCommandRequest"
+      responses:
+        "202":
+          description: Capture accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentCommandResponse"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "502": { $ref: "#/components/responses/BadGateway" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /orders/{orderId}/refund:
+    post:
+      tags: [Payments]
+      operationId: requestRefund
+      summary: Request refund through the payment service
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/OrderId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefundRequest"
+      responses:
+        "202":
+          description: Refund accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefundCommandResponse"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "502": { $ref: "#/components/responses/BadGateway" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /orders/{orderId}/cancel:
+    post:
+      tags: [Orders]
+      operationId: cancelOrder
+      summary: Start order cancellation compensation
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/OrderId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CancelOrderRequest"
+      responses:
+        "202":
+          description: Cancellation accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CancellationResponse"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+  /orders/{orderId}/fulfillment:
+    post:
+      tags: [Fulfillment]
+      operationId: requestFulfillment
+      summary: Request fulfillment for a processed physical order
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/OrderId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "202":
+          description: Fulfillment requested
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FulfillmentResponse"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+    get:
+      tags: [Fulfillment]
+      operationId: getFulfillment
+      summary: Get fulfillment state
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/OrderId"
+      responses:
+        "200":
+          description: Fulfillment state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FulfillmentResponse"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/InternalError" }
+
+  /orders/{orderId}/invoice:
+    get:
+      tags: [Invoice]
+      operationId: getInvoice
+      summary: Request or retrieve an invoice artifact
+      parameters:
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/OrderId"
+      responses:
+        "200":
+          description: Invoice artifact available
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoiceResponse"
+        "202":
+          description: Invoice generation in progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoiceResponse"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "503": { $ref: "#/components/responses/Unavailable" }
+
+components:
+  parameters:
+    Authorization:
+      name: Authorization
+      in: header
+      required: true
+      schema: { type: string }
+    TenantId:
+      name: x-tenant-id
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    StoreId:
+      name: x-store-id
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    CorrelationId:
+      name: x-correlation-id
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 255 }
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema: { type: integer, format: int64, minimum: 1 }
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, format: int32, minimum: 1, default: 1 }
+    PageSize:
+      name: pageSize
+      in: query
+      schema: { type: integer, format: int32, minimum: 1, maximum: 100, default: 20 }
+
+  schemas:
+    OrderStatus:
+      type: string
+      enum: [Ordered, Processed, Delivered, Refunded, Canceled]
+
+    PaymentStatus:
+      type: string
+      enum: [Pending, Authorized, Captured, Failed, Refunded, Voided, Unknown]
+
+    FulfillmentStatus:
+      type: string
+      enum: [NotRequested, Requested, InProgress, Shipped, Delivered, Canceled]
+
+    Order:
+      type: object
+      required: [orderId, tenantId, storeId, status, currencyCode, total, datePurchased, lines, totals]
+      properties:
+        orderId: { type: integer, format: int64 }
+        tenantId: { type: string }
+        storeId: { type: integer, format: int64 }
+        customerId: { type: integer, format: int64, nullable: true }
+        customerEmailAddress: { type: string, format: email }
+        status: { $ref: "#/components/schemas/OrderStatus" }
+        paymentStatus: { $ref: "#/components/schemas/PaymentStatus" }
+        fulfillmentStatus: { $ref: "#/components/schemas/FulfillmentStatus" }
+        currencyCode: { type: string, minLength: 3, maxLength: 3 }
+        total: { type: number, format: double, minimum: 0 }
+        refundedAmount: { type: number, format: double, minimum: 0 }
+        refundableAmount: { type: number, format: double, minimum: 0 }
+        datePurchased: { type: string, format: date-time }
+        orderDateFinished: { type: string, format: date-time, nullable: true }
+        paymentType: { type: string, nullable: true }
+        paymentModuleCode: { type: string, nullable: true }
+        shippingModuleCode: { type: string, nullable: true }
+        customerAgreed: { type: boolean }
+        confirmedAddress: { type: boolean }
+        locale: { type: string, nullable: true }
+        billingAddress: { $ref: "#/components/schemas/AddressSnapshot" }
+        deliveryAddress: { $ref: "#/components/schemas/AddressSnapshot" }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/OrderLine" }
+        totals:
+          type: array
+          items: { $ref: "#/components/schemas/OrderTotal" }
+        attributes:
+          type: array
+          items: { $ref: "#/components/schemas/OrderAttribute" }
+        history:
+          type: array
+          items: { $ref: "#/components/schemas/OrderHistoryEntry" }
+        downloads:
+          type: array
+          items: { $ref: "#/components/schemas/DownloadEntitlement" }
+
+    CustomerOrder:
+      allOf:
+        - $ref: "#/components/schemas/Order"
+
+    AddressSnapshot:
+      type: object
+      required: [firstName, lastName, address, city, countryCode, postalCode]
+      properties:
+        firstName: { type: string }
+        lastName: { type: string }
+        company: { type: string, nullable: true }
+        address: { type: string }
+        city: { type: string }
+        state: { type: string, nullable: true }
+        countryCode: { type: string, minLength: 2, maxLength: 2 }
+        zoneCode: { type: string, nullable: true }
+        postalCode: { type: string }
+        telephone: { type: string, nullable: true }
+
+    OrderLine:
+      type: object
+      required: [orderProductId, sku, productName, quantity, oneTimeCharge]
+      properties:
+        orderProductId: { type: integer, format: int64 }
+        sku: { type: string }
+        productName: { type: string }
+        quantity: { type: integer, format: int32, minimum: 1 }
+        oneTimeCharge: { type: number, format: double, minimum: 0 }
+        attributes:
+          type: array
+          items: { $ref: "#/components/schemas/OrderLineAttribute" }
+        prices:
+          type: array
+          items: { $ref: "#/components/schemas/OrderLinePrice" }
+
+    OrderLineAttribute:
+      type: object
+      required: [optionId, optionValueId, name, value, price]
+      properties:
+        optionId: { type: integer, format: int64 }
+        optionValueId: { type: integer, format: int64 }
+        name: { type: string }
+        value: { type: string }
+        price: { type: number, format: double, minimum: 0 }
+        free: { type: boolean }
+        weight: { type: number, format: double, nullable: true }
+
+    OrderLinePrice:
+      type: object
+      required: [code, price, defaultPrice]
+      properties:
+        code: { type: string }
+        name: { type: string, nullable: true }
+        price: { type: number, format: double, minimum: 0 }
+        specialPrice: { type: number, format: double, nullable: true }
+        specialStartDate: { type: string, format: date-time, nullable: true }
+        specialEndDate: { type: string, format: date-time, nullable: true }
+        defaultPrice: { type: boolean }
+
+    OrderTotal:
+      type: object
+      required: [orderTotalId, code, value]
+      properties:
+        orderTotalId: { type: integer, format: int64 }
+        code: { type: string }
+        title: { type: string, nullable: true }
+        text: { type: string, nullable: true }
+        value: { type: number, format: double }
+        module: { type: string, nullable: true }
+        type: { type: string, nullable: true, enum: [Shipping, Handling, Tax, Product, Subtotal, Total, Credit, Refund] }
+        valueType: { type: string, enum: [OneTime, Monthly] }
+        sortOrder: { type: integer, format: int32 }
+        isRefund: { type: boolean }
+
+    OrderAttribute:
+      type: object
+      required: [identifier, value]
+      properties:
+        identifier: { type: string }
+        value: { type: string }
+
+    OrderHistoryEntry:
+      type: object
+      required: [historyId, orderId, dateAdded, source]
+      properties:
+        historyId: { type: integer, format: int64 }
+        orderId: { type: integer, format: int64 }
+        status: { $ref: "#/components/schemas/OrderStatus", nullable: true }
+        dateAdded: { type: string, format: date-time }
+        comments: { type: string, nullable: true }
+        actorId: { type: string, nullable: true }
+        source: { type: string }
+        customerNotified: { type: boolean }
+
+    DownloadEntitlement:
+      type: object
+      required: [downloadId, orderId, productName, fileName, downloadCount, downloadExpiryDays, accessState]
+      properties:
+        downloadId: { type: integer, format: int64 }
+        orderId: { type: integer, format: int64 }
+        productName: { type: string }
+        fileName: { type: string }
+        downloadCount: { type: integer, format: int32, minimum: 0 }
+        downloadExpiryDays: { type: integer, format: int32, minimum: 1 }
+        accessState: { type: string, enum: [Available, Expired, Revoked] }
+        expiresAt: { type: string, format: date-time, nullable: true }
+
+    PaginationInfo:
+      type: object
+      required: [page, pageSize, totalItems, totalPages]
+      properties:
+        page: { type: integer, format: int32 }
+        pageSize: { type: integer, format: int32 }
+        totalItems: { type: integer, format: int64 }
+        totalPages: { type: integer, format: int32 }
+
+    OrderListResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/Order" }
+        pagination: { $ref: "#/components/schemas/PaginationInfo" }
+
+    OrderHistoryResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/OrderHistoryEntry" }
+
+    AppendHistoryRequest:
+      type: object
+      required: [status, source]
+      properties:
+        status: { $ref: "#/components/schemas/OrderStatus" }
+        comments: { type: string, nullable: true }
+        source: { type: string, enum: [Admin, Payment, Fulfillment, System] }
+
+    TransitionOrderStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: "#/components/schemas/OrderStatus" }
+        reason: { type: string, nullable: true }
+
+    CustomerSnapshotUpdateRequest:
+      type: object
+      required: [emailAddress, billingAddress, deliveryAddress]
+      properties:
+        emailAddress: { type: string, format: email }
+        billingAddress: { $ref: "#/components/schemas/AddressSnapshot" }
+        deliveryAddress: { $ref: "#/components/schemas/AddressSnapshot" }
+
+    NextPaymentAction:
+      type: object
+      required: [orderId, nextAction]
+      properties:
+        orderId: { type: integer, format: int64 }
+        nextAction: { type: string, enum: [Capture, Refund, Ok] }
+        lastPaymentAction: { type: string, nullable: true }
+
+    PaymentTransaction:
+      type: object
+      required: [transactionId, action, status, amount, currency, occurredAt]
+      properties:
+        transactionId: { type: string }
+        action: { type: string, enum: [Init, Authorize, AuthorizeCapture, Capture, Refund, Ok] }
+        status: { type: string, enum: [Pending, Succeeded, Failed, Unknown] }
+        amount: { type: number, format: double }
+        currency: { type: string }
+        paymentReference: { type: string, nullable: true }
+        occurredAt: { type: string, format: date-time }
+
+    PaymentTransactionListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/PaymentTransaction" }
+
+    PaymentCommandRequest:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount: { type: number, format: double, exclusiveMinimum: 0 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        paymentReference: { type: string, nullable: true }
+
+    PaymentCommandResponse:
+      type: object
+      required: [orderId, commandId, action, status]
+      properties:
+        orderId: { type: integer, format: int64 }
+        commandId: { type: string }
+        action: { type: string, enum: [Capture] }
+        status: { type: string, enum: [Processing, Succeeded, Failed] }
+        paymentReference: { type: string, nullable: true }
+
+    RefundRequest:
+      type: object
+      required: [amount, currency, reason]
+      properties:
+        amount: { type: number, format: double, exclusiveMinimum: 0 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        reason: { type: string, minLength: 1 }
+
+    RefundCommandResponse:
+      type: object
+      required: [orderId, refundId, amount, status]
+      properties:
+        orderId: { type: integer, format: int64 }
+        refundId: { type: string }
+        amount: { type: number, format: double }
+        remainingRefundable: { type: number, format: double }
+        status: { type: string, enum: [Processing, Applied, Failed] }
+
+    CancelOrderRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 1 }
+
+    CancellationResponse:
+      type: object
+      required: [orderId, status, compensationState]
+      properties:
+        orderId: { type: integer, format: int64 }
+        status: { $ref: "#/components/schemas/OrderStatus" }
+        compensationState: { type: string, enum: [Pending, Completed, Failed] }
+
+    FulfillmentResponse:
+      type: object
+      required: [orderId, fulfillmentId, status]
+      properties:
+        orderId: { type: integer, format: int64 }
+        fulfillmentId: { type: string, format: uuid }
+        status: { $ref: "#/components/schemas/FulfillmentStatus" }
+        carrierReference: { type: string, nullable: true }
+        lastUpdatedAt: { type: string, format: date-time }
+
+    InvoiceResponse:
+      type: object
+      required: [orderId, status]
+      properties:
+        orderId: { type: integer, format: int64 }
+        requestId: { type: string }
+        status: { type: string, enum: [Processing, Available, Failed] }
+        artifactUrl: { type: string, format: uri, nullable: true }
+        generatedAt: { type: string, format: date-time, nullable: true }
+
+    ErrorResponse:
+      type: object
+      required: [error, message, statusCode, timestamp]
+      properties:
+        error: { type: string }
+        message: { type: string }
+        statusCode: { type: integer, format: int32 }
+        timestamp: { type: string, format: date-time }
+        correlationId: { type: string, nullable: true }
+
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Forbidden:
+      description: Caller lacks permission
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    NotFound:
+      description: Resource not found in the tenant/store context
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Conflict:
+      description: Business conflict or illegal state transition
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    ValidationError:
+      description: Validation failure
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    BadGateway:
+      description: Downstream payment boundary failure
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    Unavailable:
+      description: Dependency unavailable or command queued
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorResponse" }
