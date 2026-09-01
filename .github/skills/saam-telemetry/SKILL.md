@@ -837,7 +837,7 @@ validation/run-and-reconcile.sh <service>
     ↓ produces
 .saam/reconciliation/<service>/validation-run-<id>.yaml  (raw per-run data)
     ↓ consumed by
-reconcile_validation.py (updates graph + generates Kiro tasks)
+reconcile_validation.py (updates graph + generates GitHub Copilot tasks)
     ↓ at service exit gate, agent aggregates all runs into:
 .saam/telemetry/phase5-implementation/service-NNN.yaml  (telemetry export)
 ```

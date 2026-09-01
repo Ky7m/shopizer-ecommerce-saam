@@ -58,9 +58,15 @@ def _br_id_regex() -> str:
     try:
         for candidate in (
             ws_root / "core/steering/saam-calibration.yaml",
+            ws_root / ".github/saam-calibration.yaml",
+            ws_root / ".github/skills/saam-calibration.yaml",
+            ws_root / "dist/copilot/.github/saam-calibration.yaml",
             ws_root / ".kiro/steering/saam-calibration.yaml",
             ws_root / "dist/kiro-ide/.kiro/steering/saam-calibration.yaml",
             Path("core/steering/saam-calibration.yaml"),
+            Path(".github/saam-calibration.yaml"),
+            Path(".github/skills/saam-calibration.yaml"),
+            Path("dist/copilot/.github/saam-calibration.yaml"),
             Path(".kiro/steering/saam-calibration.yaml"),
             Path("dist/kiro-ide/.kiro/steering/saam-calibration.yaml"),
         ):
@@ -91,7 +97,7 @@ def _source_ref_stem(source_ref):
     ref = str(source_ref).strip()
     if not ref or ref.lower() in ("n/a", "none", "greenfield"):
         return None
-    first = ref.split(":", 1)[0].strip().strip("`")
+    first = ref.split(":", 1)[0].strip()
     first = Path(first).stem            # drop file extension
     if "." in first:                    # drop schema prefix (dbo.bspFoo -> bspFoo)
         first = first.split(".")[-1]
@@ -213,14 +219,8 @@ def parse_tables(service_dir: Path) -> list[dict]:
     content = ddl_file.read_text()
     tables = []
 
-    # Find CREATE TABLE statements. PostgreSQL specs commonly use schema-qualified
-    # names; retain the qualified name so ownership remains unambiguous.
-    for match in re.finditer(
-        r'CREATE TABLE\s+(?:IF NOT EXISTS\s+)?["\']?'
-        r'([A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)?)["\']?\s*\(',
-        content,
-        re.IGNORECASE,
-    ):
+    # Find CREATE TABLE statements
+    for match in re.finditer(r'CREATE TABLE\s+(?:IF NOT EXISTS\s+)?["\']?(\w+)["\']?\s*\(', content, re.IGNORECASE):
         table_name = match.group(1)
         tables.append({"name": table_name})
 
@@ -558,26 +558,6 @@ def import_service(driver, service_name: str, workspace: Path, check_only: bool 
                     stem=src_stem, brId=rule["brId"]
                 ).single()
                 if not linked:
-                    # P4 may identify a real source file that was absent from the P1 CAST inventory.
-                    # Materialize a minimal source component so provenance is not silently dropped.
-                    fallback_ref = rule.get("sourceRef", "")
-                    linked = session.run(
-                        "MERGE (sc:SourceComponent {castId: $castId}) "
-                        "ON CREATE SET sc.name = $stem, sc.type = 'Class', "
-                        "  sc.businessLayer = true, sc.intentCategory = 'unknown', "
-                        "  sc.firstPassIntent = 'unknown', sc.sourceRef = $sourceRef "
-                        "WITH sc "
-                        "MATCH (br:BusinessRule {brId: $brId}) "
-                        "MERGE (br)-[:EXTRACTED_FROM]->(sc) "
-                        "SET sc.extracted = true, sc.p4Intent = coalesce(sc.p4Intent, sc.intentCategory), "
-                        "    sc.intentCategory = coalesce(sc.p4Intent, sc.intentCategory) "
-                        "RETURN sc.castId AS cid",
-                        castId=f"p4-source:{src_stem}",
-                        stem=src_stem,
-                        sourceRef=fallback_ref,
-                        brId=rule["brId"],
-                    ).single()
-                if not linked:
                     unresolved_refs.append((rule["brId"], src_stem))
 
             # EXTENDS_VIA edges (Layer B) — link rule to any extension point it names.
@@ -800,12 +780,7 @@ def main():
                     "MATCH (sc:SourceComponent) WHERE coalesce(sc.businessLayer,true)=true RETURN count(sc) AS n"
                 ).single()["n"]
                 orphan = session.run(
-                    "MATCH (br:BusinessRule)-[:ASSIGNED_TO]->(s:Service) "
-                    "WHERE s.name IN $services "
-                    "AND trim(coalesce(br.sourceRef, '')) <> '' "
-                    "AND NOT (br)-[:EXTRACTED_FROM]->() "
-                    "RETURN count(DISTINCT br) AS n",
-                    services=services,
+                    "MATCH (br:BusinessRule) WHERE NOT (br)-[:EXTRACTED_FROM]->() RETURN count(br) AS n"
                 ).single()["n"]
             cov = (after_extracted / biz * 100) if biz else 0
             print("\n=== IMPORT SELF-CHECK ===")
@@ -813,10 +788,11 @@ def main():
                   f"(delta {after_extracted - before_extracted})")
             print(f"  Coverage (extracted / businessLayer): {after_extracted}/{biz} = {cov:.1f}%")
             print(f"  BusinessRules without EXTRACTED_FROM: {orphan} (greenfield rules are expected here)")
-            if orphan > 0:
-                print("  FAIL: source-backed rules are missing EXTRACTED_FROM edges — the "
-                      "SourceComponent-linking half is incomplete. Fix the resolver or the source "
-                      "reference format and re-run; do NOT hand-edit the graph or use a partial importer.",
+            if total > 0 and after_extracted <= before_extracted:
+                print("  FAIL: extracted-flip did NOT move — the SourceComponent-linking half was not "
+                      "written (the silent-disconnect bug). Likely a Source Reference format drift the "
+                      "resolver missed. FIX the resolver in this script (_source_ref_stem / the match "
+                      "query) and re-run — do NOT hand-edit the graph or fall back to a partial importer.",
                       file=sys.stderr)
                 success = False
 

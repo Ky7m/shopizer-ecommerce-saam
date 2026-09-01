@@ -552,7 +552,7 @@ The roadmap MUST include timelines for ALL THREE Phase 5 execution models so the
 
 #### Per-Model Duration Tables
 
-**Model A: Pure Kiro (Sequential, Interactive)**
+**Model A: GitHub Copilot (Sequential, Interactive)**
 
 | Score | Base Duration (per 20 rules) | Human Oversight Level |
 |-------|-----------------------------|-----------------------|
@@ -562,14 +562,14 @@ The roadmap MUST include timelines for ALL THREE Phase 5 execution models so the
 | 40-59% | 7-14 days | Heavy human involvement |
 | < 40% | 14+ days | Mostly manual with AI assist |
 
-**Model B: Transform + Kiro (Semi-Automated, per service)**
+**Model B: Transform + GitHub Copilot (Semi-Automated, per service)**
 
 | Score | Base Duration (per service) | Notes |
 |-------|----------------------------|-------|
-| 90-100% | 1-2 days | ATX generates ~95%, minimal Kiro fixes |
-| 75-89% | 2-4 days | ATX generates ~80%, Kiro fixes + wiring |
-| 60-74% | 4-6 days | ATX generates ~60%, significant Kiro rework |
-| 40-59% | 6-10 days | ATX struggles, heavy Kiro intervention |
+| 90-100% | 1-2 days | ATX generates ~95%, minimal GitHub Copilot fixes |
+| 75-89% | 2-4 days | ATX generates ~80%, GitHub Copilot fixes + wiring |
+| 60-74% | 4-6 days | ATX generates ~60%, significant GitHub Copilot rework |
+| 40-59% | 6-10 days | ATX struggles, heavy GitHub Copilot intervention |
 | < 40% | Not recommended | Spec quality too low for Transform |
 
 **Model C: ATX Batch + AI-DLC Pipeline (Maximum Velocity)**
@@ -606,8 +606,8 @@ The implementation roadmap MUST present ALL THREE models side by side:
 
 | Model | Total Duration | Parallelism | Best For |
 |-------|---------------|-------------|----------|
-| A: Pure Kiro | X weeks | Sequential (1 service at a time) | Complex services, learning phase |
-| B: Transform + Kiro | Y weeks | 1-2 services parallel | Mid-scale, balanced control |
+| A: GitHub Copilot | X weeks | Sequential (1 service at a time) | Complex services, learning phase |
+| B: Transform + GitHub Copilot | Y weeks | 1-2 services parallel | Mid-scale, balanced control |
 | C: ATX Batch + AI-DLC | Z days | All services parallel (Stage 1) | Maximum velocity, 5+ services |
 
 ## Per-Service Estimates (All Models)

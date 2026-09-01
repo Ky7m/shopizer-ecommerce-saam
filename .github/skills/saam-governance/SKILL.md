@@ -92,7 +92,7 @@ python3 graph-mcp/scripts/spec_drift.py --service order-service --update
 | Event | What Triggers It | Script |
 |-------|-----------------|--------|
 | Validation run | `run-and-reconcile.sh` calls `reconcile_validation.py` which checks hashes | Automatic during Phase 5 + Phase 6 |
-| File save (sourcecode/) | PostFileSave hook runs `detect_br_ids.py` which stamps new hash | Automatic via Kiro hook |
+| File save (sourcecode/) | PostFileSave hook runs `detect_br_ids.py` which stamps new hash | Automatic via GitHub Copilot hook |
 | CI/CD pipeline | Can include `spec_drift.py --all` as a merge gate | Manual setup per project |
 
 ## Governance Responses

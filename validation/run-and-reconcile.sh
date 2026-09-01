@@ -4,7 +4,7 @@
 #
 # Runs the comprehensive test suite for a service, parses results into a
 # structured YAML artifact, then calls the reconciliation script to update
-# the graph and generate Kiro remediation tasks.
+# the graph and generate remediation tasks.
 #
 # USAGE:
 #   ./validation/run-and-reconcile.sh <service-name> [trigger]
@@ -21,7 +21,7 @@
 #
 # OUTPUT:
 #   .saam/reconciliation/<service>/validation-run-<timestamp>.yaml
-#   (then reconcile_validation.py updates graph + generates Kiro tasks)
+#   (then reconcile_validation.py updates graph + generates remediation tasks)
 # =============================================================================
 
 set -uo pipefail

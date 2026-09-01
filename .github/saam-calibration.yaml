@@ -200,12 +200,12 @@ automatibility:
     # Prevention pipeline is UNIVERSAL; only the loop-closer branches by mode.
     # Criticality of the PREVENTION steps scales with mode (same steps, different stakes):
     criticality_by_mode:
-      model_a_kiro_inline:
+      model_agent_inline:
         prevention_criticality: "advisory-strong"   # human closes gaps in-session
         loop_closer: "in-session agent iterates against behavioral results live"
-      model_b_atx_plus_kiro:
+      model_b_atx_plus_agent:
         prevention_criticality: "essential"
-        loop_closer: "-c fix loop: Kiro remediates against the behavioral suite"
+        loop_closer: "-c fix loop: GitHub Copilot remediates against the behavioral suite"
       model_c_atx_batch:
         prevention_criticality: "load-bearing (HARD PRE-GENERATION GATES)"
         loop_closer: "fix-logic/validate loop: behavioral-aware, bounded passes, escalate on stall"

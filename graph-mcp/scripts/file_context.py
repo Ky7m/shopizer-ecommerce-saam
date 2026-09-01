@@ -1,6 +1,6 @@
 """PreToolUse hook script: provides service context when agent writes to sourcecode/ files.
 
-Called by the Kiro PreToolUse hook when the agent is about to write/modify files
+Called by the harness PreToolUse hook when the agent is about to write/modify files
 in the sourcecode/ directory. Receives JSON on stdin with the tool call details.
 Extracts the file path, determines which service it belongs to, and returns
 relevant BR-IDs, endpoints, and field names from the graph.

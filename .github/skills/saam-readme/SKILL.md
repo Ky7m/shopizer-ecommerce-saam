@@ -18,7 +18,7 @@ SAAM is a graph-driven modernization platform that transforms legacy application
 3. **Technology Agnostic**: Works with any legacy stack (RPG, COBOL, Java, .NET, PL/SQL, etc.)
 4. **Knowledge Graph**: Neo4j-backed lifecycle tracking, multi-dimensional confidence, and context construction — always active for all projects
 5. **CAST Imaging Integration**: Optional — use CAST data for structural analysis + graph validation layer
-6. **AI-DLC Output**: Specifications enable agentic code generation via Kiro specs
+6. **AI-DLC Output**: Specifications enable agentic code generation via GitHub Copilot specs
 7. **Mandatory Validation**: Every microservice MUST have a bash-scripted comprehensive test suite
 8. **Continuous Evolution**: Phase 6 feedback loop — deviations, bugs, and features flow through the same spec-driven pipeline
 9. **No Budget Calculations**: SAAM produces timelines and team composition only — no financial projections

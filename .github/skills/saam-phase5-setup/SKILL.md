@@ -46,17 +46,17 @@ Present the three models and ask the user to choose:
 
 "Phase 5 is ready to begin. You have [N] services to implement. Choose an execution model:
 
-**Model A: Pure Kiro (Interactive)**
+**Model A: Pure GitHub Copilot (Interactive)**
 - I implement each service task by task, you review PRs
 - Best for: 1-3 services, complex custom logic, learning the codebase
 - Timeline: ~1-2 weeks per service (sequential)
-- Requirements: Just this workspace + Kiro
+- Requirements: Just this workspace + GitHub Copilot
 - Sub-options:
-  - **A-spec:** Generate Kiro spec files (requirements.md/design.md/tasks.md) — visible task progress in UI
+  - **A-spec:** Generate GitHub Copilot spec files (requirements.md/design.md/tasks.md) — visible task progress in UI
   - **A-direct:** Implement directly from SAAM specs via subagent delegation — faster, fewer tokens, same outcome
 
-**Model B: Transform + Kiro (Semi-Automated)**
-- AWS Transform generates ~80% of each service, then I fix/extend via Kiro tasks
+**Model B: Transform + GitHub Copilot (Semi-Automated)**
+- AWS Transform generates ~80% of each service, then I fix/extend via GitHub Copilot tasks
 - Best for: 3-10 services, well-defined specs with clear boundaries
 - Timeline: ~3-5 days per service
 - Requirements: ATX CLI installed, TD published
@@ -73,14 +73,14 @@ Wait for the user's response. Then proceed to the corresponding setup section.
 
 ---
 
-## Model A Setup: Pure Kiro
+## Model A Setup: Pure GitHub Copilot
 
 ### Sub-Mode Selection
 
 If human chose Model A, ask:
 
 > "Model A has two sub-modes:
-> - **A-spec:** I generate Kiro spec files (requirements.md, design.md, tasks.md) for each service. You see task progress in the Kiro UI. Good for learning the codebase or when you want visible step-by-step progress.
+> - **A-spec:** I generate GitHub Copilot spec files (requirements.md, design.md, tasks.md) for each service. You see task progress in the GitHub Copilot UI. Good for learning the codebase or when you want visible step-by-step progress.
 > - **A-direct:** I implement directly from SAAM specs (01-business-rules.md, 02-domain-model.md, 04-api-contract.yaml) via subagent delegation. No intermediate format. Faster, uses fewer tokens. Progress tracked via reconciliation pipeline + signalStatus.
 >
 > Which sub-mode?"
@@ -95,17 +95,17 @@ None required beyond what's already in the workspace. The agent confirms:
 
 The agent creates:
 
-1. **`.kiro/specs/<first-service>/`** — Kiro spec (requirements.md, design.md, tasks.md) for the first service in dependency order
+1. **`.github/specs/<first-service>/`** — GitHub Copilot spec (requirements.md, design.md, tasks.md) for the first service in dependency order
 2. **`tracking/phase5-implementation/<first-service>.md`** — tracking file for the first service
 
-**Confirmation:** "Model A-spec is set up. Starting with `<first-service>` (priority [N] in the roadmap). Kiro spec generated at `.kiro/specs/<service>/tasks.md` with [N] tasks. Ready to begin Task 1?"
+**Confirmation:** "Model A-spec is set up. Starting with `<first-service>` (priority [N] in the roadmap). GitHub Copilot spec generated at `.github/specs/<service>/tasks.md` with [N] tasks. Ready to begin Task 1?"
 
 ### Model A-direct: Artifacts Created
 
 The agent creates:
 
 1. **`tracking/phase5-implementation/<first-service>.md`** — tracking file for the first service
-2. No `.kiro/specs/` files generated — implementation is driven directly from SAAM specs
+2. No `.github/specs/` files generated — implementation is driven directly from SAAM specs
 
 **Confirmation:** "Model A-direct is set up. Starting with `<first-service>` (priority [N] in the roadmap). Implementing directly from SAAM specs. Progress tracked via validation artifacts + signalStatus. Ready to begin?"
 
@@ -244,11 +244,11 @@ For Delegation Modes 2 and 3, the parent MUST maintain an implementation state f
 - Subagents do NOT write to this file — only the parent orchestrator does
 - The file is removed at the post-service checklist (after validation passes)
 
-**Why A-direct is faster:** No token spend on reformatting SAAM specs into Kiro format. No redundant requirements.md that restates 01-business-rules.md. No design.md that restates 02-domain-model.md + 03-api-design.md. The agent goes straight from spec to code. Per-layer delegation prevents context pressure on large services.
+**Why A-direct is faster:** No token spend on reformatting SAAM specs into GitHub Copilot format. No redundant requirements.md that restates 01-business-rules.md. No design.md that restates 02-domain-model.md + 03-api-design.md. The agent goes straight from spec to code. Per-layer delegation prevents context pressure on large services.
 
 ---
 
-## Model B Setup: Transform + Kiro
+## Model B Setup: Transform + GitHub Copilot
 
 ### Parameters Needed
 
@@ -302,7 +302,7 @@ The agent creates:
    - `coding-patterns.md` — target stack conventions, project structure
    - Copy of `04-api-contract.yaml` for the first service
 
-3. **`.kiro/specs/<service>/`** — Kiro spec with Transform-first tasks.md (Task 1: Run ATX, Task 2: Fix output, etc.)
+3. **`.github/specs/<service>/`** — GitHub Copilot spec with Transform-first tasks.md (Task 1: Run ATX, Task 2: Fix output, etc.)
 
 4. **`tracking/phase5-implementation/<service>.md`** — tracking file
 
@@ -323,7 +323,7 @@ Let me know the TD name once published."
 
 ### Confirmation
 
-"Model B (Transform + Kiro) is set up. TD: `<td-name>`. Starting with `<service>`. Run the transform:
+"Model B (Transform + GitHub Copilot) is set up. TD: `<td-name>`. Starting with `<service>`. Run the transform:
 
 ```bash
 atx custom def exec -n <td-name> -p spec/microservices/<service>/ -x -t
@@ -429,12 +429,12 @@ The agent creates:
 4. **AI-DLC rules** (if user approved installation):
    ```bash
    mkdir -p .github/skills/aws-aidlc-rules
-   mkdir -p .kiro/aws-aidlc-rule-details
+   mkdir -p .github/aws-aidlc-rule-details
    # Copy core-workflow.md to .github/skills/aws-aidlc-rules/
-   # Copy rule-details to .kiro/aws-aidlc-rule-details/
+   # Copy rule-details to .github/aws-aidlc-rule-details/
    ```
 
-5. **`.kiro/aws-aidlc-rule-details/extensions/saam/saam-rules.md`** — SAAM extension for AI-DLC:
+5. **`.github/aws-aidlc-rule-details/extensions/saam/saam-rules.md`** — SAAM extension for AI-DLC:
    ```markdown
    ## Rule SAAM-01: No Shell Implementations
    Every method that calls an external service MUST make real HTTP calls.
@@ -457,7 +457,7 @@ The agent creates:
    Verification: code generation plan must reference spec files, not validation/ files.
 
    ## Rule SAAM-06: Known Deviations (Stage 2 Output)
-   Read .kiro/aws-aidlc-rule-details/extensions/saam/known-deviations.md BEFORE construction.
+   Read .github/aws-aidlc-rule-details/extensions/saam/known-deviations.md BEFORE construction.
    Unit 0 fixes these systemic issues. Do NOT build integration on top of known-broken patterns.
    Verification: known-deviations.md exists and Unit 0 is the first construction unit in the plan.
 
@@ -474,7 +474,7 @@ The agent creates:
 
    ## Unit 0: Systemic Fixes (MANDATORY FIRST — from Stage 2 deviation log)
    - Scope: Fix ALL systemic deviations identified during Stage 2 smoke validation
-   - Inputs: .kiro/aws-aidlc-rule-details/extensions/saam/known-deviations.md + all 04-api-contract.yaml files
+   - Inputs: .github/aws-aidlc-rule-details/extensions/saam/known-deviations.md + all 04-api-contract.yaml files
    - Output: All services aligned with their API contracts (status codes, headers, field names, response shapes)
    - Priority: RUNS FIRST — before any other unit. Do NOT build integration on broken patterns.
    - Verification: Re-run affected test assertions after each pattern fix

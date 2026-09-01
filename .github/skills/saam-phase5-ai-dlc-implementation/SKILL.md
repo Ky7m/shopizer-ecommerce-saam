@@ -12,22 +12,22 @@ Use AI-driven SDLC to generate running microservices from SAAM specifications. E
 
 ## Knowledge Graph Population (Orchestrator-Only — Unified Across All Modes)
 
-The knowledge graph is a **projection of the source tree**, maintained by ONE actor — the Kiro
+The knowledge graph is a **projection of the source tree**, maintained by ONE actor — the GitHub Copilot
 orchestrator — via ONE idempotent operation: `detect_br_ids.py --all` (scans `sourcecode/` for
 BR-ID annotations, MERGEs CLAIMS_IMPLEMENTATION edges). This is the single, mode-independent
 mechanism. There is no per-file-save hook — it fragmented per mode and silently missed bulk-landed
 code.
 
 **Why orchestrator-only:** generation, test, and validate agents (especially Model C — ATX batch on
-Fargate) run sandboxed with NO Neo4j access. Only the Kiro orchestrator has BOTH the local Neo4j
+Fargate) run sandboxed with NO Neo4j access. Only the GitHub Copilot orchestrator has BOTH the local Neo4j
 connection AND visibility of landed code (it pulls the branches, reads results, drives the loop).
 So graph population is NEVER delegated to those agents. Their only graph-related responsibility is to
-LEAVE BR-ID annotations in the code (`// BR-XX-YYY-NNN`). The orchestrator HARVESTS those annotations
+leave BR-ID annotations in the code (`// BR-XX-YYY-NNN`). The orchestrator HARVESTS those annotations
 into the graph after pulling.
 
 **The contract between sandboxed agents and the orchestrator:**
 - Generation/fix agents (any mode): write code WITH BR-ID annotations. Never touch the graph.
-- Orchestrator (Kiro, always): after code lands in its view, run `detect_br_ids.py --all`.
+- Orchestrator (GitHub Copilot, always): after code lands in its view, run `detect_br_ids.py --all`.
 
 **Reconcile checkpoints (all are orchestrator actions with Neo4j access — mode-independent):**
 
@@ -85,7 +85,7 @@ regenerated every dispatch (never hand-edited); the orchestrator overwrites it b
 **Mode split (this is the one real branch — do not pretend it's uniform):**
 - **Model B / C (sandboxed agents, no Neo4j):** use the file path above — export + commit + the TD
   reads `_graph-context.md`.
-- **Model A (Kiro inline, has Neo4j):** the orchestrator IS the code author and can call the MCP
+- **Model A (GitHub Copilot inline, has Neo4j):** the orchestrator IS the code author and can call the MCP
   tools live (`graph_implementation_context`, `graph_fix_context`) — no file needed. Exporting a
   file for Model A is redundant; skip it.
 
@@ -286,7 +286,7 @@ For each service (in dependency order):
   │ Step 0: Test suite prerequisite check     │
   │ Step 0.5: Copy DTOs from spec (08-dtos/) │
   │ Step 1: Read full spec                    │
-  │ Step 2: Create Kiro spec                  │
+  │ Step 2: Create GitHub Copilot spec      │
   │ Step 3: Implement (spec-driven, no stubs) │
   │     ├── Scaffolding                       │
   │     ├── Domain model                      │
@@ -472,13 +472,13 @@ Code generation (Step 3) and validation (Step 4) are DISTINCT stages with NO ove
 2. Run unit tests — fix failures by re-reading spec
 3. Build container image — fix Containerfile issues
 4. Start service on local profile — verify health endpoint
-5. Run `comprehensive-test-suite.sh` via `validation/run-and-reconcile.sh <service>` — produces structured artifact + updates graph + generates Kiro tasks
-6. If < 100% pass → proceed to Step 5 (Fix Failures) using generated `.kiro/specs/<service>/tasks.md`
+5. Run `comprehensive-test-suite.sh` via `validation/run-and-reconcile.sh <service>` — produces structured artifact + updates graph + generates remediation tasks
+6. If < 100% pass → proceed to Step 5 (Fix Failures) using generated `tracking/phase5-implementation/<service>.md` (or `.github/specs/<service>/tasks.md`)
 7. If 100% pass → proceed to Step 6 (CI/CD)
 
 ## Subagent Delegation (Per-Service Implementation)
 
-When delegating per-service implementation work to a subagent (Model A — Pure Kiro):
+When delegating per-service implementation work to a subagent (Model A — Pure GitHub Copilot):
 
 **contextFiles to include:**
 - `.github/skills/saam-phase5-ai-dlc-implementation/SKILL.md`
@@ -584,7 +584,7 @@ NEVER construct URLs. NEVER bypass the api-client. NEVER invent endpoints.
 Every time the comprehensive test suite runs (regardless of model), use the reconciliation pipeline:
 
 ```bash
-# Run tests + produce artifact + update graph + generate Kiro tasks
+# Run tests + produce artifact + update graph + generate remediation tasks
 ./validation/run-and-reconcile.sh <service-name> <trigger>
 
 # Triggers: model_a_inline | model_b_post_atx | stage2_smoke | stage4_final | ci_pipeline
@@ -598,16 +598,16 @@ Every time the comprehensive test suite runs (regardless of model), use the reco
    - Creates `Deviation` nodes for failing BR-IDs
    - Regresses previously-passing rules that now fail
    - Updates service completeness and confidence scores
-4. Generates/updates `.kiro/specs/<service>/tasks.md` with remaining fixes (systemic patterns first, then per-BR-ID tasks)
+4. Generates/updates remediation tasks in `.github/specs/<service>/tasks.md` with remaining fixes (systemic patterns first, then per-BR-ID tasks)
 
-**The generated tasks.md is the bridge between validation and the next fix cycle.** The agent picks it up naturally as Kiro spec tasks.
+**The generated tasks.md is the bridge between validation and the next fix cycle.** The agent picks it up naturally as GitHub Copilot spec tasks.
 
 **Per-model usage:**
 
 | Model | When to run | Trigger value |
 |-------|-------------|---------------|
-| A (Kiro) | After Step 4 validation | `model_a_inline` |
-| B (Transform + Kiro) | After ATX output lands + after each Kiro fix cycle | `model_b_post_atx` |
+| A (GitHub Copilot) | After Step 4 validation | `model_a_inline` |
+| B (Transform + GitHub Copilot) | After ATX output lands + after each GitHub Copilot fix cycle | `model_b_post_atx` |
 | C (ATX Batch) | Stage 2 smoke + Stage 4 final | `stage2_smoke` / `stage4_final` |
 
 **ATX `-c` flag integration (Model B):** To make ATX iterate against the comprehensive suite during generation, copy and customize `validation/atx-check.sh.template` for each service:
@@ -634,13 +634,13 @@ Phase 5 supports three execution models. The choice is made at the start of impl
 
 | Model | When to Use | Speed | How It Works |
 |-------|-------------|-------|--------------|
-| **A: Pure Kiro** | Small systems (1-3 services), complex integrations | Slowest (sequential) | Agent works through tasks.md one by one per service |
-| **B: Transform + Kiro** | Mid-scale (3-10 services), clear boundaries | Medium | ATX generates per service, Kiro tasks fix/extend |
+| **A: Pure GitHub Copilot** | Small systems (1-3 services), complex integrations | Slowest (sequential) | Agent works through tasks.md one by one per service |
+| **B: Transform + GitHub Copilot** | Mid-scale (3-10 services), clear boundaries | Medium | ATX generates per service, GitHub Copilot tasks fix/extend |
 | **C: ATX Batch + AI-DLC** | Large-scale (5+ services), maximum velocity | Fastest | ATX bulk generates ALL services (backend + frontend) in parallel, AI-DLC handles wiring/integration/polish |
 
 **🔴 PROMPT HUMAN**: "Ready for Phase 5 implementation. Based on the engagement scope ([N] services), I recommend:
-- **Pure Kiro** — fully interactive, task by task (best for 1-3 services)
-- **Transform + Kiro** — ATX generates each service, Kiro polishes (best for 3-10 services)
+- **Pure GitHub Copilot** — fully interactive, task by task (best for 1-3 services)
+- **Transform + GitHub Copilot** — ATX generates each service, GitHub Copilot polishes (best for 3-10 services)
 - **ATX Batch + AI-DLC Pipeline** — maximum velocity: ATX generates ALL services in parallel, AI-DLC handles cross-cutting wiring (best for 5+ services)
 
 Which model?"
@@ -765,7 +765,7 @@ done
 
 **Output 1: `validation/spec-deviation-log.md`** (full deviation log per the template defined in Step 5)
 
-**Output 2: `.kiro/aws-aidlc-rule-details/extensions/saam/known-deviations.md`** — a condensed file that AI-DLC reads during Stage 3:
+**Output 2: `.github/aws-aidlc-rule-details/extensions/saam/known-deviations.md`** — a condensed file that AI-DLC reads during Stage 3:
 
 ```markdown
 # Known Deviations from ATX Generation (Stage 2 Smoke Validation)
@@ -806,10 +806,10 @@ After Stage 2 produces the deviation log and known-deviations file, install AI-D
 
 **Setup AI-DLC in the workspace:**
 ```bash
-# Install AI-DLC rules (Kiro)
+# Install AI-DLC rules
 mkdir -p .github/skills
 cp -R <aidlc-rules>/aws-aidlc-rules .github/skills/
-cp -R <aidlc-rules>/aws-aidlc-rule-details .kiro/
+cp -R <aidlc-rules>/aws-aidlc-rule-details .github/
 
 # known-deviations.md was already generated by Stage 2 into the extensions folder
 ```
@@ -855,7 +855,7 @@ For each systemic pattern in `known-deviations.md`:
 To enforce SAAM rules within AI-DLC, add a SAAM extension file:
 
 ```markdown
-# .kiro/aws-aidlc-rule-details/extensions/saam/saam-rules.md
+# .github/aws-aidlc-rule-details/extensions/saam/saam-rules.md
 
 ## Rule SAAM-01: No Shell Implementations (Anti-Skeleton)
 Every method that implements a BR-ID MUST perform the effect the workflow recipe specifies —
@@ -891,7 +891,7 @@ Production database via env vars is the PRIMARY persistence. In-memory fallback 
 Never read test suites to determine implementation logic. Use the API contract for naming.
 
 ## Rule SAAM-06: Known Deviations
-Read .kiro/aws-aidlc-rule-details/extensions/saam/known-deviations.md BEFORE construction. Unit 0 fixes these systemic issues. Do NOT build on top of known-broken patterns.
+Read .github/aws-aidlc-rule-details/extensions/saam/known-deviations.md BEFORE construction. Unit 0 fixes these systemic issues. Do NOT build on top of known-broken patterns.
 
 ## Rule SAAM-07: BR-ID Annotation (Traceability)
 Every method that implements a business rule MUST include a comment or annotation referencing the BR-ID.
@@ -918,7 +918,7 @@ done
 
 **Expected result:** Significantly higher pass rate than Stage 2 smoke run (Unit 0 fixed systemic issues, Units 1-5 added missing wiring).
 
-**If tests still fail:** Use SAAM's spec-first debugging protocol (read the API contract + spec, fix the code). Log new deviations in the deviation log. AI-DLC or Kiro can handle fixes — the guardrails apply regardless of which tool is used.
+**If tests still fail:** Use SAAM's spec-first debugging protocol (read the API contract + spec, fix the code). Log new deviations in the deviation log. AI-DLC or Coding agent can handle fixes — the guardrails apply regardless of which tool is used.
 
 **Final deviation log update:** After all services pass (or reach human-accepted state), update `validation/spec-deviation-log.md` with final statistics:
 - Items resolved during Stage 3 (Unit 0): moved from DEV-TEST to DEV-CODE
@@ -958,7 +958,7 @@ the loop-closer that runs when behavioral validation fails.**
    - **Behavioral validation (validate TD — any mode, incl. sandboxed):** run the behavioral suite.
      This needs only the running service, not the graph, so it is the one part a sandboxed ATX/fix
      container CAN do.
-   - **Reachability audit + fidelity report (ORCHESTRATOR ONLY — Kiro, post-pull):** `fidelity_audit.py`
+   - **Reachability audit + fidelity report (ORCHESTRATOR ONLY — GitHub Copilot, post-pull):** `fidelity_audit.py`
      reads landed code and WRITES `Implementation.reachable` / `BusinessRule.deadCode` to Neo4j. This
      is a graph operation, so it is NEVER run by a sandboxed agent (they have no Neo4j — see
      "Knowledge Graph Population"). The orchestrator runs it after it pulls the code into view, as
@@ -1014,8 +1014,8 @@ the loop-closer that runs when behavioral validation fails.**
 
 | Mode | Loop-closer |
 |------|-------------|
-| A (Kiro inline) | In-session: the agent sees the failing behavioral result and fixes it live before marking the task done |
-| B (ATX + Kiro) | `-c` fix loop: Kiro remediates against the behavioral suite |
+| A (GitHub Copilot inline) | In-session: the agent sees the failing behavioral result and fixes it live before marking the task done |
+| B (ATX + GitHub Copilot) | `-c` fix loop: GitHub Copilot remediates against the behavioral suite |
 | C (ATX batch) | fix-logic/validate loop: behavioral-aware remediation, bounded passes, escalate on stall (a behavioral gap fix-logic can't close in N passes = genuinely missing logic → focused extraction or human) |
 
 **Criticality gradient (same steps, different stakes):** prevention steps 1-3 are advisory-strong
@@ -1113,7 +1113,7 @@ control that surfaces that class. It MUST run before the Phase 5 exit gate is pr
 
 #### Timeline Comparison
 
-| System Size | Pure Kiro (Model A) | Transform + Kiro (Model B) | ATX Batch + AI-DLC (Model C) |
+| System Size | Pure GitHub Copilot (Model A) | Transform + GitHub Copilot (Model B) | ATX Batch + AI-DLC (Model C) |
 |-------------|--------------------|-----------------------------|-------------------------------|
 | 3 services | 3-6 weeks | 1-2 weeks | 1 week |
 | 10 services | 10-20 weeks | 4-6 weeks | 2-3 weeks |
@@ -1126,9 +1126,9 @@ Model C achieves velocity through:
 
 ---
 
-### Model B: Transform + Kiro (Dual-Workflow)
+### Model B: Transform + GitHub Copilot (Dual-Workflow)
 
-For most services, a solid approach is **Transform first, then Kiro for polish:**
+For most services, a solid approach is **Transform first, then GitHub Copilot for polish:**
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -1143,9 +1143,9 @@ For most services, a solid approach is **Transform first, then Kiro for polish:*
           │ Transform output lands in sourcecode/
           ▼
 ┌─────────────────────────────────────────────────────────────┐
-│ WORKFLOW B: Kiro Tasks (iterative fix + extend)             │
+│ WORKFLOW B: GitHub Copilot Tasks (iterative fix + extend)             │
 │                                                             │
-│  .kiro/specs/<service>/tasks.md                             │
+│  .github/specs/<service>/tasks.md              │
 │    Task 1: Fix Transform output compilation                 │
 │    Task 2: Add cross-cutting concerns (auth, tenancy, etc.) │
 │    Task 3: Wire integration (cross-service calls)           │
@@ -1156,9 +1156,9 @@ For most services, a solid approach is **Transform first, then Kiro for polish:*
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### What Transform Generates vs. What Kiro Tasks Handle
+### What Transform Generates vs. What GitHub Copilot Tasks Handle
 
-| Component | Transform Generates? | Kiro Task Needed? |
+| Component | Transform Generates? | GitHub Copilot Task Needed? |
 |-----------|---------------------|-------------------|
 | Domain entities + DTOs | Yes | Only if fixes needed |
 | Repository layer | Yes | Only if fixes needed |
@@ -1220,10 +1220,10 @@ Record the result in the tracking file.
 
 ### tasks.md for Transform-First Workflow
 
-When using Transform + Kiro, the generated `tasks.md` looks different from pure Kiro:
+When using Transform + GitHub Copilot, the generated `tasks.md` looks different from pure GitHub Copilot:
 
 ```markdown
-# Tasks: <Service Name> (Transform + Kiro)
+# Tasks: <Service Name> (Transform + GitHub Copilot)
 
 ## Task 1: Run AWS Transform Custom
 - **Status:** PENDING
@@ -1277,9 +1277,9 @@ When using Transform + Kiro, the generated `tasks.md` looks different from pure 
   - [ ] README.md
 ```
 
-### Model A: Pure Kiro (No Transform)
+### Model A: Pure GitHub Copilot (No Transform)
 
-If the user chooses Kiro-only (Model A), the agent follows the full Step 0-7 workflow documented in the "AI-DLC Workflow Per Service (Model A)" section below.
+If the user chooses GitHub Copilot-only (Model A), the agent follows the full Step 0-7 workflow documented in the "AI-DLC Workflow Per Service (Model A)" section below.
 
 ### Scaled Execution (Multi-Service Parallel via AWS Batch)
 
@@ -1409,9 +1409,9 @@ Web UI (CloudFront) → HTTP API → Lambda → AgentCore Orchestrator
 | Monitoring | Terminal | API + CloudWatch | Dashboard + DynamoDB |
 | Best for | PoCs, single service | Mid-scale engagements | Enterprise-scale, ongoing modernization |
 
-#### Scaled Execution + Kiro Tasks Integration
+#### Scaled Execution + GitHub Copilot Tasks Integration
 
-Regardless of which scaled option is used, the output still needs Kiro tasks for polish:
+Regardless of which scaled option is used, the output still needs GitHub Copilot tasks for polish:
 
 ```
 Scaled ATX (parallel, all services)
@@ -1435,7 +1435,7 @@ Validation gate: comprehensive-test-suite.sh passes 100%
 **Tracking for scaled execution:**
 - The tracking file gets ONE "Run Transform" task per service (Status: IN_PROGRESS while Batch job runs)
 - When the Batch job completes: mark IN_REVIEW, create assessment tasks
-- Kiro tasks for fixes/integration are appended after Transform output is assessed
+- GitHub Copilot tasks for fixes/integration are appended after Transform output is assessed
 - If using the Agentic Platform: Jira transitions can be triggered by the orchestrator directly
 
 **tasks.md for scaled execution:**
@@ -1456,11 +1456,11 @@ Validation gate: comprehensive-test-suite.sh passes 100%
 
 ---
 
-## AI-DLC Workflow Per Service (Model A: Pure Kiro Path)
+## AI-DLC Workflow Per Service (Model A: Pure GitHub Copilot Path)
 
 ### Step 0: Test Suite Prerequisite Check (MANDATORY)
 
-Before ANY implementation work begins (including decomposing SAAM specs into Kiro specs), verify that a `comprehensive-test-suite.sh` exists for the service being developed.
+Before ANY implementation work begins (including decomposing SAAM specs into GitHub Copilot specs), verify that a `comprehensive-test-suite.sh` exists for the service being developed.
 
 **Check**: Does `validation/<service-name>/comprehensive-test-suite.sh` exist?
 
@@ -1489,11 +1489,11 @@ The agent MUST NOT begin implementation until it has read all four files complet
 
 **After reading, the agent must state:** "I have read X business rules, Y tables, Z endpoints, and the API contract (naming convention: <camelCase/snake_case>). Beginning implementation."
 
-### Step 2: Generate Kiro Spec from SAAM Specification (MANDATORY)
+### Step 2: Generate GitHub Copilot Spec from SAAM Specification (MANDATORY)
 
-The agent transforms the SAAM service specification into Kiro's standard requirements → design → tasks structure. This is NOT a summary — it is a structured reformatting of the SAAM spec into Kiro's format for task execution.
+The agent transforms the SAAM service specification into GitHub Copilot's standard requirements → design → tasks structure. This is NOT a summary — it is a structured reformatting of the SAAM spec into GitHub Copilot's format for task execution.
 
-Generate `.kiro/specs/<service-name>/`:
+Generate `.github/specs/<service-name>/`:
 
 #### 2.1 Generate `requirements.md`
 
@@ -1709,8 +1709,8 @@ All four systems MUST be interlinked so that any artifact can be traced back to 
 SAAM Spec (source of truth)
   spec/microservices/<service>/01-business-rules.md → BR-IDs
        ↓ feeds into
-Kiro SDD Spec (implementation plan)
-  .kiro/specs/<service-name>/tasks.md → Task items referencing BR-IDs
+GitHub Copilot SDD Spec (implementation plan)
+  .github/specs/<service-name>/tasks.md → Task items referencing BR-IDs
        ↓ mirrors into
 Tracking File (progress visibility)
   tracking/phase5-implementation/<service-name>.md → Status per task/BR-ID
@@ -1746,7 +1746,7 @@ Jira (external visibility)
 
 ```
 SAAM Spec: spec/microservices/<service>/01-business-rules.md
-SDD Spec Task: .kiro/specs/<service-name>/tasks.md#Task-N
+SDD Spec Task: .github/specs/<service-name>/tasks.md#Task-N
 BR-IDs: BR-XX-001, BR-XX-002, BR-XX-003
 Tracking: tracking/phase5-implementation/<service-name>.md
 ```
@@ -1789,7 +1789,7 @@ When a task moves to DONE (human action after PR merge):
 
 #### 2.5 Task Tracking Integration
 
-After generating the Kiro spec and establishing cross-references, the agent MUST:
+After generating the GitHub Copilot spec and establishing cross-references, the agent MUST:
 1. Create/update `tracking/phase5-implementation/<service-name>.md` with tasks from `tasks.md` (including SDD spec links)
 2. If Jira is configured:
    - Create Epic: "SAAM Phase 5: Implementation — <Service Name>"
@@ -2420,9 +2420,9 @@ graph_query_nodes(Service, {name: "<service>"})
 → check signalStatus property
 ```
 
-If BLOCKED → resolve all blockers first (the generated `.kiro/specs/<service>/tasks.md` lists them). Re-run `./validation/run-and-reconcile.sh <service>` after fixing. Only when `signalStatus` is CLEAR or FLAGGED can the exit gate be presented.
+If BLOCKED → resolve all blockers first (the generated `.github/specs/<service>/tasks.md` lists them). Re-run `./validation/run-and-reconcile.sh <service>` after fixing. Only when `signalStatus` is CLEAR or FLAGGED can the exit gate be presented.
 
-**PRECONDITION: The ORCHESTRATOR (Kiro — not a sandboxed agent) MUST produce `validation/<service>/fidelity-report.md` BEFORE presenting the exit gate** (see "Fidelity report" under the Anti-Skeleton pipeline for the format). It is generated from a graph read, so only the orchestrator can produce it (sandboxed ATX/fix containers have no Neo4j). Generate it AFTER the reconcile-in sequence (`detect_br_ids.py --all` → `fidelity_audit.py --all`) so it reads a current graph — under Model C, this runs on the orchestrator after the ATX branches are pulled, never in the Fargate containers. The operator uses it at the gate to confirm the dead-code / orphaned-capability / false-flag classification for each annotated-but-unreachable BR-ID. If the report is missing when the gate is presented, that is a bug.
+**PRECONDITION: The ORCHESTRATOR (GitHub Copilot — not a sandboxed agent) MUST produce `validation/<service>/fidelity-report.md` BEFORE presenting the exit gate** (see "Fidelity report" under the Anti-Skeleton pipeline for the format). It is generated from a graph read, so only the orchestrator can produce it (sandboxed ATX/fix containers have no Neo4j). Generate it AFTER the reconcile-in sequence (`detect_br_ids.py --all` → `fidelity_audit.py --all`) so it reads a current graph — under Model C, this runs on the orchestrator after the ATX branches are pulled, never in the Fargate containers. The operator uses it at the gate to confirm the dead-code / orphaned-capability / false-flag classification for each annotated-but-unreachable BR-ID. If the report is missing when the gate is presented, that is a bug.
 
 **🔴 PROMPT HUMAN**: "[Service] implementation complete.
 

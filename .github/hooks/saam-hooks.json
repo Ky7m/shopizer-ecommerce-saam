@@ -4,32 +4,32 @@
     "sessionStart": [
       {
         "type": "command",
-        "bash": "node --experimental-strip-types .github/hooks/saam-copilot-adapter.ts sessionStart",
-        "powershell": "node --experimental-strip-types .github/hooks/saam-copilot-adapter.ts sessionStart",
+        "bash": "node .github/hooks/saam-copilot-adapter.ts sessionStart",
+        "powershell": "node .github/hooks/saam-copilot-adapter.ts sessionStart",
         "timeoutSec": 30
       }
     ],
     "preToolUse": [
       {
         "type": "command",
-        "bash": "node --experimental-strip-types .github/hooks/saam-copilot-adapter.ts preToolUse",
-        "powershell": "node --experimental-strip-types .github/hooks/saam-copilot-adapter.ts preToolUse",
+        "bash": "node .github/hooks/saam-copilot-adapter.ts preToolUse",
+        "powershell": "node .github/hooks/saam-copilot-adapter.ts preToolUse",
         "timeoutSec": 30
       }
     ],
     "postToolUse": [
       {
         "type": "command",
-        "bash": "node --experimental-strip-types .github/hooks/saam-copilot-adapter.ts postToolUse",
-        "powershell": "node --experimental-strip-types .github/hooks/saam-copilot-adapter.ts postToolUse",
+        "bash": "node .github/hooks/saam-copilot-adapter.ts postToolUse",
+        "powershell": "node .github/hooks/saam-copilot-adapter.ts postToolUse",
         "timeoutSec": 30
       }
     ],
     "agentStop": [
       {
         "type": "command",
-        "bash": "node --experimental-strip-types .github/hooks/saam-copilot-adapter.ts agentStop",
-        "powershell": "node --experimental-strip-types .github/hooks/saam-copilot-adapter.ts agentStop",
+        "bash": "node .github/hooks/saam-copilot-adapter.ts agentStop",
+        "powershell": "node .github/hooks/saam-copilot-adapter.ts agentStop",
         "timeoutSec": 15
       }
     ]

@@ -2,7 +2,7 @@
 
 Reads a validation artifact YAML (produced by run-and-reconcile.sh),
 updates graph lifecycle states, creates/resolves Deviation nodes,
-and generates Kiro remediation tasks.
+and generates remediation tasks.
 
 Usage:
   python3 graph-mcp/scripts/reconcile_validation.py <artifact-path>
@@ -16,7 +16,7 @@ What it does:
   3. Creates Deviation nodes for failing BR-IDs (if not already existing)
   4. Regresses previously-passing BR-IDs that now fail
   5. Updates service completeness (pass_rate, last_validated)
-  6. Generates/updates .kiro/specs/<service>/tasks.md with remediation tasks
+  6. Generates/updates remediation tasks in spec/<service>/tasks.md
 
 Exit codes:
   0 = success (graph updated)

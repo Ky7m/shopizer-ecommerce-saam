@@ -74,9 +74,15 @@ def _br_id_regex() -> str:
     try:
         for candidate in (
             WORKSPACE_ROOT / "core/steering/saam-calibration.yaml",
+            WORKSPACE_ROOT / ".github/saam-calibration.yaml",
+            WORKSPACE_ROOT / ".github/skills/saam-calibration.yaml",
+            WORKSPACE_ROOT / "dist/copilot/.github/saam-calibration.yaml",
             WORKSPACE_ROOT / ".kiro/steering/saam-calibration.yaml",
             WORKSPACE_ROOT / "dist/kiro-ide/.kiro/steering/saam-calibration.yaml",
             Path("core/steering/saam-calibration.yaml"),
+            Path(".github/saam-calibration.yaml"),
+            Path(".github/skills/saam-calibration.yaml"),
+            Path("dist/copilot/.github/saam-calibration.yaml"),
             Path(".kiro/steering/saam-calibration.yaml"),
             Path("dist/kiro-ide/.kiro/steering/saam-calibration.yaml"),
         ):

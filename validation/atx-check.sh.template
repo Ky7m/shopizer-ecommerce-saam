@@ -1,0 +1,100 @@
+#!/bin/bash
+# =============================================================================
+# ATX Check Script Template — Used as the -c flag for AWS Transform Custom
+#
+# This wrapper allows ATX to iterate against the comprehensive test suite.
+# ATX calls this script after each generation iteration:
+#   exit 0 = code passes (ATX stops iterating)
+#   exit 1 = code fails (ATX iterates again)
+#
+# USAGE:
+#   atx custom def exec -n "$TD_NAME" -p "spec/microservices/$SERVICE" \
+#       -c "../../validation/$SERVICE/atx-check.sh" -x -t
+#
+# CUSTOMIZATION:
+#   Copy this template to validation/<service>/atx-check.sh and adjust:
+#   - BUILD_CMD: how to compile the service
+#   - START_CMD: how to start it (must run in background)
+#   - PORT: what port the service listens on
+#   - HEALTH_ENDPOINT: how to check readiness
+#   - MAX_WAIT: how long to wait for startup
+#
+# The template defaults to Spring Boot (Maven). Adjust for your stack.
+# =============================================================================
+
+set -euo pipefail
+
+# --- Configuration (adjust per service/stack) ---
+SERVICE_DIR="${1:-.}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+TEST_SUITE="$SCRIPT_DIR/comprehensive-test-suite.sh"
+
+# Build tool (Maven / Gradle / npm)
+BUILD_CMD="mvn -q compile -DskipTests -f $SERVICE_DIR/pom.xml"
+# Alternative for Node: BUILD_CMD="cd $SERVICE_DIR && npm run build"
+
+# Start command (must run as background process, use local/test profile)
+START_CMD="mvn -q spring-boot:run -f $SERVICE_DIR/pom.xml -Dspring-boot.run.profiles=local"
+# Alternative for Node: START_CMD="cd $SERVICE_DIR && PORT=$PORT npm run start:local"
+
+# Service port
+PORT="${SERVICE_PORT:-8080}"
+
+# Health check endpoint
+HEALTH_ENDPOINT="http://localhost:$PORT/actuator/health"
+# Alternative: HEALTH_ENDPOINT="http://localhost:$PORT/health"
+
+# Max seconds to wait for service to start
+MAX_WAIT=60
+
+# --- Execution ---
+
+echo "[atx-check] Building service..."
+if ! eval $BUILD_CMD 2>/dev/null; then
+    echo "[atx-check] BUILD FAILED"
+    exit 1
+fi
+
+echo "[atx-check] Starting service on port $PORT..."
+eval $START_CMD &
+SERVICE_PID=$!
+
+# Ensure cleanup on exit
+cleanup() {
+    if [ -n "${SERVICE_PID:-}" ]; then
+        kill $SERVICE_PID 2>/dev/null || true
+        wait $SERVICE_PID 2>/dev/null || true
+    fi
+}
+trap cleanup EXIT
+
+# Wait for service readiness
+echo "[atx-check] Waiting for service (max ${MAX_WAIT}s)..."
+for i in $(seq 1 $MAX_WAIT); do
+    if curl -sf "$HEALTH_ENDPOINT" > /dev/null 2>&1; then
+        echo "[atx-check] Service ready after ${i}s"
+        break
+    fi
+    if ! kill -0 $SERVICE_PID 2>/dev/null; then
+        echo "[atx-check] Service crashed during startup"
+        exit 1
+    fi
+    sleep 1
+done
+
+# Verify service is actually running
+if ! curl -sf "$HEALTH_ENDPOINT" > /dev/null 2>&1; then
+    echo "[atx-check] Service failed to start within ${MAX_WAIT}s"
+    exit 1
+fi
+
+# Run comprehensive test suite
+echo "[atx-check] Running comprehensive test suite..."
+export PORT
+if bash "$TEST_SUITE"; then
+    echo "[atx-check] ALL TESTS PASSED"
+    exit 0
+else
+    echo "[atx-check] TESTS FAILED (ATX will iterate)"
+    exit 1
+fi

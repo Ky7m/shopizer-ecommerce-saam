@@ -180,7 +180,7 @@ For inputs requiring test changes:
 
 ### Step 4: Implement Change
 
-Route to AI-DLC (Kiro) for implementation:
+Route to AI-DLC (GitHub Copilot) for implementation:
 
 **For DEV-TEST / Bug fixes (code-only):**
 1. Read the relevant BR-ID + API contract
@@ -216,7 +216,7 @@ This automatically:
 - Produces a validation artifact in `.saam/reconciliation/<service>/`
 - Updates the graph (lifecycle states, VALIDATED_BY edges, confidence)
 - Checks for spec drift (flags SPEC_DRIFT deviations if spec changed since implementation)
-- Generates/updates `.kiro/specs/<service>/tasks.md` if failures remain
+- Generates/updates `.github/specs/<service>/tasks.md` if failures remain
 
 **Governance enforcement (automatic — see `.github/skills/saam-governance/SKILL.md`):**
 - If the change touched BR-ID code and spec hashes match → validated automatically

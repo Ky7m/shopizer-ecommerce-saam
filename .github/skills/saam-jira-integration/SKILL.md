@@ -9,7 +9,7 @@ authors: "Max Kozinenko, Roman Kalita (SoftServe)"
 
 ## Overview
 
-SAAM optionally integrates with Jira to track implementation progress. When enabled, SAAM creates epics and tickets from `tasks.md` for each service, and the AI-DLC agent (Kiro or AWS Transform) transitions ticket statuses as work progresses.
+SAAM optionally integrates with Jira to track implementation progress. When enabled, SAAM creates epics and tickets from `tasks.md` for each service, and the AI-DLC agent (GitHub Copilot or AWS Transform) transitions ticket statuses as work progresses.
 
 This integration uses [sooperset/mcp-atlassian](https://github.com/sooperset/mcp-atlassian) — a community MCP server supporting Jira Cloud and Server/Data Center with 72+ tools.
 
@@ -22,9 +22,9 @@ This integration uses [sooperset/mcp-atlassian](https://github.com/sooperset/mcp
 
 ## Configuration
 
-### Kiro MCP Config (`.kiro/settings/mcp.json`)
+### GitHub Copilot MCP Config
 
-Add the `mcp-atlassian` server to enable Jira tools in Kiro:
+Add the `mcp-atlassian` server to enable Jira tools:
 
 ```json
 {
@@ -117,7 +117,7 @@ flowchart TD
 
 ## Pre-flight: Creating Jira Tickets from tasks.md
 
-Before implementation begins, the agent (Kiro or ATX) creates the Jira structure:
+Before implementation begins, the agent (GitHub Copilot or ATX) creates the Jira structure:
 
 ### Step 1: Create the Service Epic
 
@@ -261,7 +261,7 @@ The SAAM enablement skill should ask whether to configure Jira integration durin
 
 1. Request Jira URL, username, and API token
 2. Request Jira project key for the engagement
-3. Add `mcp-atlassian` to `.kiro/settings/mcp.json`
+3. Add `mcp-atlassian` to GitHub Copilot MCP configuration
 4. Create `~/.aws/atx/skills/jira-task-tracker/SKILL.md` (if ATX is used)
 5. Store project key in a config file for reuse
 

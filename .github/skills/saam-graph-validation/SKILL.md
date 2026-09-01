@@ -395,7 +395,7 @@ graph-mcp/
 
 ### MCP Server Configuration
 
-Add to `.kiro/settings/mcp.json` (created automatically by the enablement skill when CAST is configured):
+Add to GitHub Copilot MCP configuration:
 
 ```json
 {

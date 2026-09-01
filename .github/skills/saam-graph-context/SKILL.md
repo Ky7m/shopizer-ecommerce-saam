@@ -113,7 +113,7 @@ The SAAM graph provides context at four levels of automation:
 | **L1: Agent-initiated** | `graph_implementation_context`, `graph_fix_context` tools | Agent explicitly queries graph before starting work | Implemented |
 | **L2: Session-start injection** | SessionStart hook → `session_context.py` | Agent receives engagement status automatically on every session | Implemented |
 | **L3: File-write injection** | PreToolUse hook → `file_context.py` | Agent receives service endpoints/fields/rules when writing to sourcecode/ | Implemented |
-| **L4: Implementation tracking** | Orchestrator reconcile → `detect_br_ids.py --all` | Projects BR-ID annotations from the source tree into CLAIMS_IMPLEMENTATION edges. Run by the Kiro orchestrator at code-landing checkpoints (after pull, P5 exit, SessionStart) | Implemented |
+| **L4: Implementation tracking** | Orchestrator reconcile → `detect_br_ids.py --all` | Projects BR-ID annotations from the source tree into CLAIMS_IMPLEMENTATION edges. Run by the GitHub Copilot orchestrator at code-landing checkpoints (after pull, P5 exit, SessionStart) | Implemented |
 
 **L1** is always available (agent calls tools when it thinks to).
 **L2+L3** are automatic — context arrives without the agent asking.
@@ -129,7 +129,7 @@ public void validateOrderTotal(Order order) { ... }
 ```
 
 **Graph population is ORCHESTRATOR-ONLY and mode-independent.** The knowledge graph is a projection
-of the source tree, maintained by ONE actor (the Kiro orchestrator) via ONE idempotent operation:
+of the source tree, maintained by ONE actor (the GitHub Copilot orchestrator) via ONE idempotent operation:
 `detect_br_ids.py --all`. There is NO per-file-save hook — it fragmented per execution mode and
 silently missed bulk-landed code (ATX batch, git pull, fix loops never trigger PostFileSave).
 
@@ -196,7 +196,7 @@ Egress (`graph_context_export`) makes it USEFUL — it projects the actionable s
 per-service file the sandboxed agents can read.
 
 ```
-Kiro orchestrator (has Neo4j)
+GitHub Copilot orchestrator (has Neo4j)
   reconcile IN:  tree/results → graph   (detect_br_ids, fidelity_audit, reconcile_validation)
   export  OUT:   graph → sourcecode/<service>/_graph-context.md   (graph_context_export)
   commit + push  (git is the ONLY channel into a sandboxed container)
@@ -206,7 +206,7 @@ Sandboxed gen/fix agent (ATX Fargate / fix container — NO Neo4j)
 ```
 
 **Rules:**
-- **Orchestrator-only.** Only Kiro runs export (it needs Neo4j). Agents never query the graph.
+- **Orchestrator-only.** Only GitHub Copilot runs export (it needs Neo4j). Agents never query the graph.
 - **Committed, not gitignored.** The file must be on the branch or the container never sees it.
 - **Regenerated every dispatch.** Never hand-edited; the orchestrator overwrites before push.
 - **Actionable-only content.** Dead code, stubs, deviation history, cross-service shapes, priority —
@@ -215,7 +215,7 @@ Sandboxed gen/fix agent (ATX Fargate / fix container — NO Neo4j)
   says what to FIX and what NOT to retry.
 - **Order matters.** Export runs AFTER reconcile so the file reflects the freshest truth, including
   what the previous pass did.
-- **Mode split.** File path for Model B/C (sandboxed). Model A (Kiro inline, has Neo4j) uses the MCP
+- **Mode split.** File path for Model B/C (sandboxed). Model A (GitHub Copilot inline, has Neo4j) uses the MCP
   tools live (`graph_implementation_context`, `graph_fix_context`) — no file needed.
 
 **Primitive (from workspace root):**

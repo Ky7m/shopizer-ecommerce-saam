@@ -317,7 +317,7 @@ Enable CI governance when:
 - All of the above plus:
 - Signal status computed after validation
 - Graph updated with test results
-- Kiro tasks regenerated in PR
+- Remediation tasks regenerated in PR
 - Service `signalStatus` accurate for the next agent session
 
 ---

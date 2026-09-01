@@ -140,7 +140,7 @@ Implementation phase uses **append-only log tracking**. Tasks are never undone �
 | 1 | <description> | DONE / IN_REVIEW / IN_PROGRESS / PENDING | tasks.md#task-1 | <PROJ-456> | BR-XX-001..005 | |
 | 2 | <description> | PENDING | tasks.md#task-2 | — | | |
 
-<!-- SDD Task column links to .kiro/specs/<service>/tasks.md task reference -->
+<!-- SDD Task column links to .github/specs/<service>/tasks.md task reference -->
 <!-- Tasks are APPEND-ONLY — never delete, revert, or renumber -->
 ```
 
@@ -207,20 +207,20 @@ The maximum status the agent can set autonomously during Phase 5 is **IN_REVIEW*
 
 During Phases 0-4c, the agent CAN mark tasks DONE when deliverables are produced — because there is no PR review cycle for analysis artifacts.
 
-### Two-Level Task Lifecycle (Kiro ↔ Jira)
+### Two-Level Task Lifecycle (GitHub Copilot ↔ Jira)
 
-Kiro's `tasks.md` and Jira operate at DIFFERENT lifecycle levels:
+GitHub Copilot's `tasks.md` and Jira operate at DIFFERENT lifecycle levels:
 
 | System | Scope | "Done" means |
 |--------|-------|--------------|
-| **Kiro tasks.md** | Agent's implementation work | Code written, all deliverables [x], PR created |
+| **GitHub Copilot tasks.md** | Agent's implementation work | Code written, all deliverables [x], PR created |
 | **Jira** | Full SDLC process | PR reviewed, merged, CI passes, deployed |
 
-**A Kiro task can be complete while the Jira ticket is still open.** This is normal — the gap between "agent finished coding" and "human approved and merged" is the review cycle.
+**A GitHub Copilot task can be complete while the Jira ticket is still open.** This is normal — the gap between "agent finished coding" and "human approved and merged" is the review cycle.
 
 ## Append-Only Actions Log — Phase 5 Only (NEVER Rewrite History)
 
-The tracking file is an **append-only log** — it mirrors the Kiro task flow. Tasks are NEVER undone, reverted, or removed. If something needs fixing, a NEW task is created.
+The tracking file is an **append-only log** — it mirrors the GitHub Copilot task flow. Tasks are NEVER undone, reverted, or removed. If something needs fixing, a NEW task is created.
 
 **Rules:**
 - A task marked IN_REVIEW stays IN_REVIEW forever (it reflects that the agent DID complete its work at that point)
@@ -257,7 +257,7 @@ To Do → In Progress → In Review → Done
 
 ### Reopened Ticket Protocol
 
-When the agent detects (on session start) that a Jira ticket linked to a completed Kiro task has been **Reopened**:
+When the agent detects (on session start) that a Jira ticket linked to a completed GitHub Copilot task has been **Reopened**:
 
 1. **Read the reopen reason** — query Jira for the latest comment/reason on the reopened ticket
 2. **Create a new fix task** in `tasks.md`:
@@ -391,7 +391,7 @@ Tasks (per service):
 ### Phase 5: Implementation
 
 Tasks (per service — tracked in separate file `tracking/phase5-implementation/<service>.md`):
-- Kiro spec generated (requirements.md, design.md, tasks.md)
+- Harness spec generated (requirements.md, design.md, tasks.md)
 - Scaffolding complete
 - Domain model implemented
 - Repository layer complete
@@ -410,7 +410,7 @@ Tasks (per service — tracked in separate file `tracking/phase5-implementation/
 
 **Phase 5 tracking files include cross-references to:**
 - SAAM spec file path and BR-ID group (`spec/microservices/<service>/01-business-rules.md`)
-- SDD spec task reference (`.kiro/specs/<service-name>/tasks.md#Task-N`)
+- SDD spec task reference (`.github/specs/<service-name>/tasks.md#Task-N`)
 - Jira ticket IDs (if configured)
 
 This interlinking ensures any tracking entry can be traced back to its source spec and forward to its Jira representation.

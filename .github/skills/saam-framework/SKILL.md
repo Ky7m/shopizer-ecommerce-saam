@@ -9,7 +9,7 @@ authors: "Max Kozinenko, Roman Kalita (SoftServe)"
 
 ## Framework Overview
 
-SAAM is a graph-driven modernization platform that transforms legacy applications into verified microservices. It combines dual-track analysis (source + domain), a Neo4j knowledge graph for lifecycle governance and confidence tracking, and pluggable execution engines (Kiro, AWS Transform, AI-DLC) — all connected through a continuous feedback loop.
+SAAM is a graph-driven modernization platform that transforms legacy applications into verified microservices. It combines dual-track analysis (source + domain), a Neo4j knowledge graph for lifecycle governance and confidence tracking, and pluggable execution engines (GitHub Copilot, AWS Transform, AI-DLC) — all connected through a continuous feedback loop.
 
 The knowledge graph is the control plane: it stores every entity and relationship, tracks multi-dimensional confidence per business rule, constructs targeted agent context, and routes feedback from validation back into specifications.
 
@@ -39,7 +39,7 @@ flowchart TD
     end
 
     subgraph exec["Execution Engines"]
-        KIRO[Kiro Agent]
+        AGENT[GitHub Copilot]
         ATX[AWS Transform]
         AIDLC[AI-DLC Workflows]
     end
@@ -155,8 +155,8 @@ Phase 4 has a known failure mode where the agent generates rules by rotating thr
 **API Contract (`04-api-contract.yaml`):** Phase 4 generates an OpenAPI 3.1 contract per service that locks field names, endpoint paths, status codes, and response shapes. Both Phase 4c (test suites) and Phase 5 (code generators) MUST reference this contract for all naming decisions. This eliminates mismatches between generated tests and generated code. See `.github/skills/saam-api-contract/SKILL.md`.
 
 **Phase 5 Execution Models:** Phase 5 supports three models for maximum flexibility:
-- **Model A (Pure Kiro)** — interactive, task by task (1-3 services)
-- **Model B (Transform + Kiro)** — ATX generates per service, Kiro polishes (3-10 services)
+- **Model A (Pure GitHub Copilot)** — interactive, task by task (1-3 services)
+- **Model B (Transform + GitHub Copilot)** — ATX generates per service, GitHub Copilot polishes (3-10 services)
 - **Model C (ATX Batch + AI-DLC)** — maximum velocity, 4-stage pipeline (5+ services):
   1. ATX batch generates ALL services in parallel
   2. Smoke validation produces deviation log (identifies systemic patterns)
@@ -356,7 +356,7 @@ Frontend specs are written AFTER backend services exist (or their API specs exis
 ## AI-DLC Integration
 
 SAAM specifications are designed to feed directly into AI-DLC:
-- Kiro spec format (requirements.md → design.md → tasks.md)
+- GitHub Copilot spec format (requirements.md → design.md → tasks.md)
 - Tasks are implementation-ready with clear acceptance criteria
 - Each task references specific business rules from the spec
 - Agent can implement autonomously given the spec quality
@@ -365,7 +365,7 @@ SAAM specifications are designed to feed directly into AI-DLC:
 
 AWS Transform Custom is a bulk code generation engine for Phase 5. It reads the SAAM spec as input and generates a complete service in one pass, iterating until the comprehensive test suite passes.
 
-**Transform is Workflow A; Kiro Tasks are Workflow B.** Transform generates ~80% of the service; Kiro tasks handle fixes, cross-cutting concerns, and integration wiring.
+**Transform is Workflow A; GitHub Copilot Tasks are Workflow B.** Transform generates ~80% of the service; GitHub Copilot tasks handle fixes, cross-cutting concerns, and integration wiring.
 
 ### How It Works
 
@@ -396,10 +396,10 @@ atx custom def exec \
   -x -t
 ```
 
-### What Transform Won't Generate (Kiro Tasks Handle These)
+### What Transform Won't Generate (GitHub Copilot Tasks Handle These)
 
-| Component | Why Not Transform | Kiro Task |
-|-----------|-------------------|-----------|
+| Component | Why Not Transform | GitHub Copilot Task |
+|-----------|-------------------|--------------|
 | Auth/tenancy middleware | Cross-cutting, not per-service | Yes |
 | Cross-service HTTP clients | Integration glue, needs runtime context | Yes |
 | Event wiring | Depends on infrastructure setup | Yes |
@@ -412,7 +412,7 @@ atx custom def exec \
 - Same acceptance gate applies: 100% pass required on comprehensive-test-suite.sh
 - Use continual learning (`list-ki`, `update-ki-config`) to improve across services
 - If Jira is configured: ATX can transition ticket statuses via `mcp-atlassian` in `~/.aws/atx/mcp.json`
-- Transform output lands in `sourcecode/<service>/` — Kiro tasks then fix/extend in the same directory
+- Transform output lands in `sourcecode/<service>/` — GitHub Copilot tasks then fix/extend in the same directory
 
 ### Scaled Execution (Multi-Service Parallel)
 
@@ -433,7 +433,7 @@ SAAM optionally integrates with Jira to track implementation progress using [mcp
 
 - Pre-flight: `tasks.md` is decomposed into a Jira Epic + Stories/Sub-tasks with dependency links
 - During implementation: AI-DLC agent transitions tickets (To Do → In Progress → Done) as work progresses
-- Both Kiro and AWS Transform support this via MCP (`.kiro/settings/mcp.json` and `~/.aws/atx/mcp.json`)
+- Both GitHub Copilot and AWS Transform support this via MCP
 
 See `.github/skills/saam-jira-integration/SKILL.md` for full configuration and workflow details.
 
@@ -502,7 +502,7 @@ Vague references (e.g., "in the order module") are NOT acceptable. The reference
 
 ### Implementation Prerequisite: Test Suite Check
 
-Before ANY implementation work begins for a service — including decomposing SAAM specs into Kiro specs — the system MUST verify that a `comprehensive-test-suite.sh` exists for that service. If the test suite has not been generated yet, the system MUST offer to create one from the SAAM specification before proceeding. Implementation without a pre-existing test suite is NOT allowed.
+Before ANY implementation work begins for a service — including decomposing SAAM specs into GitHub Copilot tasks — the system MUST verify that a `comprehensive-test-suite.sh` exists for that service. If the test suite has not been generated yet, the system MUST offer to create one from the SAAM specification before proceeding. Implementation without a pre-existing test suite is NOT allowed.
 
 ### Phase 4 Independent Validation (MANDATORY)
 

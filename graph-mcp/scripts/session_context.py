@@ -1,6 +1,6 @@
 """SessionStart hook script: queries SAAM Knowledge Graph for current engagement state.
 
-Called by the Kiro SessionStart hook. Outputs context as text to stdout.
+Called by the harness SessionStart hook. Outputs context as text to stdout.
 The output is injected into the agent's context at the start of every session.
 
 Exit codes:

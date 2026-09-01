@@ -23,7 +23,7 @@ uv run saam-graph
 
 ```
 ┌─────────────────────────────────────────────┐
-│  Kiro Agent (via MCP protocol)              │
+│  AI Coding Agent / Harness (via MCP)        │
 │  • Adds nodes/edges as phases execute       │
 │  • Queries for context construction         │
 │  • Runs reconciliation at phase gates       │
@@ -80,6 +80,7 @@ uv run saam-graph
 
 ## Configuration
 
+### Kiro IDE
 Add to `.kiro/settings/mcp.json`:
 
 ```json
@@ -99,6 +100,25 @@ Add to `.kiro/settings/mcp.json`:
 }
 ```
 
+### GitHub Copilot / Other MCP Clients
+Add to `.mcp.json` or your MCP client configuration:
+
+```json
+{
+  "mcpServers": {
+    "saam-graph": {
+      "command": "uv",
+      "args": ["--directory", "graph-mcp", "run", "saam-graph"],
+      "env": {
+        "NEO4J_URI": "bolt://localhost:7687",
+        "NEO4J_USER": "neo4j",
+        "NEO4J_PASSWORD": "saamgraph"
+      }
+    }
+  }
+}
+```
+
 ## Schema
 
 See `saam-graph-schema.yaml` for the formal definition of:
@@ -110,11 +130,15 @@ See `saam-graph-schema.yaml` for the formal definition of:
 
 ## Automatic Context Hooks
 
-The graph also powers two Kiro hooks (in `.kiro/hooks/`) that inject context automatically:
+The graph also powers context hooks (or harness adapters) that inject context automatically:
 
+### Kiro IDE Hooks (`.kiro/hooks/`)
 | Hook | Trigger | Script | What It Provides |
 |------|---------|--------|-----------------|
 | `graph-session-context.json` | SessionStart | `scripts/session_context.py` | Engagement overview, service progress, open deviations, pending work |
 | `graph-file-context.json` | PreToolUse (fs_write/str_replace/fs_append) | `scripts/file_context.py` | Service endpoints, contract field names, pending BR-IDs (only for `sourcecode/` paths) |
+
+### GitHub Copilot Hook Adapter (`.github/hooks/`)
+- `saam-copilot-adapter.ts`: executes SessionStart and PreToolUse context injection in Copilot workspace runtime.
 
 Both scripts connect to Neo4j directly (not through the MCP server) for minimal latency. They exit 1 silently if Neo4j is unavailable — no disruption to normal workflow.
