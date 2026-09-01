@@ -6,11 +6,11 @@
 | Metric | Value |
 |--------|-------|
 | Total tasks | 12 |
-| Completed | 2 |
+| Completed | 3 |
 | In progress | 0 |
 | Blocked | 0 |
 | Started | 2026-09-01T12:52:17+04:00 |
-| Last updated | 2026-09-01T13:26:00+04:00 |
+| Last updated | 2026-09-01T14:10:54+04:00 |
 
 ## Tasks
 
@@ -20,7 +20,7 @@
 |---|------|--------|------|----------|-------|
 | 1 | Generate Customer and Identity specification (MS-01) | DONE | — | Agent | 2026-09-01T13:10:18+04:00 — 51 rules, 14 tables, 39 endpoint methods, OpenAPI 3.1 contract |
 | 2 | Generate Merchant and Store Administration specification (MS-10) | DONE | — | Agent | 2026-09-01T13:26:00+04:00 — 21 rules, 2 tables, 17 endpoint methods, OpenAPI 3.1 contract |
-| 3 | Generate Catalog and Product specification (MS-02) | PENDING | — | Agent | Depends on MS-10 store scope |
+| 3 | Generate Catalog and Product specification (MS-02) | DONE | — | Agent | 2026-09-01T14:10:54+04:00 — 41 rules, 15 tables, 35 endpoint methods, OpenAPI 3.1 contract; graph import/check passed |
 | 4 | Generate Search specification (MS-03) | PENDING | — | Agent | Consumes catalog and content events |
 | 5 | Generate Pricing and Promotions specification (MS-07) | PENDING | — | Agent | Depends on MS-10 store scope |
 | 6 | Generate Tax specification (MS-08) | PENDING | — | Agent | Calculation provider |

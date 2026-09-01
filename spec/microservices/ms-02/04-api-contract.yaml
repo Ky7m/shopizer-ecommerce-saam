@@ -1,0 +1,1402 @@
+openapi: 3.1.0
+info:
+  title: Catalog and Product API
+  version: 1.0.0
+  description: |
+    API contract for MS-02 Catalog and Product.
+    This is the single source of truth for paths, fields, status codes, and response shapes.
+servers:
+  - url: http://localhost:8102/api/v1/catalog
+
+x-naming-conventions:
+  fieldNaming: camelCase
+  endpointNaming: kebab-case
+  headerNaming: kebab-case
+  enumValues: PascalCase
+  queryParams: camelCase
+
+x-global-headers:
+  - name: x-tenant-id
+    required: true
+    description: Tenant context.
+    testValue: test-tenant-001
+  - name: x-store-id
+    required: true
+    description: Opaque store context validated by MS-10.
+    testValue: test-store-001
+  - name: x-correlation-id
+    required: true
+    description: Distributed tracing identifier.
+    testValue: 11111111-1111-4111-8111-111111111111
+
+paths:
+  /products:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+    get:
+      operationId: listProducts
+      summary: List eligible or administrative products.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/LanguageCode'
+        - $ref: '#/components/parameters/CountryCode'
+        - name: categoryId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: sku
+          in: query
+          schema: { type: string }
+        - name: name
+          in: query
+          schema: { type: string }
+        - name: manufacturerCode
+          in: query
+          schema: { type: string }
+        - name: available
+          in: query
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: Product page.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    post:
+      operationId: createProduct
+      summary: Create a product aggregate.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateProductRequest' }
+      responses:
+        '201':
+          description: Product created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Product' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /products/{productId}:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/ProductId'
+    get:
+      operationId: getProduct
+      summary: Get a product in a localized storefront context.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/LanguageCode'
+        - $ref: '#/components/parameters/CountryCode'
+      responses:
+        '200':
+          description: Product.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Product' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+    put:
+      operationId: updateProduct
+      summary: Update product metadata and associations.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateProductRequest' }
+      responses:
+        '200':
+          description: Updated product.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Product' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+    delete:
+      operationId: deleteProduct
+      summary: Delete a product aggregate and dependents.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Deletion result.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeletionResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /products/slug/{friendlyUrl}:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/FriendlyUrl'
+    get:
+      operationId: getProductByFriendlyUrl
+      summary: Get a product by localized friendly URL.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/LanguageCode'
+        - $ref: '#/components/parameters/CountryCode'
+      responses:
+        '200':
+          description: Product.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Product' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+
+  /products/sku/{sku}:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: sku
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      operationId: getProductBySku
+      summary: Get a product by store-scoped SKU.
+      security: []
+      responses:
+        '200':
+          description: Product.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Product' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /products/uniqueness:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+    get:
+      operationId: checkProductSkuUniqueness
+      summary: Check product SKU uniqueness.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: sku
+          in: query
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 200 }
+        - name: excludeProductId
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Existence result.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExistsResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /products/{productId}/visibility:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/ProductId'
+    patch:
+      operationId: updateProductVisibility
+      summary: Update visibility and purchase eligibility.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateVisibilityRequest' }
+      responses:
+        '200':
+          description: Updated product.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Product' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+
+  /products/{productId}/categories/{categoryId}:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/ProductId'
+      - $ref: '#/components/parameters/CategoryId'
+    post:
+      operationId: attachProductToCategory
+      summary: Attach a product to a category.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Updated product.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Product' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+    delete:
+      operationId: detachProductFromCategory
+      summary: Detach a product from a category.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Updated product.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Product' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /products/{productId}/availability:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/ProductId'
+    get:
+      operationId: getProductAvailability
+      summary: Get regional product availability.
+      security: []
+      responses:
+        '200':
+          description: Availability list.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AvailabilityListResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      operationId: replaceProductAvailability
+      summary: Replace product availability.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReplaceAvailabilityRequest' }
+      responses:
+        '200':
+          description: Availability list.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AvailabilityListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+
+  /products/{productId}/reservations:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/ProductId'
+    post:
+      operationId: createInventoryReservation
+      summary: Atomically reserve product or variant availability.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateReservationRequest' }
+      responses:
+        '201':
+          description: Held reservation.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InventoryReservation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+
+  /reservations/{reservationId}/commit:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/ReservationId'
+    post:
+      operationId: commitInventoryReservation
+      summary: Commit a held inventory reservation.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Committed reservation.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InventoryReservation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /reservations/{reservationId}/release:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/ReservationId'
+    post:
+      operationId: releaseInventoryReservation
+      summary: Release a held inventory reservation.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Released reservation.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InventoryReservation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /products/{productId}/media:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/ProductId'
+    post:
+      operationId: uploadProductMedia
+      summary: Upload product media through the configured provider.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema: { $ref: '#/components/schemas/ProductMediaUploadRequest' }
+          application/json:
+            schema: { $ref: '#/components/schemas/ExternalMediaRequest' }
+      responses:
+        '201':
+          description: Product media.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductMedia' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /products/{productId}/media/{mediaId}:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/ProductId'
+      - $ref: '#/components/parameters/MediaId'
+    delete:
+      operationId: deleteProductMedia
+      summary: Delete product media and publish a projection change.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Deletion result.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeletionResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /categories:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+    get:
+      operationId: listCategories
+      summary: List categories and hierarchy.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/LanguageCode'
+        - name: name
+          in: query
+          schema: { type: string }
+        - name: visible
+          in: query
+          schema: { type: boolean }
+        - name: featured
+          in: query
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: Category page.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CategoryListResponse' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+    post:
+      operationId: createCategory
+      summary: Create a category.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateCategoryRequest' }
+      responses:
+        '201':
+          description: Category created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Category' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+
+  /categories/{categoryId}:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/CategoryId'
+    get:
+      operationId: getCategory
+      summary: Get a category and its children.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/LanguageCode'
+      responses:
+        '200':
+          description: Category.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Category' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      operationId: updateCategory
+      summary: Update category metadata.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateCategoryRequest' }
+      responses:
+        '200':
+          description: Updated category.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Category' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+    delete:
+      operationId: deleteCategory
+      summary: Delete a category subtree.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: orphanProductPolicy
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [Detach, Delete, Reject]
+            default: Reject
+      responses:
+        '200':
+          description: Category deletion result.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CategoryDeletionResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /categories/slug/{friendlyUrl}:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/FriendlyUrl'
+    get:
+      operationId: getCategoryByFriendlyUrl
+      summary: Get a category by friendly URL.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/LanguageCode'
+      responses:
+        '200':
+          description: Category.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Category' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /categories/uniqueness:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+    get:
+      operationId: checkCategoryCodeUniqueness
+      summary: Check category code uniqueness.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 100 }
+        - name: excludeCategoryId
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Existence result.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExistsResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /categories/{categoryId}/visibility:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/CategoryId'
+    patch:
+      operationId: updateCategoryVisibility
+      summary: Update category visibility.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [visible]
+              properties:
+                visible: { type: boolean }
+      responses:
+        '200':
+          description: Updated category.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Category' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /categories/{categoryId}/move/{parentId}:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/CategoryId'
+      - $ref: '#/components/parameters/ParentId'
+    put:
+      operationId: moveCategory
+      summary: Move a category and recalculate descendants.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Moved category.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Category' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+
+  /categories/{categoryId}/products:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/CategoryId'
+    get:
+      operationId: listCategoryProducts
+      summary: List products in a category subtree.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/LanguageCode'
+        - $ref: '#/components/parameters/CountryCode'
+      responses:
+        '200':
+          description: Product page.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductListResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /products/{productId}/variants:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/ProductId'
+    get:
+      operationId: listProductVariants
+      summary: List variants.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Variant page.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductVariantListResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      operationId: createProductVariant
+      summary: Create a product variant.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateVariantRequest' }
+      responses:
+        '201':
+          description: Variant created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductVariant' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+
+  /products/{productId}/variants/{variantId}:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/ProductId'
+      - $ref: '#/components/parameters/VariantId'
+    get:
+      operationId: getProductVariant
+      summary: Get one product variant.
+      security: []
+      responses:
+        '200':
+          description: Variant.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductVariant' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      operationId: updateProductVariant
+      summary: Update a product variant.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateVariantRequest' }
+      responses:
+        '200':
+          description: Updated variant.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductVariant' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+    delete:
+      operationId: deleteProductVariant
+      summary: Delete a product variant.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Deletion result.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DeletionResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /products/{productId}/variants/uniqueness/{sku}:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/ProductId'
+      - name: sku
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      operationId: checkVariantSkuUniqueness
+      summary: Check variant SKU uniqueness within a product.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Existence result.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExistsResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /products/{productId}/options/price:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - $ref: '#/components/parameters/ProductId'
+    post:
+      operationId: calculateProductOptionPrice
+      summary: Calculate price for selected product options.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CalculatePriceRequest' }
+      responses:
+        '200':
+          description: Calculated product price.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PriceResponse' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    TenantId:
+      name: x-tenant-id
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    StoreId:
+      name: x-store-id
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    CorrelationId:
+      name: x-correlation-id
+      in: header
+      required: true
+      schema: { type: string, format: uuid }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 200 }
+    ProductId:
+      name: productId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    CategoryId:
+      name: categoryId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    VariantId:
+      name: variantId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ParentId:
+      name: parentId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ReservationId:
+      name: reservationId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    MediaId:
+      name: mediaId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    FriendlyUrl:
+      name: friendlyUrl
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }
+    LanguageCode:
+      name: languageCode
+      in: query
+      required: false
+      schema: { type: string, default: en }
+    CountryCode:
+      name: countryCode
+      in: query
+      required: false
+      schema: { type: string, minLength: 2, maxLength: 2 }
+    Page:
+      name: page
+      in: query
+      required: false
+      schema: { type: integer, minimum: 0, default: 0 }
+    PageSize:
+      name: pageSize
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 200, default: 20 }
+
+  responses:
+    Unauthorized:
+      description: Authentication required.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: Insufficient catalog permission.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: Resource not found or not eligible in the requested scope.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: Business or concurrency conflict.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    UnprocessableEntity:
+      description: Validation failure.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    InternalError:
+      description: Internal service failure.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    ServiceUnavailable:
+      description: Media or dependent provider unavailable.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error, message, statusCode, timestamp]
+      properties:
+        error: { type: string }
+        message: { type: string }
+        statusCode: { type: integer }
+        timestamp: { type: string, format: date-time }
+        correlationId: { type: string, format: uuid }
+
+    PaginationInfo:
+      type: object
+      required: [page, pageSize, totalItems, totalPages]
+      properties:
+        page: { type: integer, minimum: 0 }
+        pageSize: { type: integer, minimum: 1 }
+        totalItems: { type: integer, minimum: 0 }
+        totalPages: { type: integer, minimum: 0 }
+
+    ProductListResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Product' }
+        pagination: { $ref: '#/components/schemas/PaginationInfo' }
+
+    CategoryListResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Category' }
+        pagination: { $ref: '#/components/schemas/PaginationInfo' }
+
+    ProductVariantListResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/ProductVariant' }
+        pagination: { $ref: '#/components/schemas/PaginationInfo' }
+
+    ExistsResponse:
+      type: object
+      required: [exists]
+      properties:
+        exists: { type: boolean }
+
+    DeletionResult:
+      type: object
+      required: [id, status]
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [Deleted] }
+        dependentsRemoved: { type: integer, minimum: 0 }
+        projectionEventPublished: { type: boolean }
+
+    CategoryDeletionResult:
+      type: object
+      required: [categoryId, status, deletedCategoryCount]
+      properties:
+        categoryId: { type: string, format: uuid }
+        status: { type: string, enum: [Deleted] }
+        deletedCategoryCount: { type: integer, minimum: 1 }
+        detachedProductCount: { type: integer, minimum: 0 }
+        deletedProductCount: { type: integer, minimum: 0 }
+
+    ProductDescription:
+      type: object
+      required: [languageCode, name, friendlyUrl]
+      properties:
+        languageCode: { type: string, minLength: 2 }
+        name: { type: string, minLength: 1 }
+        friendlyUrl: { type: string, minLength: 1 }
+        description: { type: string }
+        highlights: { type: string }
+        title: { type: string }
+        keywords: { type: string }
+        metaDescription: { type: string }
+
+    ProductMedia:
+      type: object
+      required: [id, fileName, imageType, mediaStatus]
+      properties:
+        id: { type: string, format: uuid }
+        fileName: { type: string }
+        imageType: { type: string, enum: [Binary, ExternalUrl] }
+        originalUri: { type: string, format: uri }
+        transformedUri: { type: string, format: uri }
+        externalUrl: { type: string, format: uri }
+        defaultImage: { type: boolean }
+        mediaStatus: { type: string, enum: [Pending, Ready, Failed, Deleted] }
+
+    Availability:
+      type: object
+      required: [id, regionCode, quantity, reservedQuantity, active]
+      properties:
+        id: { type: string, format: uuid }
+        regionCode: { type: string, minLength: 1 }
+        quantity: { type: integer, minimum: 0 }
+        reservedQuantity: { type: integer, minimum: 0 }
+        sellableQuantity: { type: integer, minimum: 0 }
+        active: { type: boolean }
+
+    AvailabilityListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Availability' }
+
+    Price:
+      type: object
+      required: [id, amount, currencyCode, defaultPrice]
+      properties:
+        id: { type: string, format: uuid }
+        amount: { type: number, minimum: 0 }
+        currencyCode: { type: string, minLength: 3, maxLength: 3 }
+        priceType: { type: string, enum: [OneTime, Subscription, Rental] }
+        defaultPrice: { type: boolean }
+        specialAmount: { type: number, minimum: 0 }
+        specialStartAt: { type: string, format: date-time }
+        specialEndAt: { type: string, format: date-time }
+        finalAmount: { type: number, minimum: 0 }
+        discounted: { type: boolean }
+
+    ProductOptionValue:
+      type: object
+      required: [id, code, displayOnly]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        displayOnly: { type: boolean }
+        priceAdjustment: { type: number }
+        imageUri: { type: string, format: uri }
+
+    ProductOption:
+      type: object
+      required: [id, code, displayOnly, values]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        displayOnly: { type: boolean }
+        values:
+          type: array
+          items: { $ref: '#/components/schemas/ProductOptionValue' }
+
+    ProductVariant:
+      type: object
+      required: [id, productId, sku, status, defaultSelection]
+      properties:
+        id: { type: string, format: uuid }
+        productId: { type: string, format: uuid }
+        sku: { type: string }
+        code: { type: string }
+        status: { type: string, enum: [Draft, Active, Unavailable, Deleted] }
+        defaultSelection: { type: boolean }
+        available: { type: boolean }
+        dateAvailable: { type: string, format: date-time }
+        availability:
+          type: array
+          items: { $ref: '#/components/schemas/Availability' }
+        price: { $ref: '#/components/schemas/Price' }
+
+    Product:
+      type: object
+      required: [id, storeId, sku, status, visible, available, canBePurchased, dateAvailable, descriptions, availabilities]
+      properties:
+        id: { type: string, format: uuid }
+        storeId: { type: string }
+        sku: { type: string }
+        refSku: { type: string }
+        status: { type: string, enum: [Draft, Active, Unavailable, Deleted] }
+        visible: { type: boolean }
+        available: { type: boolean }
+        canBePurchased: { type: boolean }
+        dateAvailable: { type: string, format: date-time }
+        manufacturerCode: { type: string }
+        productTypeCode: { type: string }
+        taxClassCode: { type: string }
+        productVirtual: { type: boolean }
+        productShippable: { type: boolean }
+        productFree: { type: boolean }
+        length: { type: number }
+        width: { type: number }
+        height: { type: number }
+        weight: { type: number }
+        reviewAverage: { type: number }
+        reviewCount: { type: integer, minimum: 0 }
+        sortOrder: { type: integer }
+        descriptions:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/ProductDescription' }
+        categories:
+          type: array
+          items: { $ref: '#/components/schemas/CategoryReference' }
+        variants:
+          type: array
+          items: { $ref: '#/components/schemas/ProductVariant' }
+        availabilities:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/Availability' }
+        options:
+          type: array
+          items: { $ref: '#/components/schemas/ProductOption' }
+        properties:
+          type: array
+          items: { $ref: '#/components/schemas/ProductProperty' }
+        media:
+          type: array
+          items: { $ref: '#/components/schemas/ProductMedia' }
+        price: { $ref: '#/components/schemas/Price' }
+
+    ProductProperty:
+      type: object
+      required: [code, value]
+      properties:
+        code: { type: string }
+        value: { type: string }
+        name: { type: string }
+
+    CategoryReference:
+      type: object
+      required: [id, code]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+
+    Category:
+      type: object
+      required: [id, storeId, code, status, visible, depth, lineage, descriptions]
+      properties:
+        id: { type: string, format: uuid }
+        storeId: { type: string }
+        code: { type: string }
+        parentId: { type: string, format: uuid }
+        status: { type: string, enum: [Draft, Active, Hidden, Deleted] }
+        visible: { type: boolean }
+        featured: { type: boolean }
+        sortOrder: { type: integer }
+        depth: { type: integer, minimum: 0 }
+        lineage: { type: string }
+        descriptions:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/CategoryDescription' }
+        children:
+          type: array
+          items: { $ref: '#/components/schemas/CategoryReference' }
+
+    CategoryDescription:
+      type: object
+      required: [languageCode, name, friendlyUrl]
+      properties:
+        languageCode: { type: string }
+        name: { type: string }
+        friendlyUrl: { type: string }
+        description: { type: string }
+        title: { type: string }
+        metaDescription: { type: string }
+
+    InventoryReservation:
+      type: object
+      required: [id, productId, quantity, state, expiresAt]
+      properties:
+        id: { type: string, format: uuid }
+        productId: { type: string, format: uuid }
+        variantId: { type: string, format: uuid }
+        availabilityId: { type: string, format: uuid }
+        reservationKey: { type: string }
+        quantity: { type: integer, minimum: 1 }
+        state: { type: string, enum: [Held, Committed, Released, Expired] }
+        expiresAt: { type: string, format: date-time }
+        committedAt: { type: string, format: date-time }
+        releasedAt: { type: string, format: date-time }
+
+    PriceSelection:
+      type: object
+      required: [optionId, valueId]
+      properties:
+        optionId: { type: string, format: uuid }
+        valueId: { type: string, format: uuid }
+
+    PriceResponse:
+      type: object
+      required: [finalAmount, currencyCode, priceSource, matchedSelections]
+      properties:
+        finalAmount: { type: number, minimum: 0 }
+        originalAmount: { type: number, minimum: 0 }
+        currencyCode: { type: string }
+        priceSource: { type: string, enum: [Product, DefaultVariant, ParentProduct] }
+        discounted: { type: boolean }
+        matchedSelections: { type: integer, minimum: 0 }
+
+    CalculatePriceRequest:
+      type: object
+      required: [selections]
+      properties:
+        selections:
+          type: array
+          items: { $ref: '#/components/schemas/PriceSelection' }
+        currencyCode: { type: string }
+        countryCode: { type: string }
+
+    CreateProductRequest:
+      type: object
+      required: [sku, descriptions, availabilities]
+      properties:
+        sku: { type: string, minLength: 1, pattern: '^[A-Za-z0-9]+([_-][A-Za-z0-9]+)*$' }
+        refSku: { type: string }
+        visible: { type: boolean, default: false }
+        canBePurchased: { type: boolean, default: true }
+        dateAvailable: { type: string, format: date-time }
+        manufacturerCode: { type: string }
+        productTypeCode: { type: string }
+        taxClassCode: { type: string }
+        productVirtual: { type: boolean }
+        productShippable: { type: boolean }
+        productFree: { type: boolean }
+        sortOrder: { type: integer }
+        descriptions:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/ProductDescription' }
+        availabilities:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/AvailabilityInput' }
+        categories:
+          type: array
+          items: { $ref: '#/components/schemas/CategoryReferenceInput' }
+        variants:
+          type: array
+          items: { $ref: '#/components/schemas/CreateVariantRequest' }
+
+    UpdateProductRequest:
+      type: object
+      minProperties: 1
+      properties:
+        sku: { type: string }
+        refSku: { type: string }
+        visible: { type: boolean }
+        canBePurchased: { type: boolean }
+        dateAvailable: { type: string, format: date-time }
+        manufacturerCode: { type: string }
+        productTypeCode: { type: string }
+        taxClassCode: { type: string }
+        productVirtual: { type: boolean }
+        productShippable: { type: boolean }
+        productFree: { type: boolean }
+        sortOrder: { type: integer }
+        descriptions:
+          type: array
+          items: { $ref: '#/components/schemas/ProductDescription' }
+        availabilities:
+          type: array
+          items: { $ref: '#/components/schemas/AvailabilityInput' }
+
+    UpdateVisibilityRequest:
+      type: object
+      required: [visible, canBePurchased]
+      properties:
+        visible: { type: boolean }
+        canBePurchased: { type: boolean }
+        dateAvailable: { type: string, format: date-time }
+
+    AvailabilityInput:
+      type: object
+      required: [regionCode, quantity]
+      properties:
+        regionCode: { type: string, minLength: 1 }
+        quantity: { type: integer, minimum: 0 }
+        active: { type: boolean, default: true }
+
+    ReplaceAvailabilityRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/AvailabilityInput' }
+
+    CreateVariantRequest:
+      type: object
+      required: [sku]
+      properties:
+        sku: { type: string, minLength: 1 }
+        code: { type: string }
+        defaultSelection: { type: boolean, default: false }
+        available: { type: boolean, default: false }
+        dateAvailable: { type: string, format: date-time }
+        availability:
+          $ref: '#/components/schemas/AvailabilityInput'
+
+    UpdateVariantRequest:
+      type: object
+      minProperties: 1
+      properties:
+        sku: { type: string }
+        code: { type: string }
+        defaultSelection: { type: boolean }
+        available: { type: boolean }
+        dateAvailable: { type: string, format: date-time }
+
+    CreateReservationRequest:
+      type: object
+      required: [reservationKey, quantity, expiresAt]
+      properties:
+        reservationKey: { type: string, minLength: 1, maxLength: 200 }
+        variantId: { type: string, format: uuid }
+        availabilityId: { type: string, format: uuid }
+        regionCode: { type: string, default: '*' }
+        quantity: { type: integer, minimum: 1 }
+        expiresAt: { type: string, format: date-time }
+
+    ProductMediaUploadRequest:
+      type: object
+      required: [file]
+      properties:
+        file:
+          type: string
+          format: binary
+        fileName: { type: string }
+        defaultImage: { type: boolean, default: false }
+
+    ExternalMediaRequest:
+      type: object
+      required: [externalUrl, fileName]
+      properties:
+        externalUrl: { type: string, format: uri }
+        fileName: { type: string }
+        defaultImage: { type: boolean, default: false }
+
+    CreateCategoryRequest:
+      type: object
+      required: [code, descriptions]
+      properties:
+        code: { type: string, minLength: 1, maxLength: 100, pattern: '^[A-Za-z0-9_-]+$' }
+        parentId: { type: string, format: uuid }
+        visible: { type: boolean, default: false }
+        featured: { type: boolean, default: false }
+        sortOrder: { type: integer, default: 0 }
+        descriptions:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/CategoryDescription' }
+
+    UpdateCategoryRequest:
+      type: object
+      minProperties: 1
+      properties:
+        code: { type: string }
+        parentId: { type: string, format: uuid }
+        visible: { type: boolean }
+        featured: { type: boolean }
+        sortOrder: { type: integer }
+        descriptions:
+          type: array
+          items: { $ref: '#/components/schemas/CategoryDescription' }
+
+    CategoryReferenceInput:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }

@@ -558,6 +558,26 @@ def import_service(driver, service_name: str, workspace: Path, check_only: bool 
                     stem=src_stem, brId=rule["brId"]
                 ).single()
                 if not linked:
+                    # P4 may identify a real source file that was absent from the P1 CAST inventory.
+                    # Materialize a minimal source component so provenance is not silently dropped.
+                    fallback_ref = rule.get("sourceRef", "")
+                    linked = session.run(
+                        "MERGE (sc:SourceComponent {castId: $castId}) "
+                        "ON CREATE SET sc.name = $stem, sc.type = 'Class', "
+                        "  sc.businessLayer = true, sc.intentCategory = 'unknown', "
+                        "  sc.firstPassIntent = 'unknown', sc.sourceRef = $sourceRef "
+                        "WITH sc "
+                        "MATCH (br:BusinessRule {brId: $brId}) "
+                        "MERGE (br)-[:EXTRACTED_FROM]->(sc) "
+                        "SET sc.extracted = true, sc.p4Intent = coalesce(sc.p4Intent, sc.intentCategory), "
+                        "    sc.intentCategory = coalesce(sc.p4Intent, sc.intentCategory) "
+                        "RETURN sc.castId AS cid",
+                        castId=f"p4-source:{src_stem}",
+                        stem=src_stem,
+                        sourceRef=fallback_ref,
+                        brId=rule["brId"],
+                    ).single()
+                if not linked:
                     unresolved_refs.append((rule["brId"], src_stem))
 
             # EXTENDS_VIA edges (Layer B) — link rule to any extension point it names.
