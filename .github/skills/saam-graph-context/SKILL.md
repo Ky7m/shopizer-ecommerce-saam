@@ -505,4 +505,12 @@ dispatch. See the full dispatch protocol in `.github/skills/saam-phase5-ai-dlc-i
 | `reconcile_validation.py <artifact>` | Test results → deviations, behavioralStatus, promote/regress lifecycle | after a validation run |
 | `spec_drift.py --service X` / `--update` | Detect (or re-baseline) spec-hash drift, incl. the `02` state/invariant/db-object sections | after spec edits |
 | `graph_context_export.py --all` | EGRESS: graph actionable state → committed `sourcecode/<svc>/_graph-context.md` for sandboxed agents | before dispatching a gen/fix job |
-| `import_specs.py --service X` / `--all` | Deterministic spec → graph population (BR/Table/Endpoint + EntityState/Invariant/DbObject/ExtensionPoint) | Phase 4 Tracker + `--check` in Validator |
+| `import_specs.py --service X` / `--all` | Deterministic spec → graph population — the COMPLETE contract: BusinessRule + ASSIGNED_TO + **EXTRACTED_FROM edges + SourceComponent.extracted flip + p4Intent** (the previously-omitted half that froze coverage) + self-check that fails loud if the flip didn't move. FIX the script on spec-format drift; never hand-roll a partial importer. | Phase 4 step 6c, per service |
+
+**BR-ID pattern — single source of truth (governance).** Every script/gate that detects or matches BR-IDs
+MUST read `br_id_pattern` from `.github/saam-calibration.yaml` — NO script may hardcode its own pattern. Three
+divergent hardcoded patterns (in `detect_br_ids.py`, `import_specs.py`, and calibration) previously
+disagreed and silently missed the flat `BR-AP-001` form at Phase 5 (annotations not detected →
+`CLAIMS_IMPLEMENTATION` edges never form → coverage under-counts). Both the flat 2-segment (`BR-AP-001`)
+and the 3-segment (`BR-GL-PST-001`) conventions are valid; the calibration pattern admits both. Do NOT
+rewrite existing IDs to force one form — that churns committed services and the graph disproportionately.

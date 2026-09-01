@@ -49,8 +49,53 @@ NEO4J_URI = os.environ.get("NEO4J_URI") or f"bolt://localhost:{os.environ.get('N
 NEO4J_USER = os.environ.get("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "saamgraph")
 
-# BR-ID pattern from saam-calibration.yaml (single source of truth)
-BR_ID_PATTERN = re.compile(r'BR-[A-Z]{2,4}-[A-Z]{2,5}-[0-9]{2,3}')
+def _br_id_regex() -> str:
+    """Read the BR-ID pattern from the single source of truth (saam-calibration.yaml → br_id_pattern).
+    NEVER hardcode a divergent pattern. Falls back to the widened union pattern (group segment optional,
+    admits both BR-AP-001 and BR-GL-PST-001) only if calibration is unreadable."""
+    fallback = r"BR-[A-Z]{2,6}(?:-[A-Z]{2,6})?-[0-9]{2,3}"
+    ws_root = Path(__file__).resolve().parent.parent.parent
+    try:
+        for candidate in (
+            ws_root / "core/steering/saam-calibration.yaml",
+            ws_root / ".kiro/steering/saam-calibration.yaml",
+            ws_root / "dist/kiro-ide/.kiro/steering/saam-calibration.yaml",
+            Path("core/steering/saam-calibration.yaml"),
+            Path(".kiro/steering/saam-calibration.yaml"),
+            Path("dist/kiro-ide/.kiro/steering/saam-calibration.yaml"),
+        ):
+            if candidate.exists():
+                text = candidate.read_text(encoding="utf-8", errors="ignore")
+                block = text.split("br_id_pattern:", 1)
+                if len(block) == 2:
+                    body = block[1]
+                    m = re.search(r'regex_tolerant:\s*"([^"]+)"', body) or re.search(r'regex:\s*"([^"]+)"', body)
+                    if m:
+                        return m.group(1)
+                break
+    except Exception:
+        pass
+    return fallback
+
+
+# BR-ID pattern — sourced from saam-calibration.yaml (single source of truth), NOT hardcoded.
+BR_ID_PATTERN = re.compile(_br_id_regex())
+
+
+def _source_ref_stem(source_ref):
+    """Extract a matchable component stem from a BR Source Reference.
+    'CustomerService.cs:Validate:45-60' -> 'CustomerService'; 'dbo.bspApplyPayment:...' -> 'bspApplyPayment'.
+    Returns None for greenfield/N/A (no legacy source to link)."""
+    if not source_ref:
+        return None
+    ref = str(source_ref).strip()
+    if not ref or ref.lower() in ("n/a", "none", "greenfield"):
+        return None
+    first = ref.split(":", 1)[0].strip()
+    first = Path(first).stem            # drop file extension
+    if "." in first:                    # drop schema prefix (dbo.bspFoo -> bspFoo)
+        first = first.split(".")[-1]
+    return first or None
 
 
 def connect():
@@ -87,7 +132,7 @@ def parse_business_rules(service_dir: Path) -> list[dict]:
     rules = []
 
     # Split by BR-ID headings (### BR-XX-YYY-NNN: ...)
-    sections = re.split(r'^### (BR-[A-Z]{2,4}-[A-Z]{2,5}-[0-9]{2,3}):', content, flags=re.MULTILINE)
+    sections = re.split(rf'^###\s+({_br_id_regex()}):', content, flags=re.MULTILINE)
 
     # sections[0] is preamble, then pairs of (brId, content)
     for i in range(1, len(sections) - 1, 2):
@@ -449,6 +494,7 @@ def import_service(driver, service_name: str, workspace: Path, check_only: bool 
             return True
 
     # Import to graph
+    unresolved_refs = []   # (brId, stem) where the Source Reference didn't match a SourceComponent
     with driver.session() as session:
         # Import BR-IDs
         for rule in rules:
@@ -484,6 +530,29 @@ def import_service(driver, service_name: str, workspace: Path, check_only: bool 
                 "MERGE (br)-[:ASSIGNED_TO]->(s)",
                 brId=rule["brId"], service=service_name
             )
+
+            # EXTRACTED_FROM edge + SourceComponent.extracted flip + p4Intent stamp.
+            # THIS IS THE HALF THAT WAS MISSING — without it the graph's two sides (BusinessRule vs the
+            # CAST SourceComponent inventory) stay disconnected, so coverage freezes and never moves as
+            # services are extracted. Resolve the rule's Source Reference to a SourceComponent and link it.
+            src_stem = _source_ref_stem(rule.get("sourceRef"))
+            if src_stem:
+                linked = session.run(
+                    "MATCH (sc:SourceComponent) "
+                    "WHERE sc.name = $stem OR sc.name ENDS WITH $stem OR sc.castId ENDS WITH $stem "
+                    "WITH sc LIMIT 1 "
+                    "MATCH (br:BusinessRule {brId: $brId}) "
+                    "MERGE (br)-[:EXTRACTED_FROM]->(sc) "
+                    # p4Intent baseline = the current intent CONFIRMED by the P4 source read; a genuine
+                    # correction is applied by the agent post-import (see steering 6a). extracted flips true.
+                    "SET sc.extracted = true, "
+                    "    sc.p4Intent = coalesce(sc.p4Intent, sc.intentCategory), "
+                    "    sc.intentCategory = coalesce(sc.p4Intent, sc.intentCategory) "
+                    "RETURN sc.castId AS cid",
+                    stem=src_stem, brId=rule["brId"]
+                ).single()
+                if not linked:
+                    unresolved_refs.append((rule["brId"], src_stem))
 
             # EXTENDS_VIA edges (Layer B) — link rule to any extension point it names.
             # MERGE a minimal ExtensionPoint so the edge has a target; Stage 1.8 (extensibility-model.md)
@@ -589,6 +658,13 @@ def import_service(driver, service_name: str, workspace: Path, check_only: bool 
                     id=inv["invariantId"], entity=inv["entity"],
                 )
 
+    if unresolved_refs:
+        print(f"    WARN: {len(unresolved_refs)} rules had a Source Reference that did not match any "
+              f"SourceComponent (no EXTRACTED_FROM edge). Some may be greenfield; if they should trace to "
+              f"source, check the reference format or that the component was ingested at P1 Step 0.")
+        for br_id, stem in unresolved_refs[:10]:
+            print(f"      {br_id} -> '{stem}'")
+
     return True
 
 
@@ -657,6 +733,12 @@ def main():
     driver = connect()
 
     try:
+        before_extracted = 0
+        if not args.check:
+            before_extracted = driver.session().run(
+                "MATCH (sc:SourceComponent) WHERE sc.extracted = true RETURN count(sc) AS n"
+            ).single()["n"]
+
         if args.all:
             services = find_services(workspace)
             print(f"Found {len(services)} services")
@@ -681,6 +763,32 @@ def main():
                 # Count total imported
                 total = session.run("MATCH (br:BusinessRule) RETURN count(br) AS cnt").single()["cnt"]
                 print(f"Total BR nodes in graph: {total}")
+
+            # SELF-CHECK — the guard that catches the silent-disconnect bug (the SourceComponent-linking
+            # half not being written). Fails loud so it surfaces on import, not at QC.
+            with driver.session() as session:
+                after_extracted = session.run(
+                    "MATCH (sc:SourceComponent) WHERE sc.extracted = true RETURN count(sc) AS n"
+                ).single()["n"]
+                biz = session.run(
+                    "MATCH (sc:SourceComponent) WHERE coalesce(sc.businessLayer,true)=true RETURN count(sc) AS n"
+                ).single()["n"]
+                orphan = session.run(
+                    "MATCH (br:BusinessRule) WHERE NOT (br)-[:EXTRACTED_FROM]->() RETURN count(br) AS n"
+                ).single()["n"]
+            cov = (after_extracted / biz * 100) if biz else 0
+            print("\n=== IMPORT SELF-CHECK ===")
+            print(f"  SourceComponent.extracted: {before_extracted} -> {after_extracted} "
+                  f"(delta {after_extracted - before_extracted})")
+            print(f"  Coverage (extracted / businessLayer): {after_extracted}/{biz} = {cov:.1f}%")
+            print(f"  BusinessRules without EXTRACTED_FROM: {orphan} (greenfield rules are expected here)")
+            if total > 0 and after_extracted <= before_extracted:
+                print("  FAIL: extracted-flip did NOT move — the SourceComponent-linking half was not "
+                      "written (the silent-disconnect bug). Likely a Source Reference format drift the "
+                      "resolver missed. FIX the resolver in this script (_source_ref_stem / the match "
+                      "query) and re-run — do NOT hand-edit the graph or fall back to a partial importer.",
+                      file=sys.stderr)
+                success = False
 
         if not success:
             sys.exit(2)

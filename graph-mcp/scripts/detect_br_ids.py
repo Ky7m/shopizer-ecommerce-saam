@@ -65,8 +65,39 @@ def _ws(rel: str) -> Path:
     cwd_p = Path(rel)
     return cwd_p if cwd_p.exists() else p
 
-# BR-ID pattern: BR-<DOMAIN 2 chars>-<GROUP 3 chars>-<NUMBER 3 digits>
-BR_ID_PATTERN = re.compile(r"BR-[A-Z]{2}-[A-Z]{2,4}-\d{2,3}")
+def _br_id_regex() -> str:
+    """Read the BR-ID pattern from the single source of truth (saam-calibration.yaml → br_id_pattern).
+    NEVER hardcode a divergent pattern — three separate hardcoded patterns previously disagreed and
+    silently missed flat BR-AP-001 style IDs at Phase 5. Falls back to the widened union pattern
+    (group segment optional, admits both BR-AP-001 and BR-GL-PST-001) only if calibration is unreadable."""
+    fallback = r"BR-[A-Z]{2,6}(?:-[A-Z]{2,6})?-[0-9]{2,3}"
+    try:
+        for candidate in (
+            WORKSPACE_ROOT / "core/steering/saam-calibration.yaml",
+            WORKSPACE_ROOT / ".kiro/steering/saam-calibration.yaml",
+            WORKSPACE_ROOT / "dist/kiro-ide/.kiro/steering/saam-calibration.yaml",
+            Path("core/steering/saam-calibration.yaml"),
+            Path(".kiro/steering/saam-calibration.yaml"),
+            Path("dist/kiro-ide/.kiro/steering/saam-calibration.yaml"),
+        ):
+            if candidate.exists():
+                import re as _re
+                text = candidate.read_text(encoding="utf-8", errors="ignore")
+                # find the br_id_pattern block, then its regex_tolerant (preferred for detection) or regex
+                block = text.split("br_id_pattern:", 1)
+                if len(block) == 2:
+                    body = block[1]
+                    m = _re.search(r'regex_tolerant:\s*"([^"]+)"', body) or _re.search(r'regex:\s*"([^"]+)"', body)
+                    if m:
+                        return m.group(1)
+                break
+    except Exception:
+        pass
+    return fallback
+
+
+# BR-ID pattern — sourced from saam-calibration.yaml (single source of truth), NOT hardcoded.
+BR_ID_PATTERN = re.compile(_br_id_regex())
 
 # File extensions to scan
 SOURCE_EXTENSIONS = {
@@ -75,7 +106,7 @@ SOURCE_EXTENSIONS = {
 }
 
 # BR-ID heading pattern in spec files
-BR_HEADING_PATTERN = re.compile(r"^###\s+(BR-[A-Z]{2}-[A-Z]{2,4}-\d{2,3})\s*[:\-]", re.MULTILINE)
+BR_HEADING_PATTERN = re.compile(rf"^###\s+({_br_id_regex()})\s*[:\-]", re.MULTILINE)
 
 
 def compute_spec_hash(service_name: str, br_id: str) -> str | None:

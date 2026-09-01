@@ -128,10 +128,36 @@ The brief MUST include:
 - Cross-service dependencies from call graph
 - Existing P1 rules that need P4 upgrade (from assessment/*-extraction-summary.md)
 - Dead code excluded from scope
+- **Hidden-engine check** (see below) — a note on whether the proc/component count implies logic beyond CRUD
 
 NEVER produce spec files. NEVER read source code. Your ONLY job is querying CAST
 and producing the brief file.
 ```
+
+**Hidden-Engine Detection (Scout heuristic — run for EVERY module, especially "CRUD-looking" ones):**
+
+Under-extraction risk is HIGHEST exactly where a module looks like "just documents / CRUD," because a
+buried engine hides behind a plausible-looking surface. Detect it structurally, before concluding
+"low-risk CRUD":
+
+1. **Compute the CRUD baseline.** A pure-CRUD module has roughly a handful of procs/components per entity
+   (create/read/update/delete/list/validate + a couple of helpers — on the order of ~5-8 per entity;
+   calibrate to the stack). Expected ≈ `entities × per-entity-CRUD`.
+2. **Compare to actual.** If the actual proc/component count GREATLY exceeds that baseline, the excess is
+   NOT breadth — it is logic that isn't CRUD. That gap is the signal.
+3. **Probe the residual.** Run a name/suffix histogram over the components beyond the baseline and inspect
+   the residual for signs of a hidden engine — behavior that isn't create/read/update/delete. Engine
+   categories to look for (NOT exhaustive — think about the domain):
+   - **Workflow / approval** (e.g. names like `*Status*`, `*Approve*`, `*Review*`, `*Step*`, `*Route*`, `*WF*`)
+   - **Calculation / pricing / tax / rate**
+   - **Allocation / distribution / posting**
+   - **Scheduling / batch sweeps**
+   The example tokens are workflow-flavored; other engines use other vocabulary — read for *behavior*, not
+   just a fixed token list.
+4. **Flag it in the brief.** If a hidden engine is suspected, say so explicitly: it likely deserves its own
+   service boundary (a shared engine consumed by several modules) and its own deep extraction — P1's
+   module-level grouping usually will NOT have catalogued it. A "documents module" that is really a shared
+   approval-workflow engine is the canonical miss this check exists to catch.
 
 **Output:** `assessment/<service-id>-cast-brief.md` (file on disk)
 
@@ -310,6 +336,26 @@ RUN THESE CHECKS (report PASS/FAIL for each):
 6. API CONTRACT:
    □ 04-api-contract.yaml is valid OpenAPI 3.1 structure
    □ Every endpoint in 03-api-design.md has a corresponding path in the contract
+
+7. ANTI-NUMBER-CHASING (rule count must be DERIVED, not fitted to a target):
+   The "~2-3x the P1 rule count" figure elsewhere in the steering is an OBSERVATION of what deep
+   extraction typically yields — it is NEVER a target. Splitting rules to hit a number (inflation) is a
+   gate FAILURE, and so is padding to look thorough. Weigh these signals (no single one auto-fails except
+   the last — a count alone can't prove intent, so treat 1-2 as prompts to spot-check the source):
+   □ **Mechanical slicing:** rules map 1:1 to source procs with NO merges and NO behavioral-seam splits.
+     Genuine extraction merges related conditionals into one rule and splits one proc along distinct
+     behavioral seams — a perfect 1:1 proc→rule mapping means the agent sliced by proc, not by behavior.
+   □ **Band-fitting:** the count lands dead-center of the expected-yield band with no source-driven
+     justification for why THIS service produced THIS many rules. (A count that honestly lands mid-band is
+     fine — the failure is a count that looks fitted rather than derived. Spot-check the source if unsure.)
+   □ **Framing tell (near-mandatory):** the `06-completion-summary.md` frames the count as "matching /
+     hitting the target / brief yield." → FAIL. The completion summary MUST state the count as a
+     DECOMPOSITION OUTCOME — "N rules = M source procs decomposed along K behavioral seams + P net-new
+     findings" — and cite at least ONE net-new finding the deep read produced that P1 did not have (a
+     defect, a security exposure, a wire-format detail, an algorithm subtlety), OR explicitly state "no
+     net-new findings; P1's grouping was already faithful" WITH justification. A summary that reports the
+     count as a hit-the-number outcome, with no decomposition rationale and no net-new finding (or
+     justified absence), FAILS this gate.
    □ Response schemas reference named schemas in components/schemas
 
 7. EXTRACTION EVIDENCE:
@@ -356,6 +402,7 @@ PRODUCE a validation report:
 |------|--------|---------|
 | File completeness | PASS/FAIL | ... |
 | Statement compliance | PASS/FAIL | N violations (BR-IDs: ...) |
+| Anti-number-chasing | PASS/FAIL | decomposition-outcome framing? net-new finding cited (or justified none)? mechanical-slicing/band-fitting signals |
 | Preservation tables | PASS/FAIL | N/M present, dimensions: ... |
 | Concrete examples | PASS/FAIL | N missing |
 | DDL quality | PASS/FAIL | ... |
@@ -601,7 +648,7 @@ The agent MUST update the knowledge graph incrementally as each service's specif
 4. Service owns tables: `graph_add_edge(edgeType="OWNS", sourceId=<serviceId>, sourceType="Service", targetId=<tableName>, targetType="Table")`
 5. Service exposes endpoints: `graph_add_edge(edgeType="EXPOSES", sourceId=<serviceId>, sourceType="Service", targetId=<path>, targetType="Endpoint")`
 6. Column-to-field mapping: `graph_add_edge(edgeType="MAPS_TO", sourceId=<tableName>, sourceType="Table", targetId=<fieldName>, targetType="Field", properties={columnName})`
-7. Any new BR-IDs extracted during deep extraction: `graph_add_node(nodeType="BusinessRule", ...)` + `graph_add_edge(edgeType="EXTRACTED_FROM", ...)`
+7. **BusinessRule nodes + ASSIGNED_TO + EXTRACTED_FROM edges + SourceComponent.extracted flip + p4Intent:** do NOT hand-create these per-BR — run the shipped importer for the service (`import_specs.py --service <id>`, see the Deep Convergence step 6c). It owns the complete contract and self-checks it. Hand-rolling the BR/EXTRACTED_FROM writes is what silently disconnected the graph halves before (coverage froze) — forbidden.
 
 **Why incremental:** Phase 4 may span multiple sessions across many services. If the graph is only updated at the exit gate, context construction tools (`graph_implementation_context`) won't have data for already-completed services.
 
@@ -2473,6 +2520,10 @@ CROSS-SERVICE CONTRACT RECONCILIATION — Across all services:
   ✓ The response shape each consumer expects matches the provider's published response schema (field names, types, list vs single)
   ✓ The request shape each consumer sends satisfies the provider's required parameters and body schema
   ✓ spec/shared/cross-service-contracts.md exists with reconciliation status for every sync call (no GAP entries remain)
+  ✓ No unresolved cross-boundary table reads: every table referenced in any service's 01-business-rules.md
+    Logic/Data-Dependencies resolves to owned-DDL / a declared CALLS-dependency / a shared-reference schema
+    (Deep Convergence Re-Check step 2b). NO "DDL elided" foreign-table reference left un-dispositioned — each
+    is a boundary violation until resolved to a call/shared-ref/out-of-scope decision
   ✓ Shared-convention reconciliation complete: every service 04-api-contract.yaml CONFORMS to the shared
     conventions (company/tenant param name, pagination params, list envelope, error shape, auth headers) —
     references spec/shared/common-schemas.yaml, does not redefine. assessment/shared-convention-reconciliation.md
@@ -2551,9 +2602,41 @@ Phase 4 extraction typically discovers 2-3x more rules than Phase 1 (new rules f
    - Compare against `spec/microservices/*/01-business-rules.md` actual content
    - Flag any BR-ID in a spec file that isn't ASSIGNED_TO the corresponding service in the graph
 
-2. **Boundary violation check:**
-   - For each service pair: check if >3 rules reference each other's domain tables
-   - If found: flag for human review ("Should these rules be reassigned?")
+2. **Boundary violation check (TWO distinct checks — do BOTH):**
+
+   **Principle:** No service reads another service's table directly (database-per-service). EVERY
+   cross-boundary reference in a rule's Logic/Data-Dependencies must resolve to a declared home:
+   (a) **owned** — a table in THIS service's `02-domain-model.md` DDL; (b) **consumed via a declared
+   dependency** — a CALLS edge to the owning service whose endpoint Stage 1.5 resolves into
+   `05-dependencies.md` (naming authority = the provider's `04-api-contract.yaml`); or (c) **shared
+   reference/config schema** — a deliberately-shared lookup/reference source (declared, not assumed).
+   A reference that resolves to NONE of these is a boundary violation, regardless of how many rules make it.
+
+   **2a. Coupling signal (the existing pair-wise count — keep it):**
+   - For each service pair: if >3 rules reference each other's domain tables → flag for human review
+     ("These services are entangled — should rules be reassigned or the boundary redrawn?"). This
+     answers "are these two services too coupled?" — a count is the right instrument for that.
+
+   **2b. Unresolved cross-boundary read (the leak check — NEW, count-independent):**
+   - Enumerate EVERY table/entity referenced in each service's `01-business-rules.md` Logic +
+     Data Dependencies. For each, confirm it resolves to (a) owned / (b) consumed-via-CALLS / (c)
+     shared-reference. **Any reference resolving to none is a BOUNDARY VIOLATION — even a single rule
+     reading a single foreign table.** The >3 threshold does NOT apply here: "is this read legal?" is a
+     different question from "are these services entangled?", and one illegal read is still illegal.
+   - **"DDL elided" is NOT a resolution — close this escape hatch.** If the domain model marked a
+     referenced foreign table "DDL elided" / "owned by another service" and left it there, that is a
+     SILENT unresolved read (this is exactly how a foreign-table read slips past — it reads as "handled"
+     but nothing was declared). It MUST carry an explicit disposition: convert to a declared CALLS
+     dependency on the owner (then Stage 1.5 resolves the shape), classify as shared-reference, or
+     confirm out-of-scope. Silence is not allowed — same discipline as "absence of signal → unknown,
+     never a silent exclusion."
+   - **🔴 PROMPT HUMAN** for each unresolved cross-boundary read (this is a DATA_OWNERSHIP / boundary
+     decision, human-owned): "Rule <BR-ID> in <service> reads <table> owned by <other service>, with no
+     declared dependency. Resolve as: (a) API call to <owner> — I add the CALLS edge + Stage 1.5 pins the
+     shape; (b) shared reference/config schema; (c) out of scope. Which?" On (a), create the CALLS edge so
+     Stage 1.5 resolves it and the generator binds to the provider's response DTO — NOT to the raw foreign
+     table name (which would generate an illegal direct cross-service DB read).
+   - Any unresolved read still open at the P4 exit gate is a GAP that blocks exit (a full/assurance run).
 
 3. **Orphan rule detection + node creation (CRITICAL — this is where P4 rules enter the graph):**
    - Parse ALL BR-IDs from `spec/microservices/*/01-business-rules.md` files
@@ -2587,7 +2670,13 @@ Phase 4 extraction typically discovers 2-3x more rules than Phase 1 (new rules f
    - Parse the file/component list with their counted vectors
    - For each component: `graph_update_node(nodeType="SourceComponent", id=<name>, properties={srcControlFlow: N, srcDataFlow: N, srcConstants: N, srcStateTransitions: N, srcOutcomes: N, srcDataWrites: N, srcIntegrations: N, srcErrorPaths: N})`
    - If SourceComponent node doesn't exist: create it first
-   - **Stamp `p4Intent` (snapshot 3):** for each component the deep read actually TOUCHED, set its intent as confirmed/corrected by the source read — `graph_update_node(nodeType="SourceComponent", id=<name>, properties={p4Intent: <post|entry|validate|derive|distribute|util|report>})` and update `intentCategory` to match. Stamp it whether the read CONFIRMS the first pass (`p4Intent = firstPassIntent`) or CORRECTS it — a confirmation is a meaningful signal, not silence. Do NOT stamp `p4Intent` on components P4 never reads (the un-extracted majority) — they keep `firstPassIntent` as their last word. The delta `firstPassIntent → p4Intent` is the second-order fidelity signal (how often even behavior+name missed and a human source read corrected it) — a P4 telemetry number.
+   - **`p4Intent` (snapshot 3)** is stamped by the shipped importer in 6c for every component a rule
+     traces to (baseline = confirmed current intent). You only need to act here when the P4 source read
+     shows the intent is DIFFERENT from `firstPassIntent` (a genuine correction): after the import, apply
+     `graph_update_node(nodeType="SourceComponent", id=<name>, properties={p4Intent: <corrected>})`.
+     Components P4 never reads keep `firstPassIntent` — the importer only stamps ones a rule traced to.
+     The delta `firstPassIntent → p4Intent` is the second-order fidelity signal (how often even
+     behavior+name missed and a human source read corrected it) — a P4 telemetry number.
 
    **6b. Per-BR spec vectors (from Semantic Preservation tables):**
    For each BR-ID in `01-business-rules.md`:
@@ -2599,17 +2688,42 @@ Phase 4 extraction typically discovers 2-3x more rules than Phase 1 (new rules f
    - Set on the BR node: `graph_update_node(nodeType="BusinessRule", id=<brId>, properties={srcControlFlow: <Source col>, srcDataFlow: ..., specControlFlow: <Spec col>, specDataFlow: ..., preservationStatus: "<OK|FLAGGED|CRITICAL>"})`
    - If table is missing (greenfield rule, or subagent skipped): set `vectorsComputed: false` on the BR node — this flags it for later attention
 
-   **6c. EXTRACTED_FROM provenance edges:**
-   For each BR-ID in `01-business-rules.md`:
-   - Parse the `Source Reference: <file>:<function>:<lines>` field
-   - Resolve `<file>` to a SourceComponent node (match by file path or name)
-   - Create edge: `graph_add_edge(edgeType="EXTRACTED_FROM", sourceId=<brId>, sourceType="BusinessRule", targetId=<componentId>, targetType="SourceComponent")`
-   - If source reference is missing or "N/A" (greenfield rule): skip edge, log it
+   **6c. Spec→graph import — RUN THE SHIPPED IMPORTER, do NOT hand-roll a bulk script:**
 
-   **Verification after step 6:**
-   - Count BR nodes with non-null `specControlFlow`: should be ≥80% of total (some greenfield rules won't have vectors)
-   - Count EXTRACTED_FROM edges: should match count of non-greenfield BR-IDs
-   - If <50% of rules have vectors: the extraction subagents likely skipped the Semantic Preservation table — flag for human attention
+   The complete spec→graph write (BusinessRule nodes + ASSIGNED_TO + **EXTRACTED_FROM edges** +
+   **SourceComponent.extracted flip** + **p4Intent stamp**) is owned by ONE shipped script so no part of
+   the contract falls through:
+   ```bash
+   uv run --project graph-mcp python graph-mcp/scripts/import_specs.py --service <service-id>
+   # or --all after all services are extracted
+   ```
+   It parses each service's `01-business-rules.md`, MERGEs the BusinessRule nodes, and — critically —
+   resolves each rule's `Source Reference` to a `SourceComponent`, creates the `EXTRACTED_FROM` edge,
+   flips `SourceComponent.extracted = true`, and stamps `p4Intent`. It ends with a **self-check** that
+   FAILS LOUD if the extracted-flip count didn't move or BRs are missing EXTRACTED_FROM edges.
+
+   **Why a script, not per-BR `graph_add_edge` calls:** at hundreds-to-thousands of rules, per-BR MCP
+   calls are slow and the agent WILL be tempted to bulk-script it — and a hand-rolled bulk script
+   historically omitted the SourceComponent-linking half, silently disconnecting the two graph halves so
+   coverage froze and never moved as services were extracted. The shipped importer owns the whole
+   contract and asserts it; a hand-rolled one is FORBIDDEN.
+
+   **IF THE IMPORTER FAILS on a field/shape mismatch (spec format drifted from the parser — this happens
+   despite templates): FIX `import_specs.py` to match the actual spec shape, re-run it, and commit the
+   fix.** Do NOT hand-write graph edges to work around it, and do NOT fall back to a partial importer —
+   both reintroduce the silent-disconnect bug the self-check exists to catch. The script is expected
+   maintenance; editing it when specs drift is the correct action, not a workaround.
+
+   **Genuine intent corrections** (where the P4 source read shows the intent differs from
+   `firstPassIntent` — see 6a) are applied by the agent via `graph_update_node(SourceComponent, {p4Intent:
+   <corrected>})` AFTER the import; the importer only sets `p4Intent` to the confirmed current intent as a
+   baseline (a confirmation), it does not override a correction the agent makes.
+
+   **Verification after step 6 (the importer's self-check reports most of this):**
+   - The importer self-check passed (extracted-flip moved; coverage delta printed; no unexplained BRs
+     without EXTRACTED_FROM beyond genuine greenfield).
+   - Count BR nodes with non-null `specControlFlow`: should be ≥80% of total (some greenfield rules won't have vectors).
+   - If <50% of rules have vectors: the extraction subagents likely skipped the Semantic Preservation table — flag for human attention.
 
 7. **Update tracking file:**
    - Append to `tracking/phase4-spec-generation.md`: "Deep Convergence complete: [timestamp], [N] mismatches fixed, [M] services validated, [K] BR vectors imported, [J] provenance edges created"
