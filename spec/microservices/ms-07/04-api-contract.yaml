@@ -1,0 +1,1587 @@
+openapi: "3.1.0"
+info:
+  title: Pricing and Promotions Service API
+  version: "1.0.0"
+  description: |
+    API contract for MS-07 Pricing and Promotions.
+    This contract is the single source of truth for price administration,
+    product and variant price calculation, promotion evaluation, and the
+    pricing quote consumed by checkout.
+    MS-07 does not calculate tax, shipping, handling, or order grand totals.
+servers:
+  - url: http://localhost:8107/api/v1
+    description: Local development server
+
+x-service:
+  serviceId: MS-07
+  serviceName: Pricing and Promotions
+  databaseSchema: pricing_promotions
+
+x-naming-conventions:
+  fieldNaming: camelCase
+  endpointNaming: kebab-case
+  headerNaming: kebab-case
+  enumValues: PascalCase
+  queryParams: camelCase
+
+x-global-headers:
+  - name: x-tenant-id
+    required: true
+    description: Multi-tenancy isolation for all price and promotion queries
+    testValue: "2e6d7b63-5b1d-4f8a-8e12-8cf43c9f2001"
+  - name: x-store-id
+    required: true
+    description: Store isolation within the tenant
+    testValue: "store-us-east"
+  - name: x-correlation-id
+    required: true
+    description: Distributed tracing identifier
+    testValue: "corr-20260901-000184"
+
+tags:
+  - name: Price Administration
+    description: Private product and availability price administration
+  - name: Price Calculation
+    description: Product and variant price calculation
+  - name: Promotions
+    description: Promotion-code evaluation
+  - name: Operations
+    description: Pricing processor and service operations
+
+paths:
+  /private/products/{sku}/availabilities/{availabilityId}/prices:
+    post:
+      tags:
+        - Price Administration
+      operationId: createAvailabilityPrice
+      summary: Create a price for a product availability
+      description: |
+        Creates a price associated with an existing MS-02 product availability.
+        The availability identifier is validated through the MS-02 boundary and
+        is not a foreign key into another service schema.
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/Sku"
+        - $ref: "#/components/parameters/AvailabilityId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AvailabilityPriceCreateRequest"
+            example:
+              code: base
+              amount: 129.99
+              priceType: OneTime
+              defaultPrice: true
+              specialStartDate: "2026-09-01"
+              specialEndDate: "2026-09-30"
+              specialAmount: 109.99
+              productIdentifierId: 88021
+      responses:
+        "201":
+          description: Price created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PriceCreatedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    get:
+      tags:
+        - Price Administration
+      operationId: listAvailabilityPrices
+      summary: List prices for a product availability
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/Sku"
+        - $ref: "#/components/parameters/AvailabilityId"
+      responses:
+        "200":
+          description: Availability prices
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PriceListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /private/products/{sku}/prices:
+    post:
+      tags:
+        - Price Administration
+      operationId: createProductPrice
+      summary: Create a product price
+      description: |
+        Creates a product price and resolves its target availability through
+        the MS-02 catalog boundary.
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/Sku"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductPriceCreateRequest"
+            example:
+              availabilityId: 88020
+              code: base
+              amount: 24.99
+              priceType: OneTime
+              defaultPrice: true
+              specialStartDate: null
+              specialEndDate: null
+              specialAmount: null
+              productIdentifierId: null
+      responses:
+        "201":
+          description: Price created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PriceCreatedResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    get:
+      tags:
+        - Price Administration
+      operationId: listProductPrices
+      summary: List all prices for a product
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/Sku"
+      responses:
+        "200":
+          description: Product prices
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PriceListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /private/products/{sku}/prices/{priceId}:
+    get:
+      tags:
+        - Price Administration
+      operationId: getProductPrice
+      summary: Retrieve one product price
+      description: |
+        Retrieves a price only when the price belongs to the supplied product
+        and the current tenant/store context.
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/Sku"
+        - $ref: "#/components/parameters/PriceId"
+      responses:
+        "200":
+          description: Product price
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Price"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    delete:
+      tags:
+        - Price Administration
+      operationId: deleteProductPrice
+      summary: Delete one product price
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/Sku"
+        - $ref: "#/components/parameters/PriceId"
+      responses:
+        "204":
+          description: Price deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeletePriceResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /private/products/{sku}/availabilities/{availabilityId}/prices/{priceId}:
+    put:
+      tags:
+        - Price Administration
+      operationId: updateAvailabilityPrice
+      summary: Update an availability price
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/Sku"
+        - $ref: "#/components/parameters/AvailabilityId"
+        - $ref: "#/components/parameters/PriceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PriceUpdateRequest"
+            example:
+              code: base
+              amount: 129.99
+              priceType: OneTime
+              defaultPrice: true
+              specialStartDate: "2026-09-01"
+              specialEndDate: "2026-09-30"
+              specialAmount: 109.99
+              productIdentifierId: 88021
+      responses:
+        "200":
+          description: Price updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Price"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /pricing/products/{sku}/price:
+    get:
+      tags:
+        - Price Calculation
+      operationId: calculateProductPrice
+      summary: Calculate the current product price
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Sku"
+        - $ref: "#/components/parameters/EvaluationAtQuery"
+        - name: includeAdditionalPrices
+          in: query
+          required: false
+          description: Include non-default price lines in the response
+          schema:
+            type: boolean
+            default: true
+      responses:
+        "200":
+          description: Calculated product price
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductPriceCalculationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /pricing/products/{sku}/quote:
+    post:
+      tags:
+        - Price Calculation
+      operationId: quoteProductPrice
+      summary: Calculate a product price with selected attributes
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Sku"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductQuoteRequest"
+            example:
+              customerId: customer-1007
+              attributes:
+                - attributeId: finish
+                  valueId: walnut
+                  priceAdjustment: 35.00
+              evaluationAt: "2026-09-01T12:00:00Z"
+      responses:
+        "200":
+          description: Calculated product quote
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductPriceCalculationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /pricing/variants/{variantSku}/quote:
+    post:
+      tags:
+        - Price Calculation
+      operationId: quoteVariantPrice
+      summary: Calculate a variant price
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/VariantSku"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VariantQuoteRequest"
+            example:
+              parentProductSku: SKU-SHIRT
+              fallbackMode: ParentProduct
+              evaluationAt: "2026-09-01T12:00:00Z"
+      responses:
+        "200":
+          description: Calculated variant quote
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProductPriceCalculationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /pricing/promotions/evaluate:
+    post:
+      tags:
+        - Promotions
+      operationId: evaluatePromotion
+      summary: Evaluate a promotion code
+      description: |
+        Evaluates a promotion code against one or more items. A matched
+        promotion reduction is returned as a positive value. The consumer
+        subtracts the reduction from its merchandise subtotal.
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PromotionEvaluationRequest"
+            example:
+              promoCode: WELCOME10
+              items:
+                - productSku: SKU-BAG-TRAVEL
+                  variantSku: null
+                  quantity: 3
+                  attributes: []
+              evaluationAt: "2026-09-01T12:00:00Z"
+      responses:
+        "200":
+          description: Promotion evaluation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PromotionEvaluationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /private/pricing/processors:
+    get:
+      tags:
+        - Operations
+      operationId: getPricingProcessors
+      summary: Get active and inactive pricing processors
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+      responses:
+        "200":
+          description: Pricing processor registry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProcessorRegistryResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /pricing/quotes:
+    post:
+      tags:
+        - Price Calculation
+      operationId: calculatePricingQuote
+      summary: Calculate merchandise pricing and promotion reductions
+      description: |
+        Calculates effective item prices, one-time additional price lines,
+        merchandise subtotal, and promotion reductions. Shipping, handling,
+        tax, and grand-total calculation remain with their owning consumers.
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PricingQuoteRequest"
+            example:
+              currency: USD
+              items:
+                - productSku: SKU-MUG-BLUE
+                  variantSku: null
+                  quantity: 2
+                  attributes: []
+                - productSku: SKU-DESK
+                  variantSku: null
+                  quantity: 1
+                  attributes:
+                    - attributeId: finish
+                      valueId: walnut
+                      priceAdjustment: 35.00
+              promoCode: WELCOME10
+              evaluationAt: "2026-09-01T12:00:00Z"
+      responses:
+        "200":
+          description: Pricing quote
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PricingQuoteResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+components:
+  parameters:
+    TenantId:
+      name: x-tenant-id
+      in: header
+      required: true
+      description: Tenant isolation identifier
+      schema:
+        type: string
+        format: uuid
+      example: "2e6d7b63-5b1d-4f8a-8e12-8cf43c9f2001"
+
+    StoreId:
+      name: x-store-id
+      in: header
+      required: true
+      description: Store isolation identifier
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 120
+      example: store-us-east
+
+    CorrelationId:
+      name: x-correlation-id
+      in: header
+      required: true
+      description: Distributed tracing identifier
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 200
+      example: corr-20260901-000184
+
+    Authorization:
+      name: Authorization
+      in: header
+      required: true
+      description: Bearer authentication token
+      schema:
+        type: string
+        pattern: "^Bearer\\s+.+$"
+      example: "Bearer eyJhbGciOiJIUzI1NiJ9"
+
+    Sku:
+      name: sku
+      in: path
+      required: true
+      description: Product SKU
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 160
+      example: SKU-BLUE-MUG
+
+    VariantSku:
+      name: variantSku
+      in: path
+      required: true
+      description: Variant SKU
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 160
+      example: SKU-SHIRT-BLUE-L
+
+    AvailabilityId:
+      name: availabilityId
+      in: path
+      required: true
+      description: Opaque MS-02 product availability identifier
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+      example: 88020
+
+    PriceId:
+      name: priceId
+      in: path
+      required: true
+      description: Service-owned price identifier
+      schema:
+        type: string
+        format: uuid
+      example: "1a40db36-2e7a-4f5f-99e0-5241c5f1e5a1"
+
+    EvaluationAtQuery:
+      name: evaluationAt
+      in: query
+      required: false
+      description: Timestamp used for special-price evaluation
+      schema:
+        type: string
+        format: date-time
+      example: "2026-09-01T12:00:00Z"
+
+  schemas:
+    AvailabilityPriceCreateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - amount
+        - priceType
+        - defaultPrice
+      properties:
+        code:
+          type: string
+          pattern: "^[A-Za-z0-9_]+$"
+          minLength: 1
+          maxLength: 80
+          description: Price code; the default source code is base
+        amount:
+          type: number
+          minimum: 0
+          multipleOf: 0.0001
+          description: Original/base price amount
+        priceType:
+          type: string
+          enum:
+            - OneTime
+            - Monthly
+          description: Whether the price is charged once or monthly
+        defaultPrice:
+          type: boolean
+          description: Whether this is the primary price for the availability
+        specialStartDate:
+          type:
+            - string
+            - "null"
+          format: date
+          description: Optional special-price start date
+        specialEndDate:
+          type:
+            - string
+            - "null"
+          format: date
+          description: Optional special-price end date
+        specialAmount:
+          type:
+            - number
+            - "null"
+          minimum: 0
+          multipleOf: 0.0001
+          description: Optional special/effective price amount
+        productIdentifierId:
+          type:
+            - integer
+            - "null"
+          format: int64
+          minimum: 1
+          description: Optional legacy product identifier
+
+    ProductPriceCreateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - availabilityId
+        - code
+        - amount
+        - priceType
+        - defaultPrice
+      properties:
+        availabilityId:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Opaque MS-02 product availability identifier
+        code:
+          type: string
+          pattern: "^[A-Za-z0-9_]+$"
+          minLength: 1
+          maxLength: 80
+          description: Price code
+        amount:
+          type: number
+          minimum: 0
+          multipleOf: 0.0001
+          description: Original/base price amount
+        priceType:
+          type: string
+          enum:
+            - OneTime
+            - Monthly
+          description: Whether the price is charged once or monthly
+        defaultPrice:
+          type: boolean
+          description: Whether this is the primary price for the availability
+        specialStartDate:
+          type:
+            - string
+            - "null"
+          format: date
+        specialEndDate:
+          type:
+            - string
+            - "null"
+          format: date
+        specialAmount:
+          type:
+            - number
+            - "null"
+          minimum: 0
+          multipleOf: 0.0001
+        productIdentifierId:
+          type:
+            - integer
+            - "null"
+          format: int64
+          minimum: 1
+
+    PriceUpdateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - amount
+        - priceType
+        - defaultPrice
+      properties:
+        code:
+          type: string
+          pattern: "^[A-Za-z0-9_]+$"
+          minLength: 1
+          maxLength: 80
+        amount:
+          type: number
+          minimum: 0
+          multipleOf: 0.0001
+        priceType:
+          type: string
+          enum:
+            - OneTime
+            - Monthly
+        defaultPrice:
+          type: boolean
+        specialStartDate:
+          type:
+            - string
+            - "null"
+          format: date
+        specialEndDate:
+          type:
+            - string
+            - "null"
+          format: date
+        specialAmount:
+          type:
+            - number
+            - "null"
+          minimum: 0
+          multipleOf: 0.0001
+        productIdentifierId:
+          type:
+            - integer
+            - "null"
+          format: int64
+          minimum: 1
+
+    Price:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - productSku
+        - priceListId
+        - code
+        - amount
+        - priceType
+        - defaultPrice
+        - discounted
+        - price
+        - discountPercent
+      properties:
+        id:
+          type: string
+          format: uuid
+        legacyPriceId:
+          type:
+            - integer
+            - "null"
+          format: int64
+        priceListId:
+          type: string
+          format: uuid
+        productSku:
+          type: string
+          minLength: 1
+          maxLength: 160
+        variantSku:
+          type:
+            - string
+            - "null"
+          minLength: 1
+          maxLength: 160
+        availabilityId:
+          type:
+            - integer
+            - "null"
+          format: int64
+          minimum: 1
+        code:
+          type: string
+          pattern: "^[A-Za-z0-9_]+$"
+        amount:
+          type: number
+          minimum: 0
+          multipleOf: 0.0001
+          description: Stored original/base amount
+        priceType:
+          type: string
+          enum:
+            - OneTime
+            - Monthly
+        defaultPrice:
+          type: boolean
+        specialStartDate:
+          type:
+            - string
+            - "null"
+          format: date
+        specialEndDate:
+          type:
+            - string
+            - "null"
+          format: date
+        specialAmount:
+          type:
+            - number
+            - "null"
+          minimum: 0
+          multipleOf: 0.0001
+        productIdentifierId:
+          type:
+            - integer
+            - "null"
+          format: int64
+          minimum: 1
+        discounted:
+          type: boolean
+        price:
+          type: number
+          minimum: 0
+          multipleOf: 0.0001
+          description: "Computed: active special amount or amount"
+        discountedPrice:
+          type:
+            - number
+            - "null"
+          minimum: 0
+          multipleOf: 0.0001
+          description: "Computed: specialAmount when a discount is active"
+        discountPercent:
+          type: integer
+          format: int32
+          minimum: 0
+          description: "Computed: integer truncation of 100 - (specialAmount / amount * 100)"
+        discountEndDate:
+          type:
+            - string
+            - "null"
+          format: date
+          description: Computed active discount end date
+        currency:
+          type:
+            - string
+            - "null"
+          pattern: "^[A-Z]{3}$"
+
+    PriceCreatedResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - productSku
+        - availabilityId
+      properties:
+        id:
+          type: string
+          format: uuid
+        legacyPriceId:
+          type:
+            - integer
+            - "null"
+          format: int64
+        productSku:
+          type: string
+          minLength: 1
+          maxLength: 160
+        availabilityId:
+          type: integer
+          format: int64
+          minimum: 1
+
+    DeletePriceResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - deleted
+      properties:
+        id:
+          type: string
+          format: uuid
+        deleted:
+          type: boolean
+          const: true
+
+    PriceListResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Price"
+
+    PricingAttribute:
+      type: object
+      additionalProperties: false
+      required:
+        - attributeId
+        - valueId
+        - priceAdjustment
+      properties:
+        attributeId:
+          type: string
+          minLength: 1
+          maxLength: 160
+        valueId:
+          type: string
+          minLength: 1
+          maxLength: 160
+        priceAdjustment:
+          type: number
+          minimum: 0
+          multipleOf: 0.0001
+
+    ProductQuoteRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - attributes
+      properties:
+        customerId:
+          type:
+            - string
+            - "null"
+          minLength: 1
+          maxLength: 160
+          description: Optional customer context; does not alter extracted standard pricing
+        attributes:
+          type: array
+          items:
+            $ref: "#/components/schemas/PricingAttribute"
+        evaluationAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+
+    VariantQuoteRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - fallbackMode
+      properties:
+        parentProductSku:
+          type:
+            - string
+            - "null"
+          minLength: 1
+          maxLength: 160
+        fallbackMode:
+          type: string
+          enum:
+            - DirectOnly
+            - ParentProduct
+        evaluationAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+
+    ProductPriceCalculationResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - productSku
+        - availabilitySource
+        - currency
+        - originalPrice
+        - finalPrice
+        - discounted
+        - discountPercent
+        - additionalPrices
+        - customerPricingApplied
+        - pricingBasis
+      properties:
+        productSku:
+          type: string
+          minLength: 1
+          maxLength: 160
+        selectedVariantSku:
+          type:
+            - string
+            - "null"
+          minLength: 1
+          maxLength: 160
+        availabilitySource:
+          type: string
+          enum:
+            - Variant
+            - Product
+        currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+        originalPrice:
+          type: number
+          minimum: 0
+          multipleOf: 0.0001
+        finalPrice:
+          type: number
+          minimum: 0
+          multipleOf: 0.0001
+          description: "Computed: active discounted price or original price plus applicable attribute adjustments"
+        discounted:
+          type: boolean
+        discountedPrice:
+          type:
+            - number
+            - "null"
+          minimum: 0
+          multipleOf: 0.0001
+        discountPercent:
+          type: integer
+          format: int32
+          minimum: 0
+        discountEndDate:
+          type:
+            - string
+            - "null"
+          format: date
+        attributeAdjustment:
+          type: number
+          minimum: 0
+          multipleOf: 0.0001
+          default: 0
+          description: "Computed: sum of positive selected attribute adjustments"
+        customerPricingApplied:
+          type: boolean
+          const: false
+        pricingBasis:
+          type: string
+          enum:
+            - Standard
+            - Variant
+            - ParentProductFallback
+        additionalPrices:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdditionalPriceLine"
+
+    AdditionalPriceLine:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - priceType
+        - finalPrice
+      properties:
+        code:
+          type: string
+          pattern: "^[A-Za-z0-9_]+$"
+        priceType:
+          type: string
+          enum:
+            - OneTime
+            - Monthly
+        finalPrice:
+          type: number
+          minimum: 0
+          multipleOf: 0.0001
+          description: Computed effective amount for the additional price
+
+    PromotionEvaluationRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - promoCode
+        - items
+      properties:
+        promoCode:
+          type: string
+          minLength: 0
+          maxLength: 160
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/PricingItemRequest"
+        evaluationAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+
+    PricingItemRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - productSku
+        - quantity
+        - attributes
+      properties:
+        productSku:
+          type: string
+          minLength: 1
+          maxLength: 160
+        variantSku:
+          type:
+            - string
+            - "null"
+          minLength: 1
+          maxLength: 160
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+        attributes:
+          type: array
+          items:
+            $ref: "#/components/schemas/PricingAttribute"
+
+    PromotionEvaluationResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - promoCode
+        - matched
+        - reduction
+        - currency
+        - items
+      properties:
+        promoCode:
+          type: string
+        matched:
+          type: boolean
+        discountRate:
+          type:
+            - number
+            - "null"
+          minimum: 0
+          maximum: 1
+          multipleOf: 0.000001
+        reduction:
+          type: number
+          minimum: 0
+          multipleOf: 0.0001
+          description: Positive reduction returned for the consumer to subtract
+        currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PromotionItemResult"
+        reason:
+          type:
+            - string
+            - "null"
+          enum:
+            - null
+            - PROMO_CODE_BLANK
+            - PROMOTION_NOT_APPLICABLE
+            - PROMOTION_EXPIRED
+            - PROCESSOR_INACTIVE
+
+    PromotionItemResult:
+      type: object
+      additionalProperties: false
+      required:
+        - productSku
+        - quantity
+        - effectiveUnitPrice
+        - reduction
+      properties:
+        productSku:
+          type: string
+          minLength: 1
+          maxLength: 160
+        variantSku:
+          type:
+            - string
+            - "null"
+          minLength: 1
+          maxLength: 160
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+        effectiveUnitPrice:
+          type: number
+          minimum: 0
+          multipleOf: 0.0001
+        reduction:
+          type: number
+          minimum: 0
+          multipleOf: 0.0001
+
+    Processor:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - name
+        - active
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 160
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        active:
+          type: boolean
+
+    InactiveProcessor:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - name
+        - active
+        - reason
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 160
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        active:
+          type: boolean
+          const: false
+        reason:
+          type: string
+          enum:
+            - NOT_REGISTERED
+            - PROCESSOR_INACTIVE
+            - NOT_SUPPORTED
+
+    ProcessorRegistryResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - processors
+        - inactive
+      properties:
+        processors:
+          type: array
+          items:
+            $ref: "#/components/schemas/Processor"
+        inactive:
+          type: array
+          items:
+            $ref: "#/components/schemas/InactiveProcessor"
+
+    PricingQuoteRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - currency
+        - items
+      properties:
+        currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/PricingItemRequest"
+        promoCode:
+          type:
+            - string
+            - "null"
+          maxLength: 160
+        evaluationAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+
+    PricedItem:
+      type: object
+      additionalProperties: false
+      required:
+        - productSku
+        - quantity
+        - unitPrice
+        - lineSubtotal
+        - additionalPrices
+      properties:
+        productSku:
+          type: string
+          minLength: 1
+          maxLength: 160
+        variantSku:
+          type:
+            - string
+            - "null"
+          minLength: 1
+          maxLength: 160
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+        unitPrice:
+          type: number
+          minimum: 0
+          multipleOf: 0.0001
+        lineSubtotal:
+          type: number
+          minimum: 0
+          multipleOf: 0.0001
+          description: "Computed: unitPrice * quantity"
+        additionalPrices:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdditionalPriceLine"
+
+    PricingQuotePromotion:
+      type: object
+      additionalProperties: false
+      required:
+        - promoCode
+        - matched
+        - reduction
+      properties:
+        promoCode:
+          type:
+            - string
+            - "null"
+        matched:
+          type: boolean
+        reduction:
+          type: number
+          minimum: 0
+          multipleOf: 0.0001
+
+    PricingQuoteResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - currency
+        - items
+        - additionalPriceLines
+        - merchandiseSubtotal
+        - promotion
+        - subtotalAfterPromotion
+        - downstreamComponents
+        - grandTotalOwnedBy
+      properties:
+        currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PricedItem"
+        additionalPriceLines:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdditionalPriceLine"
+        merchandiseSubtotal:
+          type: number
+          minimum: 0
+          multipleOf: 0.0001
+          description: "Computed: item line subtotals plus one-time additional prices"
+        promotion:
+          $ref: "#/components/schemas/PricingQuotePromotion"
+        subtotalAfterPromotion:
+          type: number
+          minimum: 0
+          multipleOf: 0.0001
+          description: "Computed: merchandiseSubtotal - promotion.reduction"
+        downstreamComponents:
+          type: array
+          items:
+            type: string
+            enum:
+              - shipping
+              - handling
+              - tax
+        grandTotalOwnedBy:
+          type: string
+          const: consumer
+
+    ErrorDetail:
+      type: object
+      additionalProperties: false
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+          minLength: 1
+        message:
+          type: string
+          minLength: 1
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+        - message
+        - statusCode
+        - timestamp
+        - correlationId
+        - details
+      properties:
+        error:
+          type: string
+          minLength: 1
+        message:
+          type: string
+          minLength: 1
+        statusCode:
+          type: integer
+          format: int32
+          minimum: 400
+          maximum: 599
+        timestamp:
+          type: string
+          format: date-time
+        correlationId:
+          type: string
+          minLength: 1
+          maxLength: 200
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorDetail"
+
+  responses:
+    BadRequest:
+      description: Malformed request or request context
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    Forbidden:
+      description: Authenticated operator lacks permission
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    NotFound:
+      description: Requested product, availability, variant, or price was not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    Conflict:
+      description: Resource or processor conflict
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    ValidationError:
+      description: Domain validation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    ServiceUnavailable:
+      description: Required pricing, catalog, or promotion dependency is unavailable
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    InternalError:
+      description: Unexpected service failure
