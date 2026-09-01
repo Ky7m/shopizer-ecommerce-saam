@@ -6,11 +6,11 @@
 | Metric | Value |
 |--------|-------|
 | Total tasks | 12 |
-| Completed | 11 |
+| Completed | 12 |
 | In progress | 0 |
 | Blocked | 0 |
 | Started | 2026-09-01T12:52:17+04:00 |
-| Last updated | 2026-09-01T20:00:48+04:00 |
+| Last updated | 2026-09-01T22:48:24+04:00 |
 
 ## Tasks
 
@@ -29,7 +29,7 @@
 | 9 | Generate Payments specification (MS-06) | DONE | — | Agent | 2026-09-01T17:07:51+04:00 — 19 rules, 8 tables, 12 endpoint methods, OpenAPI 3.1 contract; graph import/check passed |
 | 10 | Generate Order Management specification (MS-05) | DONE | — | Agent | 2026-09-01T17:24:00+04:00 — 23 rules, 14 tables, 18 endpoint operations, OpenAPI 3.1 contract; graph import/check passed; target-only provenance explicitly documented |
 | 11 | Generate Content and Configuration specification (MS-11) | DONE | — | Agent | 2026-09-01T20:00:48+04:00 — 41 rules, 5 tables, 58 endpoint operations, 24 invariants, OpenAPI 3.1 contract; graph import/check passed; six intentional BA-review GAPs documented |
-| 12 | Generate Platform Integrations specification (MS-12) | PENDING | — | Agent | Consumes business events and invokes external adapters |
+| 12 | Generate Platform Integrations specification (MS-12) | DONE | — | Agent | 2026-09-01T22:48:24+04:00 — 23 rules, 5 tables, 18 endpoint operations, 14 database-logic objects, 7 invariants, OpenAPI 3.1 contract; final spec-architect validation passed; graph import/check passed |
 
 ### Stage 1.5 — Cross-Service Compilation
 

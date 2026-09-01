@@ -1,0 +1,1571 @@
+openapi: "3.1.0"
+info:
+  title: Platform Integrations API
+  version: "2.0.0"
+  description: |
+    Contract for MS-12 Platform Integrations. This document is authoritative for
+    paths, JSON field names, required fields, enum values, response bodies, and
+    status codes. Configuration persistence remains owned by MS-11.
+servers:
+  - url: http://localhost:8112/api/v1/integrations
+    description: Local development
+x-naming-conventions:
+  fieldNaming: camelCase
+  endpointNaming: kebab-case
+  headerNaming: kebab-case
+  enumValues: PascalCase
+  queryParams: camelCase
+x-global-headers:
+  - name: x-tenant-id
+    required: true
+    description: Tenant isolation identifier
+    testValue: test-tenant-001
+  - name: x-store-id
+    required: true
+    description: Store isolation identifier
+    testValue: test-store-001
+  - name: x-correlation-id
+    required: true
+    description: Distributed tracing identifier
+    testValue: corr-ms12-0001
+  - name: Authorization
+    required: true
+    description: JWT authorization token
+    testValue: Bearer test-token
+tags:
+  - name: Adapters
+  - name: Carriers
+  - name: Maps
+  - name: Geolocation
+  - name: Files
+  - name: Email
+  - name: Delivery
+x-event-catalog:
+  consumed:
+    - name: BusinessIntegrationDeliveryRequested
+      source: MS-05
+      schema:
+        $ref: "#/components/schemas/BusinessIntegrationDeliveryRequested"
+    - name: ConfigurationReferenceChanged
+      source: MS-11
+      schema:
+        $ref: "#/components/schemas/ConfigurationReferenceChanged"
+    - name: IntegrationDeliveryReplayRequested
+      source: MS-12
+      schema:
+        $ref: "#/components/schemas/IntegrationDeliveryReplayRequested"
+  published:
+    - name: IntegrationDeliveryQueued
+      channel: integration-delivery
+      schema:
+        $ref: "#/components/schemas/IntegrationDeliveryQueued"
+    - name: IntegrationDeliveryDeadLettered
+      channel: integration-delivery-dead-letter
+      schema:
+        $ref: "#/components/schemas/IntegrationDeliveryDeadLettered"
+
+paths:
+  /adapters:
+    get:
+      tags: [Adapters]
+      operationId: listAdapters
+      summary: List safe adapter projections
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - name: moduleType
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/IntegrationType"
+        - name: environment
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Adapter projections
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdapterListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /adapters/refresh:
+    post:
+      tags: [Adapters]
+      operationId: refreshAdapter
+      summary: Validate and atomically publish an adapter projection
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshAdapterRequest"
+      responses:
+        "200":
+          description: Adapter projection published
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Adapter"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /carrier-quotes/ups:
+    post:
+      tags: [Carriers]
+      operationId: getUpsQuote
+      summary: Execute UPS rating and normalize options
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CarrierQuoteRequest"
+      responses:
+        "200":
+          description: Normalized UPS options
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CarrierQuoteResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "502":
+          $ref: "#/components/responses/BadGateway"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /carrier-quotes/usps:
+    post:
+      tags: [Carriers]
+      operationId: getUspsQuote
+      summary: Execute USPS domestic or international rating
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CarrierQuoteRequest"
+      responses:
+        "200":
+          description: Normalized USPS options
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CarrierQuoteResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "502":
+          $ref: "#/components/responses/BadGateway"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /maps/distance:
+    post:
+      tags: [Maps]
+      operationId: calculateDistance
+      summary: Geocode an eligible route and calculate distance
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DistanceRequest"
+      responses:
+        "200":
+          description: Distance result, including an explicit suppression result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DistanceResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "502":
+          $ref: "#/components/responses/BadGateway"
+
+  /geolocation/ip:
+    post:
+      tags: [Geolocation]
+      operationId: resolveIpLocation
+      summary: Resolve a client IP to coarse location
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IpGeolocationRequest"
+      responses:
+        "200":
+          description: Coarse location
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IpGeolocationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /files:
+    post:
+      tags: [Files]
+      operationId: uploadFile
+      summary: Upload one asset with an idempotent operation
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadFileRequest"
+      responses:
+        "201":
+          description: Asset uploaded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadedFileAsset"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "502":
+          $ref: "#/components/responses/BadGateway"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+    get:
+      tags: [Files]
+      operationId: listFiles
+      summary: List direct files in a content namespace
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - name: storeCode
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: contentType
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/ContentType"
+        - name: folderPath
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: File metadata list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    delete:
+      tags: [Files]
+      operationId: deleteAllFiles
+      summary: Delete a store namespace
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - name: storeCode
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: folderPath
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Namespace deleted
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "502":
+          $ref: "#/components/responses/BadGateway"
+
+  /files/batch:
+    post:
+      tags: [Files]
+      operationId: uploadFiles
+      summary: Upload multiple assets under one idempotent operation
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BatchUploadFileRequest"
+      responses:
+        "201":
+          description: Batch upload accepted and associated with attempts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileBatchResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "502":
+          $ref: "#/components/responses/BadGateway"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /files/{fileName}:
+    get:
+      tags: [Files]
+      operationId: getFile
+      summary: Read one asset as bytes
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - name: fileName
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: storeCode
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: contentType
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/ContentType"
+        - name: folderPath
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Asset bytes and metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileContentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "501":
+          $ref: "#/components/responses/NotImplemented"
+
+    delete:
+      tags: [Files]
+      operationId: deleteFile
+      summary: Delete one asset
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - name: fileName
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: storeCode
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: contentType
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/ContentType"
+        - name: folderPath
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Asset deleted
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "502":
+          $ref: "#/components/responses/BadGateway"
+
+  /files/folders:
+    post:
+      tags: [Files]
+      operationId: createFolder
+      summary: Create a folder on the caller-selected provider
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FolderRequest"
+      responses:
+        "201":
+          description: Folder created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FolderResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "501":
+          $ref: "#/components/responses/NotImplemented"
+    get:
+      tags: [Files]
+      operationId: listFolders
+      summary: List folders on the caller-selected provider
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - name: storeCode
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: provider
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/StorageProvider"
+        - name: folderPath
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Folder list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FolderListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "501":
+          $ref: "#/components/responses/NotImplemented"
+    delete:
+      tags: [Files]
+      operationId: deleteFolder
+      summary: Delete a folder on the caller-selected provider
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - name: storeCode
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: provider
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/StorageProvider"
+        - name: folderPath
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: folderName
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Folder deleted
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "501":
+          $ref: "#/components/responses/NotImplemented"
+
+  /emails:
+    post:
+      tags: [Email]
+      operationId: queueEmail
+      summary: Persist and queue an email delivery
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QueueEmailRequest"
+      responses:
+        "202":
+          description: Email queued without claiming provider delivery
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailMessage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "502":
+          $ref: "#/components/responses/BadGateway"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /delivery-attempts/{attemptId}:
+    get:
+      tags: [Delivery]
+      operationId: getDeliveryAttempt
+      summary: Inspect one durable delivery attempt
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - name: attemptId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Delivery attempt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryAttempt"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /delivery-attempts/{attemptId}/replay:
+    post:
+      tags: [Delivery]
+      operationId: replayDeliveryAttempt
+      summary: Queue a replay of a failed or dead-lettered attempt
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - name: attemptId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReplayRequest"
+      responses:
+        "202":
+          description: Replay queued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryAttempt"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+components:
+  parameters:
+    TenantId:
+      name: x-tenant-id
+      in: header
+      required: true
+      schema:
+        type: string
+    StoreId:
+      name: x-store-id
+      in: header
+      required: true
+      schema:
+        type: string
+    CorrelationId:
+      name: x-correlation-id
+      in: header
+      required: true
+      schema:
+        type: string
+    Authorization:
+      name: Authorization
+      in: header
+      required: true
+      schema:
+        type: string
+
+  schemas:
+    IntegrationType:
+      type: string
+      enum: [Email, Shipping, Maps, Storage, Adapter]
+    StorageProvider:
+      type: string
+      enum: [Local, Infinispan, S3, GCP]
+    ContentType:
+      type: string
+      enum: [Image, File, Css, Js, Pdf, Digital]
+    AdapterStatus:
+      type: string
+      enum: [Active, Disabled, Retired]
+    Adapter:
+      type: object
+      required: [endpointId, integrationType, provider, code, environment, status, configurationRef, capabilities, timeoutMs, maxAttempts]
+      properties:
+        endpointId:
+          type: string
+          format: uuid
+        integrationType:
+          $ref: "#/components/schemas/IntegrationType"
+        provider:
+          type: string
+        code:
+          type: string
+        environment:
+          type: string
+        status:
+          $ref: "#/components/schemas/AdapterStatus"
+        configurationRef:
+          type: string
+        endpointUri:
+          type: string
+          format: uri
+        capabilities:
+          type: object
+          additionalProperties:
+            type: boolean
+        supplementalConfiguration:
+          type: object
+          additionalProperties:
+            type: string
+        timeoutMs:
+          type: integer
+          minimum: 100
+          maximum: 120000
+        maxAttempts:
+          type: integer
+          minimum: 1
+          maximum: 10
+    AdapterListResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Adapter"
+        pagination:
+          $ref: "#/components/schemas/PaginationInfo"
+    RefreshAdapterRequest:
+      type: object
+      required: [moduleType, code, provider, environment, configurationRef]
+      properties:
+        moduleType:
+          $ref: "#/components/schemas/IntegrationType"
+        code:
+          type: string
+          minLength: 1
+        provider:
+          type: string
+          minLength: 1
+        environment:
+          type: string
+          minLength: 1
+        configurationRef:
+          type: string
+          minLength: 1
+        resolvedEndpointUri:
+          type: string
+          format: uri
+        capabilities:
+          type: object
+          additionalProperties:
+            type: boolean
+        timeoutMs:
+          type: integer
+          minimum: 100
+          maximum: 120000
+          default: 10000
+        maxAttempts:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 3
+        config1:
+          type: string
+        config2:
+          type: string
+        credentials:
+          type: object
+          additionalProperties:
+            type: string
+        packageTypes:
+          type: array
+          items:
+            type: string
+    Address:
+      type: object
+      required: [countryCode, postalCode]
+      properties:
+        address:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        zoneCode:
+          type: string
+        countryCode:
+          type: string
+          minLength: 2
+          maxLength: 2
+        postalCode:
+          type: string
+          minLength: 1
+    Package:
+      type: object
+      required: [weight, weightUnit, length, width, height, dimensionUnit]
+      properties:
+        weight:
+          type: number
+          exclusiveMinimum: 0
+        weightUnit:
+          type: string
+          enum: [KG, LB]
+        length:
+          type: number
+          exclusiveMinimum: 0
+        width:
+          type: number
+          exclusiveMinimum: 0
+        height:
+          type: number
+          exclusiveMinimum: 0
+        dimensionUnit:
+          type: string
+          enum: [CM, IN]
+    CarrierQuoteRequest:
+      type: object
+      required: [environment, origin, destination, packages]
+      properties:
+        environment:
+          type: string
+        origin:
+          $ref: "#/components/schemas/Address"
+        destination:
+          $ref: "#/components/schemas/Address"
+        packages:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/Package"
+        orderTotal:
+          type: number
+          minimum: 0
+    CarrierOption:
+      type: object
+      required: [provider, code, price]
+      properties:
+        provider:
+          type: string
+        code:
+          type: string
+        name:
+          type: string
+        price:
+          type: number
+        currency:
+          type: string
+        estimatedDays:
+          type: string
+    CarrierQuoteResponse:
+      type: object
+      required: [provider, requestType, options]
+      properties:
+        provider:
+          type: string
+        requestType:
+          type: string
+          enum: [Rate, Domestic, International, Suppressed]
+        packageSize:
+          type: string
+          enum: [REGULAR, LARGE, OVERSIZE]
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/CarrierOption"
+        suppressedReason:
+          type: string
+          enum: [DESTINATION_NOT_SUPPORTED]
+    DistanceRequest:
+      type: object
+      required: [origin, destination, allowedZoneCodes]
+      properties:
+        origin:
+          $ref: "#/components/schemas/Address"
+        destination:
+          $ref: "#/components/schemas/Address"
+        allowedZoneCodes:
+          type: array
+          minItems: 1
+          items:
+            type: string
+    Coordinate:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude:
+          type: number
+        longitude:
+          type: number
+    DistanceResponse:
+      type: object
+      required: [enriched]
+      properties:
+        enriched:
+          type: boolean
+        destination:
+          $ref: "#/components/schemas/Coordinate"
+        distanceKm:
+          type: number
+        suppressedReason:
+          type: string
+          enum: [DESTINATION_ZONE_NOT_ALLOWED, DESTINATION_POSTAL_CODE_MISSING, GEOCODING_UNAVAILABLE]
+    IpGeolocationRequest:
+      type: object
+      required: [ipAddress]
+      properties:
+        ipAddress:
+          type: string
+          oneOf:
+            - type: string
+              format: ipv4
+            - type: string
+              format: ipv6
+    IpGeolocationResponse:
+      type: object
+      required: [resolved, countryCode, postalCode, zoneCode, city]
+      properties:
+        resolved:
+          type: boolean
+        countryCode:
+          type: [string, "null"]
+        postalCode:
+          type: [string, "null"]
+        zoneCode:
+          type: [string, "null"]
+        city:
+          type: [string, "null"]
+    UploadFileRequest:
+      type: object
+      required: [storeCode, contentType, fileName, mimeType, contentBase64, idempotencyKey]
+      properties:
+        storeCode:
+          type: string
+          minLength: 1
+        contentType:
+          $ref: "#/components/schemas/ContentType"
+        folderPath:
+          type: string
+        fileName:
+          type: string
+          minLength: 1
+        mimeType:
+          type: string
+          minLength: 1
+        contentBase64:
+          type: string
+          format: byte
+        idempotencyKey:
+          type: string
+          minLength: 1
+          maxLength: 256
+    UploadFileItem:
+      type: object
+      required: [contentType, fileName, mimeType, contentBase64]
+      properties:
+        contentType:
+          $ref: "#/components/schemas/ContentType"
+        fileName:
+          type: string
+          minLength: 1
+        mimeType:
+          type: string
+          minLength: 1
+        contentBase64:
+          type: string
+          format: byte
+    BatchUploadFileRequest:
+      type: object
+      required: [storeCode, idempotencyKey, files]
+      properties:
+        storeCode:
+          type: string
+          minLength: 1
+        folderPath:
+          type: string
+        idempotencyKey:
+          type: string
+          minLength: 1
+          maxLength: 256
+        files:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/UploadFileItem"
+    FileStatus:
+      type: string
+      enum: [Available, Pending, Failed]
+    FileAsset:
+      type: object
+      required: [fileName, contentType, mimeType, providerKey, status]
+      properties:
+        operationId:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+        contentType:
+          $ref: "#/components/schemas/ContentType"
+        mimeType:
+          type: string
+        providerKey:
+          type: string
+        status:
+          $ref: "#/components/schemas/FileStatus"
+        deliveryAttemptId:
+          type: string
+          format: uuid
+    UploadedFileAsset:
+      allOf:
+        - $ref: "#/components/schemas/FileAsset"
+        - type: object
+          required: [operationId, deliveryAttemptId]
+          properties:
+            operationId:
+              type: string
+              format: uuid
+            deliveryAttemptId:
+              type: string
+              format: uuid
+    FileContentResponse:
+      type: object
+      required: [fileName, contentType, mimeType, providerKey, contentBase64]
+      properties:
+        fileName:
+          type: string
+        contentType:
+          $ref: "#/components/schemas/ContentType"
+        mimeType:
+          type: string
+        providerKey:
+          type: string
+        contentBase64:
+          type: string
+          format: byte
+    FileListResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/FileAsset"
+        pagination:
+          $ref: "#/components/schemas/PaginationInfo"
+    FileBatchResponse:
+      type: object
+      required: [operationId, items, acceptedCount, failedCount]
+      properties:
+        operationId:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/UploadedFileAsset"
+        acceptedCount:
+          type: integer
+          minimum: 0
+        failedCount:
+          type: integer
+          minimum: 0
+    FolderRequest:
+      type: object
+      required: [storeCode, provider, folderName]
+      properties:
+        storeCode:
+          type: string
+        provider:
+          $ref: "#/components/schemas/StorageProvider"
+        folderPath:
+          type: string
+        folderName:
+          type: string
+          minLength: 1
+    FolderResponse:
+      type: object
+      required: [path, provider, capability, status]
+      properties:
+        path:
+          type: string
+        provider:
+          $ref: "#/components/schemas/StorageProvider"
+        capability:
+          type: string
+          enum: [CreateFolder, DeleteFolder, ListFolder]
+        status:
+          type: string
+          enum: [Created, Deleted]
+    FolderListResponse:
+      type: object
+      required: [items, provider]
+      properties:
+        items:
+          type: array
+          items:
+            type: string
+        provider:
+          $ref: "#/components/schemas/StorageProvider"
+    QueueEmailRequest:
+      type: object
+      required: [idempotencyKey, templateKey, locale, recipientEmail, senderEmail, subject, tokenPayload]
+      properties:
+        idempotencyKey:
+          type: string
+          minLength: 1
+          maxLength: 256
+        templateKey:
+          type: string
+          minLength: 1
+        locale:
+          type: string
+          minLength: 2
+        recipientEmail:
+          type: string
+          format: email
+        senderEmail:
+          type: string
+          format: email
+        senderName:
+          type: string
+        subject:
+          type: string
+          minLength: 1
+        tokenPayload:
+          type: object
+          additionalProperties: true
+        orderReference:
+          type: string
+    EmailMessageStatus:
+      type: string
+      enum: [Queued, Rendered, Succeeded, Failed, DeadLettered]
+    EmailMessage:
+      type: object
+      required: [messageId, operationId, endpointId, idempotencyKey, templateKey, locale, recipientEmail, senderEmail, subject, status, queuedAt]
+      properties:
+        messageId:
+          type: string
+          format: uuid
+        operationId:
+          type: string
+          format: uuid
+        endpointId:
+          type: string
+          format: uuid
+        idempotencyKey:
+          type: string
+        templateKey:
+          type: string
+        locale:
+          type: string
+        recipientEmail:
+          type: string
+          format: email
+        senderEmail:
+          type: string
+          format: email
+        senderName:
+          type: string
+        subject:
+          type: string
+        status:
+          $ref: "#/components/schemas/EmailMessageStatus"
+        orderReference:
+          type: string
+        queuedAt:
+          type: string
+          format: date-time
+        sentAt:
+          type: string
+          format: date-time
+    DeliveryOperationStatus:
+      type: string
+      enum: [Received, Queued, InProgress, Succeeded, Failed, DeadLettered]
+    DeliveryOperation:
+      type: object
+      required: [operationId, operationType, idempotencyKey, requestHash, itemCount, status, createdAt, updatedAt]
+      properties:
+        operationId:
+          type: string
+          format: uuid
+        operationType:
+          type: string
+          enum: [Email, StorageUpload, StorageBatchUpload]
+        idempotencyKey:
+          type: string
+        requestHash:
+          type: string
+        itemCount:
+          type: integer
+        status:
+          $ref: "#/components/schemas/DeliveryOperationStatus"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+    DeliveryAttemptStatus:
+      type: string
+      enum: [Pending, Started, Succeeded, Failed, DeadLettered]
+    DeliveryAttempt:
+      type: object
+      required: [attemptId, operationId, endpointId, operationItemKey, attemptNumber, status, createdAt, updatedAt]
+      properties:
+        attemptId:
+          type: string
+          format: uuid
+        operationId:
+          type: string
+          format: uuid
+        endpointId:
+          type: string
+          format: uuid
+        messageId:
+          type: string
+          format: uuid
+        operationItemKey:
+          type: string
+        attemptNumber:
+          type: integer
+        status:
+          $ref: "#/components/schemas/DeliveryAttemptStatus"
+        providerRequestRef:
+          type: string
+        providerOutcomeCode:
+          type: string
+        providerErrorCode:
+          type: string
+        providerErrorMessage:
+          type: string
+        nextAttemptAt:
+          type: string
+          format: date-time
+        attemptedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        replayOfAttemptId:
+          type: string
+          format: uuid
+        outboxEventId:
+          type: string
+          format: uuid
+        deadLetteredAt:
+          type: string
+          format: date-time
+    ReplayRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+    OutboxEvent:
+      type: object
+      required: [eventId, operationId, eventType, aggregateType, aggregateId, payload, status, availableAt]
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        operationId:
+          type: string
+          format: uuid
+        eventType:
+          type: string
+        aggregateType:
+          type: string
+        aggregateId:
+          type: string
+          format: uuid
+        payload:
+          type: object
+          additionalProperties: true
+        status:
+          type: string
+          enum: [Pending, Published, Failed]
+        availableAt:
+          type: string
+          format: date-time
+        publishedAt:
+          type: string
+          format: date-time
+    EventMetadata:
+      type: object
+      required: [eventId, eventType, occurredAt, tenantId, storeId, correlationId]
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        eventType:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
+        tenantId:
+          type: string
+        storeId:
+          type: string
+        correlationId:
+          type: string
+    BusinessIntegrationDeliveryRequested:
+      allOf:
+        - $ref: "#/components/schemas/EventMetadata"
+        - type: object
+          required: [idempotencyKey, deliveryType, endpointCode, payload]
+          properties:
+            idempotencyKey:
+              type: string
+            deliveryType:
+              type: string
+              enum: [Email, StorageUpload, StorageBatchUpload]
+            endpointCode:
+              type: string
+            businessReference:
+              type: string
+            payload:
+              type: object
+              additionalProperties: true
+    ConfigurationReferenceChanged:
+      allOf:
+        - $ref: "#/components/schemas/EventMetadata"
+        - type: object
+          required: [moduleType, code, environment, configurationRef, version]
+          properties:
+            moduleType:
+              $ref: "#/components/schemas/IntegrationType"
+            code:
+              type: string
+            environment:
+              type: string
+            configurationRef:
+              type: string
+            version:
+              type: string
+    IntegrationDeliveryQueued:
+      allOf:
+        - $ref: "#/components/schemas/EventMetadata"
+        - type: object
+          required: [operationId, attemptId, endpointId, idempotencyKey, availableAt, requestPayload]
+          properties:
+            operationId:
+              type: string
+              format: uuid
+            attemptId:
+              type: string
+              format: uuid
+            endpointId:
+              type: string
+              format: uuid
+            idempotencyKey:
+              type: string
+            availableAt:
+              type: string
+              format: date-time
+            requestPayload:
+              type: object
+              additionalProperties: true
+    IntegrationDeliveryReplayRequested:
+      allOf:
+        - $ref: "#/components/schemas/EventMetadata"
+        - type: object
+          required: [originalAttemptId, reason]
+          properties:
+            originalAttemptId:
+              type: string
+              format: uuid
+            reason:
+              type: string
+    IntegrationDeliveryDeadLettered:
+      allOf:
+        - $ref: "#/components/schemas/EventMetadata"
+        - type: object
+          required: [operationId, attemptId, endpointId, idempotencyKey, attemptNumber, deadLetteredAt]
+          properties:
+            operationId:
+              type: string
+              format: uuid
+            attemptId:
+              type: string
+              format: uuid
+            messageId:
+              type: string
+              format: uuid
+            endpointId:
+              type: string
+              format: uuid
+            idempotencyKey:
+              type: string
+            attemptNumber:
+              type: integer
+            providerErrorCode:
+              type: string
+            providerErrorMessage:
+              type: string
+            deadLetteredAt:
+              type: string
+              format: date-time
+    PaginationInfo:
+      type: object
+      required: [page, pageSize, totalItems, totalPages]
+      properties:
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalItems:
+          type: integer
+        totalPages:
+          type: integer
+    ErrorResponse:
+      type: object
+      required: [error, message, statusCode, timestamp]
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        statusCode:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+        correlationId:
+          type: string
+        fields:
+          type: array
+          items:
+            type: string
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: State or idempotency conflict
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    UnprocessableEntity:
+      description: Domain validation failure
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotImplemented:
+      description: Provider capability is unsupported
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    BadGateway:
+      description: External provider failure
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ServiceUnavailable:
+      description: External provider unavailable
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InternalError:
+      description: Internal service failure
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"

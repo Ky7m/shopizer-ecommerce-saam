@@ -53,7 +53,7 @@ def _br_id_regex() -> str:
     """Read the BR-ID pattern from the single source of truth (saam-calibration.yaml → br_id_pattern).
     NEVER hardcode a divergent pattern. Falls back to the widened union pattern (group segment optional,
     admits both BR-AP-001 and BR-GL-PST-001) only if calibration is unreadable."""
-    fallback = r"BR-[A-Z]{2,6}(?:-[A-Z]{2,6})?-[0-9]{2,3}"
+    fallback = r"BR-[A-Z0-9]{2,6}(?:-[A-Z0-9]{2,6})?-[0-9]{2,3}"
     ws_root = Path(__file__).resolve().parent.parent.parent
     try:
         for candidate in (
