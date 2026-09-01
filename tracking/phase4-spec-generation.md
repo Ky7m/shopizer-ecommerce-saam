@@ -6,11 +6,11 @@
 | Metric | Value |
 |--------|-------|
 | Total tasks | 12 |
-| Completed | 7 |
+| Completed | 8 |
 | In progress | 0 |
 | Blocked | 0 |
 | Started | 2026-09-01T12:52:17+04:00 |
-| Last updated | 2026-09-01T16:16:00+04:00 |
+| Last updated | 2026-09-01T16:49:52+04:00 |
 
 ## Tasks
 
@@ -25,7 +25,7 @@
 | 5 | Generate Pricing and Promotions specification (MS-07) | DONE | — | Agent | 2026-09-01T15:05:00+04:00 — 13 rules, 5 tables, 13 endpoint methods, OpenAPI 3.1 contract; graph import/check passed |
 | 6 | Generate Tax specification (MS-08) | DONE | — | Agent | 2026-09-01T15:45:00+04:00 — 20 rules, 6 tables, 15 endpoint methods, OpenAPI 3.1 contract; graph import/check passed |
 | 7 | Generate Shipping specification (MS-09) | DONE | — | Agent | 2026-09-01T16:16:00+04:00 — 24 rules, 2 tables, 16 endpoint methods, OpenAPI 3.1 contract; graph import/check passed |
-| 8 | Generate Cart and Checkout specification (MS-04) | PENDING | — | Agent | Consumes customer, catalog, pricing, tax, and shipping contracts |
+| 8 | Generate Cart and Checkout specification (MS-04) | DONE | — | Agent | 2026-09-01T16:49:52+04:00 — 20 rules, 10 tables, 17 endpoint methods, OpenAPI 3.1 contract; graph import/check passed |
 | 9 | Generate Payments specification (MS-06) | PENDING | — | Agent | Provider/external boundary for order payment state |
 | 10 | Generate Order Management specification (MS-05) | PENDING | — | Agent | Consumes checkout and payment events |
 | 11 | Generate Content and Configuration specification (MS-11) | PENDING | — | Agent | Depends on store scope; publishes content/configuration events |

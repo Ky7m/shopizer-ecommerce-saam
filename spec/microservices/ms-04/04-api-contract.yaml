@@ -1,0 +1,1493 @@
+openapi: "3.1.0"
+info:
+  title: Cart and Checkout API
+  version: "1.0.0"
+  description: |
+    API contract for MS-04 Cart and Checkout.
+    This contract is the single authority for endpoint paths, field names,
+    request bodies, response bodies, and status codes.
+servers:
+  - url: http://localhost:{port}/api/v1
+    variables:
+      port:
+        default: "8084"
+
+x-naming-conventions:
+  fieldNaming: camelCase
+  endpointNaming: kebab-case
+  headerNaming: kebab-case
+  enumValues: PascalCase
+  queryParams: camelCase
+
+x-global-headers:
+  - name: x-tenant-id
+    required: true
+    description: Tenant isolation identifier
+    testValue: tenant-001
+  - name: x-store-id
+    required: true
+    description: Store isolation identifier
+    testValue: store-001
+  - name: x-correlation-id
+    required: true
+    description: Distributed tracing identifier
+    testValue: 00000000-0000-0000-0000-000000000001
+
+paths:
+  /cart:
+    post:
+      operationId: createOrAddCartItem
+      summary: Create a cart or add an item to a new anonymous cart
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddCartItemRequest"
+      responses:
+        "201":
+          description: Cart created or item added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CartEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /cart/{code}:
+    parameters:
+      - $ref: "#/components/parameters/CartCode"
+    get:
+      operationId: getCart
+      summary: Retrieve and hydrate a cart
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+      responses:
+        "200":
+          description: Hydrated cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CartEnvelope"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    put:
+      operationId: updateCartItem
+      summary: Replace one cart line quantity
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCartItemRequest"
+      responses:
+        "200":
+          description: Updated cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CartEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /cart/{code}/multi:
+    parameters:
+      - $ref: "#/components/parameters/CartCode"
+    post:
+      operationId: updateMultipleCartItems
+      summary: Apply partial changes to multiple cart lines
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              minItems: 1
+              items:
+                $ref: "#/components/schemas<MultiCartItemRequest>"
+      responses:
+        "200":
+          description: Updated cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CartEnvelope"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /cart/{code}/promo/{promoCode}:
+    parameters:
+      - $ref: "#/components/parameters/CartCode"
+      - $ref: "#/components/parameters/PromoCode"
+    post:
+      operationId: applyCartPromotion
+      summary: Store a promotion code and recalculate the cart
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+      responses:
+        "200":
+          description: Cart with promotion state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CartEnvelope"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /cart/{code}/product/{sku}:
+    parameters:
+      - $ref: "#/components/parameters/CartCode"
+      - $ref: "#/components/parameters/Sku"
+    delete:
+      operationId: removeCartItem
+      summary: Remove a product line and its selected attributes
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/ReturnCart"
+      responses:
+        "200":
+          description: Remaining cart when body=true
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CartEnvelope"
+        "204":
+          description: Item removed with no response body
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /customers/{id}/cart:
+    parameters:
+      - $ref: "#/components/parameters/CustomerId"
+    post:
+      operationId: deprecatedCustomerCartAdd
+      summary: Deprecated customer-ID cart endpoint
+      deprecated: true
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddCartItemRequest"
+      responses:
+        "410":
+          description: Endpoint is no longer supported
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /auth/customer/{id}/cart:
+    parameters:
+      - $ref: "#/components/parameters/CustomerId"
+    get:
+      operationId: getAuthenticatedCustomerCartById
+      summary: Deprecated authenticated customer-ID cart lookup
+      deprecated: true
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/OptionalCartCode"
+      responses:
+        "200":
+          description: Customer cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CartEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /auth/customer/cart:
+    get:
+      operationId: getAuthenticatedCustomerCart
+      summary: Retrieve the authenticated customer's cart
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/OptionalCartCode"
+      responses:
+        "200":
+          description: Customer cart
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CartEnvelope"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /auth/cart/{code}/checkout:
+    parameters:
+      - $ref: "#/components/parameters/CartCode"
+    post:
+      operationId: submitAuthenticatedCheckout
+      summary: Freeze and submit an authenticated checkout
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthenticatedCheckoutRequest"
+      responses:
+        "202":
+          description: Checkout accepted for downstream processing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutSubmissionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /cart/{code}/checkout:
+    parameters:
+      - $ref: "#/components/parameters/CartCode"
+    post:
+      operationId: submitAnonymousCheckout
+      summary: Freeze and submit an anonymous checkout
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnonymousCheckoutRequest"
+      responses:
+        "202":
+          description: Checkout accepted for downstream processing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckoutSubmissionResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /auth/cart/{code}/shipping:
+    parameters:
+      - $ref: "#/components/parameters/CartCode"
+    get:
+      operationId: getAuthenticatedShippingOptions
+      summary: Calculate shipping options using the authenticated customer's address
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+      responses:
+        "200":
+          description: Shipping options
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShippingSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /cart/{code}/shipping:
+    parameters:
+      - $ref: "#/components/parameters/CartCode"
+    post:
+      operationId: calculateAnonymousShippingOptions
+      summary: Calculate shipping options from a postal and country address
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShippingAddressRequest"
+      responses:
+        "200":
+          description: Shipping options
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShippingSummary"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /auth/cart/{id}/total:
+    parameters:
+      - $ref: "#/components/parameters/CartId"
+    get:
+      operationId: calculateAuthenticatedCartTotal
+      summary: Calculate totals for an authenticated customer's cart
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/OptionalQuoteId"
+      responses:
+        "200":
+          description: Calculated totals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TotalSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /cart/{code}/total:
+    parameters:
+      - $ref: "#/components/parameters/CartCode"
+    get:
+      operationId: calculateCartTotal
+      summary: Calculate totals for a cart
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/OptionalQuoteId"
+      responses:
+        "200":
+          description: Calculated totals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TotalSummary"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /auth/cart/{code}/payment/init:
+    parameters:
+      - $ref: "#/components/parameters/CartCode"
+    post:
+      operationId: initializeAuthenticatedPayment
+      summary: Initialize payment handoff for an authenticated cart
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentInitializationRequest"
+      responses:
+        "202":
+          description: Payment initialization accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentInitializationResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+  /cart/{code}/payment/init:
+    parameters:
+      - $ref: "#/components/parameters/CartCode"
+    post:
+      operationId: initializePayment
+      summary: Initialize payment handoff for a cart
+      parameters:
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/StoreId"
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentInitializationRequest"
+      responses:
+        "202":
+          description: Payment initialization accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentInitializationResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+
+components:
+  parameters:
+    TenantId:
+      name: x-tenant-id
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+    StoreId:
+      name: x-store-id
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CorrelationId:
+      name: x-correlation-id
+      in: header
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Authorization:
+      name: Authorization
+      in: header
+      required: true
+      schema:
+        type: string
+    IdempotencyKey:
+      name: idempotency-key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 255
+    CartCode:
+      name: code
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+    CartId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    CustomerId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
+    PromoCode:
+      name: promoCode
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+    Sku:
+      name: sku
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+    ReturnCart:
+      name: body
+      in: query
+      required: false
+      schema:
+        type: boolean
+        default: false
+    OptionalCartCode:
+      name: cart
+      in: query
+      required: false
+      schema:
+        type: string
+    OptionalQuoteId:
+      name: quote
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    AddCartItemRequest:
+      type: object
+      required:
+        - product
+        - quantity
+      properties:
+        product:
+          type: string
+          minLength: 1
+        quantity:
+          type: integer
+          minimum: 1
+        attributes:
+          type: array
+          items:
+            $ref: "#/components/schemas/CartAttributeReference"
+        promoCode:
+          type: string
+
+    UpdateCartItemRequest:
+      type: object
+      required:
+        - product
+        - quantity
+      properties:
+        product:
+          type: string
+        quantity:
+          type: integer
+          minimum: 0
+        attributes:
+          type: array
+          items:
+            $ref: "#/components/schemas/CartAttributeReference"
+        promoCode:
+          type: string
+
+    MultiCartItemRequest:
+      type: object
+      required:
+        - product
+        - quantity
+      properties:
+        product:
+          type: string
+        quantity:
+          type: integer
+          minimum: 0
+        attributes:
+          type: array
+          items:
+            $ref: "#/components/schemas/CartAttributeReference"
+
+    CartAttributeReference:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: integer
+          format: int64
+
+    AuthenticatedCheckoutRequest:
+      type: object
+      required:
+        - currency
+        - payment
+        - customerAgreement
+      properties:
+        currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+        shippingQuoteId:
+          type: string
+          format: uuid
+        payment:
+          $ref: "#/components/schemas/PaymentRequest"
+        comments:
+          type: string
+        customerAgreement:
+          type: boolean
+
+    AnonymousCheckoutRequest:
+      type: object
+      required:
+        - currency
+        - customer
+        - payment
+        - customerAgreement
+      properties:
+        currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+        customer:
+          $ref: "#/components/schemas/AnonymousCustomer"
+        shippingQuoteId:
+          type: string
+          format: uuid
+        payment:
+          $ref: "#/components/schemas/PaymentRequest"
+        comments:
+          type: string
+        customerAgreement:
+          type: boolean
+
+    AnonymousCustomer:
+      type: object
+      required:
+        - email
+        - firstName
+        - lastName
+        - billing
+      properties:
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        password:
+          type: string
+          format: password
+        repeatPassword:
+          type: string
+          format: password
+        billing:
+          $ref: "#/components/schemas/Address"
+
+    PaymentRequest:
+      type: object
+      required:
+        - amount
+        - paymentModule
+        - paymentType
+        - transactionType
+        - paymentToken
+      properties:
+        amount:
+          type: string
+          pattern: "^[0-9]+(\\.[0-9]{1,4})?$"
+        paymentModule:
+          type: string
+        paymentType:
+          type: string
+          enum:
+            - CREDITCARD
+            - PAYPAL
+            - MONEYORDER
+        transactionType:
+          type: string
+          enum:
+            - INIT
+            - AUTHORIZE
+            - AUTHORIZECAPTURE
+        paymentToken:
+          type: string
+          minLength: 1
+
+    ShippingAddressRequest:
+      type: object
+      required:
+        - postalCode
+        - countryCode
+      properties:
+        postalCode:
+          type: string
+        countryCode:
+          type: string
+          minLength: 2
+          maxLength: 2
+
+    CartEnvelope:
+      type: object
+      required:
+        - cart
+      properties:
+        cart:
+          $ref: "#/components/schemas/Cart"
+
+    Cart:
+      type: object
+      required:
+        - id
+        - code
+        - status
+        - items
+        - currency
+      properties:
+        id:
+          type: string
+        code:
+          type: string
+        tenantId:
+          type: string
+          format: uuid
+        storeId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+        status:
+          type: string
+          enum:
+            - Open
+            - Completed
+            - Obsolete
+        submittedOrderId:
+          type: string
+          format: uuid
+        promoCode:
+          type: string
+        promoAddedAt:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CartItem"
+        subTotal:
+          type: string
+        total:
+          type: string
+        currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+
+    CartItem:
+      type: object
+      required:
+        - id
+        - sku
+        - quantity
+        - unitPrice
+        - subTotal
+        - attributes
+      properties:
+        id:
+          type: string
+        productId:
+          type: integer
+          format: int64
+        sku:
+          type: string
+        variantId:
+          type: integer
+          format: int64
+        quantity:
+          type: integer
+          minimum: 1
+        unitPrice:
+          type: string
+        subTotal:
+          type: string
+        obsolete:
+          type: boolean
+        attributes:
+          type: array
+          items:
+            $ref: "#/components/schemas/CartAttributeReference"
+
+    ShippingSummary:
+      type: object
+      required:
+        - shippingRequired
+        - options
+      properties:
+        quoteId:
+          type: string
+          format: uuid
+        expiresAt:
+          type: string
+          format: date-time
+        shippingRequired:
+          type: boolean
+        delivery:
+          $ref: "#/components/schemas/Address"
+        shipping:
+          type: string
+        handling:
+          type: string
+        shippingModule:
+          type: string
+        shippingOption:
+          type: string
+        shippingOptionCode:
+          type: string
+        freeShipping:
+          type: boolean
+        taxOnShipping:
+          type: boolean
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShippingOption"
+
+    ShippingOption:
+      type: object
+      required:
+        - code
+        - price
+        - currency
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        price:
+          type: string
+        currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+
+    Address:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - address
+        - city
+        - countryCode
+        - postalCode
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        company:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        stateProvince:
+          type: string
+        countryCode:
+          type: string
+        postalCode:
+          type: string
+        phone:
+          type: string
+
+    TotalSummary:
+      type: object
+      required:
+        - cartCode
+        - currency
+        - subTotal
+        - discountTotal
+        - shipping
+        - handling
+        - tax
+        - grandTotal
+        - components
+      properties:
+        cartCode:
+          type: string
+        currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+        subTotal:
+          type: string
+        discountTotal:
+          type: string
+        shipping:
+          type: string
+        handling:
+          type: string
+        tax:
+          type: string
+        grandTotal:
+          type: string
+        quoteVersion:
+          type: integer
+          format: int64
+        components:
+          type: array
+          items:
+            $ref: "#/components/schemas/TotalComponent"
+
+    TotalComponent:
+      type: object
+      required:
+        - code
+        - amount
+      properties:
+        code:
+          type: string
+        amount:
+          type: string
+        title:
+          type: string
+        kind:
+          type: string
+
+    CheckoutSubmissionResponse:
+      type: object
+      required:
+        - submissionId
+        - state
+      properties:
+        submissionId:
+          type: string
+          format: uuid
+        checkoutSessionId:
+          type: string
+          format: uuid
+        state:
+          type: string
+          enum:
+            - Pending
+            - Submitted
+            - Acknowledged
+            - Failed
+        amount:
+          type: string
+        currency:
+          type: string
+        eventId:
+          type: string
+          format: uuid
+        downstream:
+          type: object
+          additionalProperties:
+            type: string
+
+    PaymentInitializationRequest:
+      type: object
+      required:
+        - amount
+        - paymentModule
+        - paymentType
+        - transactionType
+        - paymentToken
+      properties:
+        amount:
+          type: string
+        paymentModule:
+          type: string
+        paymentType:
+          type: string
+        transactionType:
+          type: string
+        paymentToken:
+          type: string
+
+    PaymentInitializationResponse:
+      type: object
+      required:
+        - submissionId
+        - paymentState
+        - amount
+        - currency
+      properties:
+        submissionId:
+          type: string
+          format: uuid
+        paymentState:
+          type: string
+          enum:
+            - Pending
+            - Failed
+        providerReference:
+          type: string
+        amount:
+          type: string
+        currency:
+          type: string
+          pattern: "^[A-Z]{3}$"
+
+    CheckoutSession:
+      type: object
+      required:
+        - checkoutSessionId
+        - cartId
+        - state
+        - currencyCode
+        - expiresAt
+      properties:
+        checkoutSessionId:
+          type: string
+          format: uuid
+        cartId:
+          type: integer
+          format: int64
+        customerId:
+          type: integer
+          format: int64
+        tenantId:
+          type: string
+          format: uuid
+        storeId:
+          type: string
+          format: uuid
+        state:
+          type: string
+        cartVersion:
+          type: integer
+          format: int64
+        currencyCode:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+        submittedAt:
+          type: string
+          format: date-time
+        failureCode:
+          type: string
+
+    CheckoutLineSnapshot:
+      type: object
+      required:
+        - checkoutLineSnapshotId
+        - checkoutSessionId
+        - lineNumber
+        - sku
+        - productName
+        - quantity
+        - unitPrice
+        - lineSubTotal
+        - productId
+        - attributes
+      properties:
+        checkoutLineSnapshotId:
+          type: string
+          format: uuid
+        checkoutSessionId:
+          type: string
+          format: uuid
+        lineNumber:
+          type: integer
+        sku:
+          type: string
+        productName:
+          type: string
+        quantity:
+          type: integer
+        unitPrice:
+          type: string
+        lineSubTotal:
+          type: string
+        productId:
+          type: integer
+          format: int64
+        variantId:
+          type: integer
+          format: int64
+        isVirtual:
+          type: boolean
+        attributes:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+
+    CheckoutTotalSnapshot:
+      type: object
+      required:
+        - checkoutTotalSnapshotId
+        - checkoutSessionId
+        - currencyCode
+        - subTotal
+        - discountTotal
+        - shippingTotal
+        - handlingTotal
+        - taxTotal
+        - grandTotal
+        - inputHash
+        - quotedAt
+      properties:
+        checkoutTotalSnapshotId:
+          type: string
+          format: uuid
+        checkoutSessionId:
+          type: string
+          format: uuid
+        currencyCode:
+          type: string
+        subTotal:
+          type: string
+        discountTotal:
+          type: string
+        shippingTotal:
+          type: string
+        handlingTotal:
+          type: string
+        taxTotal:
+          type: string
+        grandTotal:
+          type: string
+        inputHash:
+          type: string
+        quotedAt:
+          type: string
+          format: date-time
+        pricingVersion:
+          type: string
+        taxVersion:
+          type: string
+        shippingVersion:
+          type: string
+
+    CheckoutSubmission:
+      type: object
+      required:
+        - submissionId
+        - checkoutSessionId
+        - tenantId
+        - storeId
+        - currencyCode
+        - amount
+        - paymentModule
+        - paymentType
+        - state
+      properties:
+        submissionId:
+          type: string
+          format: uuid
+        checkoutSessionId:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        storeId:
+          type: string
+          format: uuid
+        currencyCode:
+          type: string
+        amount:
+          type: string
+        paymentModule:
+          type: string
+        paymentType:
+          type: string
+        state:
+          type: string
+        orderReference:
+          type: string
+          format: uuid
+        paymentReference:
+          type: string
+          format: uuid
+        inventoryReservationReference:
+          type: string
+          format: uuid
+
+    CheckoutIdempotencyKey:
+      type: object
+      required:
+        - idempotencyRecordId
+        - tenantId
+        - storeId
+        - cartId
+        - operation
+        - idempotencyKey
+        - requestHash
+        - state
+      properties:
+        idempotencyRecordId:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        storeId:
+          type: string
+          format: uuid
+        customerId:
+          type: integer
+          format: int64
+        cartId:
+          type: integer
+          format: int64
+        operation:
+          type: string
+        idempotencyKey:
+          type: string
+        requestHash:
+          type: string
+        state:
+          type: string
+        originalStatus:
+          type: integer
+        originalResponse:
+          type: object
+          additionalProperties: true
+
+    CartQuoteReference:
+      type: object
+      required:
+        - quoteReferenceId
+        - tenantId
+        - storeId
+        - cartId
+        - quoteKind
+        - providerQuoteReference
+        - expiresAt
+      properties:
+        quoteReferenceId:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        storeId:
+          type: string
+          format: uuid
+        checkoutSessionId:
+          type: string
+          format: uuid
+        cartId:
+          type: integer
+          format: int64
+        quoteKind:
+          type: string
+          enum:
+            - Pricing
+            - Promotion
+            - Tax
+            - Shipping
+        providerQuoteReference:
+          type: string
+        providerVersion:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+
+    Ms04OutboxEvent:
+      type: object
+      required:
+        - eventId
+        - tenantId
+        - storeId
+        - aggregateId
+        - eventType
+        - payload
+        - state
+        - attemptCount
+        - occurredAt
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        storeId:
+          type: string
+          format: uuid
+        aggregateId:
+          type: string
+          format: uuid
+        eventType:
+          type: string
+        payload:
+          type: object
+          additionalProperties: true
+        state:
+          type: string
+        attemptCount:
+          type: integer
+        occurredAt:
+          type: string
+          format: date-time
+        publishedAt:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+        - statusCode
+        - timestamp
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        statusCode:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+        correlationId:
+          type: string
+          format: uuid
+        details:
+          type: object
+          additionalProperties: true
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: Scope or authorization failure
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Resource not found in tenant/store scope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: State, amount, quote, or idempotency conflict
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    UnprocessableEntity:
+      description: Business validation failure
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    ServiceUnavailable:
+      description: Required downstream or durable persistence service unavailable
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
