@@ -91,7 +91,7 @@ def _source_ref_stem(source_ref):
     ref = str(source_ref).strip()
     if not ref or ref.lower() in ("n/a", "none", "greenfield"):
         return None
-    first = ref.split(":", 1)[0].strip()
+    first = ref.split(":", 1)[0].strip().strip("`")
     first = Path(first).stem            # drop file extension
     if "." in first:                    # drop schema prefix (dbo.bspFoo -> bspFoo)
         first = first.split(".")[-1]
@@ -213,8 +213,14 @@ def parse_tables(service_dir: Path) -> list[dict]:
     content = ddl_file.read_text()
     tables = []
 
-    # Find CREATE TABLE statements
-    for match in re.finditer(r'CREATE TABLE\s+(?:IF NOT EXISTS\s+)?["\']?(\w+)["\']?\s*\(', content, re.IGNORECASE):
+    # Find CREATE TABLE statements. PostgreSQL specs commonly use schema-qualified
+    # names; retain the qualified name so ownership remains unambiguous.
+    for match in re.finditer(
+        r'CREATE TABLE\s+(?:IF NOT EXISTS\s+)?["\']?'
+        r'([A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)?)["\']?\s*\(',
+        content,
+        re.IGNORECASE,
+    ):
         table_name = match.group(1)
         tables.append({"name": table_name})
 
@@ -774,7 +780,12 @@ def main():
                     "MATCH (sc:SourceComponent) WHERE coalesce(sc.businessLayer,true)=true RETURN count(sc) AS n"
                 ).single()["n"]
                 orphan = session.run(
-                    "MATCH (br:BusinessRule) WHERE NOT (br)-[:EXTRACTED_FROM]->() RETURN count(br) AS n"
+                    "MATCH (br:BusinessRule)-[:ASSIGNED_TO]->(s:Service) "
+                    "WHERE s.name IN $services "
+                    "AND trim(coalesce(br.sourceRef, '')) <> '' "
+                    "AND NOT (br)-[:EXTRACTED_FROM]->() "
+                    "RETURN count(DISTINCT br) AS n",
+                    services=services,
                 ).single()["n"]
             cov = (after_extracted / biz * 100) if biz else 0
             print("\n=== IMPORT SELF-CHECK ===")
@@ -782,11 +793,10 @@ def main():
                   f"(delta {after_extracted - before_extracted})")
             print(f"  Coverage (extracted / businessLayer): {after_extracted}/{biz} = {cov:.1f}%")
             print(f"  BusinessRules without EXTRACTED_FROM: {orphan} (greenfield rules are expected here)")
-            if total > 0 and after_extracted <= before_extracted:
-                print("  FAIL: extracted-flip did NOT move — the SourceComponent-linking half was not "
-                      "written (the silent-disconnect bug). Likely a Source Reference format drift the "
-                      "resolver missed. FIX the resolver in this script (_source_ref_stem / the match "
-                      "query) and re-run — do NOT hand-edit the graph or fall back to a partial importer.",
+            if orphan > 0:
+                print("  FAIL: source-backed rules are missing EXTRACTED_FROM edges — the "
+                      "SourceComponent-linking half is incomplete. Fix the resolver or the source "
+                      "reference format and re-run; do NOT hand-edit the graph or use a partial importer.",
                       file=sys.stderr)
                 success = False
 

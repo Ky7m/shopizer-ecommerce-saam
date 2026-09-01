@@ -1,0 +1,941 @@
+openapi: 3.1.0
+info:
+  title: Customer and Identity API
+  version: 1.0.0
+  description: |
+    Implementation contract for MS-01 Customer and Identity on port 8101.
+    This contract is the naming authority for Phase 4c tests and Phase 5 code generation.
+servers:
+  - url: http://localhost:8101/api/v1
+x-naming-conventions:
+  fieldNaming: camelCase
+  endpointNaming: kebab-case
+  headerNaming: kebab-case
+  enumValues: PascalCase
+  queryParams: camelCase
+x-global-headers:
+  - name: Authorization
+    required: false
+    description: Bearer access token for protected operations.
+    testValue: Bearer test-token
+  - name: x-tenant-id
+    required: true
+    description: Tenant context propagated from the gateway.
+    testValue: tenant-demo
+  - name: x-store-id
+    required: true
+    description: Store scope validated through MS-10.
+    testValue: default
+  - name: x-correlation-id
+    required: true
+    description: Distributed tracing and idempotency correlation context.
+    testValue: 00000000-0000-0000-0000-000000000001
+paths:
+  /customers:
+    parameters:
+      - $ref: '#/components/parameters/Authorization'
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+    get:
+      operationId: listCustomers
+      summary: List store-scoped customers
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: name
+          in: query
+          schema: { type: string }
+        - name: email
+          in: query
+          schema: { type: string, format: email }
+        - name: firstName
+          in: query
+          schema: { type: string }
+        - name: lastName
+          in: query
+          schema: { type: string }
+        - name: countryCode
+          in: query
+          schema: { type: string }
+      responses:
+        '200': { description: Customer page, content: { application/json: { schema: { $ref: '#/components/schemas/CustomerListResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    post:
+      operationId: createCustomer
+      summary: Create a customer for an administrator
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CreateCustomerRequest' } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Customer' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /customers/me:
+    parameters:
+      - $ref: '#/components/parameters/Authorization'
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+    get:
+      operationId: getCurrentCustomer
+      summary: Get authenticated customer profile
+      responses:
+        '200': { description: Profile, content: { application/json: { schema: { $ref: '#/components/schemas/Customer' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      operationId: updateCurrentCustomer
+      summary: Update authenticated customer profile
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/UpdateCustomerRequest' } } }
+      responses:
+        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/Customer' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+    delete:
+      operationId: deleteCurrentCustomer
+      summary: Delete authenticated customer
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /customers/{customerId}:
+    parameters:
+      - $ref: '#/components/parameters/Authorization'
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: customerId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getCustomer
+      summary: Get a customer
+      responses:
+        '200': { description: Customer, content: { application/json: { schema: { $ref: '#/components/schemas/Customer' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      operationId: updateCustomer
+      summary: Update a customer
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/UpdateCustomerRequest' } } }
+      responses:
+        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/Customer' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      operationId: deleteCustomer
+      summary: Delete a customer
+      responses:
+        '204': { description: Deleted }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /customers/{customerId}/address:
+    parameters:
+      - $ref: '#/components/parameters/Authorization'
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: customerId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    patch:
+      operationId: updateCustomerAddress
+      summary: Update customer addresses
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/AddressUpdateRequest' } } }
+      responses:
+        '204': { description: Address updated }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /customers/me/address:
+    parameters:
+      - $ref: '#/components/parameters/Authorization'
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+    patch:
+      operationId: updateCurrentCustomerAddress
+      summary: Update authenticated customer addresses
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/AddressUpdateRequest' } } }
+      responses:
+        '204': { description: Address updated }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /customer-auth/registrations:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+    post:
+      operationId: registerCustomer
+      summary: Register and authenticate a customer
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CreateCustomerRequest' } } }
+      responses:
+        '201': { description: Registered, content: { application/json: { schema: { $ref: '#/components/schemas/AuthenticationResponse' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /customer-auth/login:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+    post:
+      operationId: authenticateCustomer
+      summary: Authenticate a customer
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/AuthenticationRequest' } } }
+      responses:
+        '200': { description: Authenticated, content: { application/json: { schema: { $ref: '#/components/schemas/AuthenticationResponse' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /customer-auth/refresh:
+    parameters:
+      - $ref: '#/components/parameters/Authorization'
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+    get:
+      operationId: refreshCustomerToken
+      summary: Refresh a customer token
+      responses:
+        '200': { description: Refreshed, content: { application/json: { schema: { $ref: '#/components/schemas/AuthenticationResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /customers/me/password:
+    parameters:
+      - $ref: '#/components/parameters/Authorization'
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+    post:
+      operationId: changeCustomerPassword
+      summary: Change customer password
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CustomerPasswordChangeRequest' } } }
+      responses:
+        '204': { description: Password changed }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /customer-password-resets:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+    post:
+      operationId: requestCustomerPasswordReset
+      summary: Request a customer password reset
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ResetRequest' } } }
+      responses:
+        '202': { description: Reset email queued, content: { application/json: { schema: { $ref: '#/components/schemas/ResetRequestResponse' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /customer-password-resets/{storeCode}/{token}:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: storeCode
+        in: path
+        required: true
+        schema: { type: string }
+      - name: token
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      operationId: verifyCustomerPasswordReset
+      summary: Verify a customer password reset token
+      responses:
+        '200': { description: Valid, content: { application/json: { schema: { $ref: '#/components/schemas/ResetTokenValidationResponse' } } } }
+        '410': { $ref: '#/components/responses/Gone' }
+    post:
+      operationId: completeCustomerPasswordReset
+      summary: Complete a customer password reset
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ResetPasswordRequest' } } }
+      responses:
+        '204': { description: Password reset }
+        '410': { $ref: '#/components/responses/Gone' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /newsletter-subscriptions:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+    post:
+      operationId: subscribeNewsletter
+      summary: Subscribe or update newsletter details
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/NewsletterSubscriptionRequest' } } }
+      responses:
+        '201': { description: Subscribed, content: { application/json: { schema: { $ref: '#/components/schemas/NewsletterSubscription' } } } }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /newsletter-subscriptions/{email}:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: email
+        in: path
+        required: true
+        schema: { type: string, format: email }
+    put:
+      operationId: updateNewsletterSubscription
+      summary: Legacy advertised newsletter update
+      responses:
+        '501': { $ref: '#/components/responses/NotImplemented' }
+    delete:
+      operationId: unsubscribeNewsletter
+      summary: Unsubscribe newsletter address
+      responses:
+        '204': { description: Unsubscribed }
+        '501': { $ref: '#/components/responses/NotImplemented' }
+  /customers/{customerId}/reviews:
+    parameters:
+      - $ref: '#/components/parameters/Authorization'
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: customerId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: listCustomerReviews
+      summary: List reviews for a customer
+      responses:
+        '200': { description: Reviews, content: { application/json: { schema: { $ref: '#/components/schemas/CustomerReviewListResponse' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      operationId: createCustomerReview
+      summary: Create a customer review
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CreateCustomerReviewRequest' } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/CustomerReview' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /customers/{customerId}/reviews/{reviewId}:
+    parameters:
+      - $ref: '#/components/parameters/Authorization'
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: customerId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+      - name: reviewId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    put:
+      operationId: updateCustomerReview
+      summary: Update a customer review
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/UpdateCustomerReviewRequest' } } }
+      responses:
+        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/CustomerReview' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+    delete:
+      operationId: deleteCustomerReview
+      summary: Delete a customer review
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /admin-auth/login:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+    post:
+      operationId: authenticateAdministrator
+      summary: Authenticate an administrator
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/AuthenticationRequest' } } }
+      responses:
+        '200': { description: Authenticated, content: { application/json: { schema: { $ref: '#/components/schemas/AuthenticationResponse' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /admin-auth/refresh:
+    parameters:
+      - $ref: '#/components/parameters/Authorization'
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+    get:
+      operationId: refreshAdministratorToken
+      summary: Refresh an administrator token
+      responses:
+        '200': { description: Refreshed, content: { application/json: { schema: { $ref: '#/components/schemas/AuthenticationResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /users:
+    parameters:
+      - $ref: '#/components/parameters/Authorization'
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+    get:
+      operationId: listAdministrators
+      summary: List administrators
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: emailAddress
+          in: query
+          schema: { type: string, format: email }
+      responses:
+        '200': { description: Administrators, content: { application/json: { schema: { $ref: '#/components/schemas/AdministratorListResponse' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      operationId: createAdministrator
+      summary: Create an administrator
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/CreateAdministratorRequest' } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/Administrator' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /users/me:
+    parameters:
+      - $ref: '#/components/parameters/Authorization'
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+    get:
+      operationId: getCurrentAdministrator
+      summary: Get authenticated administrator
+      responses:
+        '200': { description: Administrator, content: { application/json: { schema: { $ref: '#/components/schemas/Administrator' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /users/unique:
+    parameters:
+      - $ref: '#/components/parameters/Authorization'
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+    post:
+      operationId: checkAdministratorUsername
+      summary: Check administrator username uniqueness
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/UniqueUsernameRequest' } } }
+      responses:
+        '200': { description: Existence result, content: { application/json: { schema: { $ref: '#/components/schemas/EntityExistsResponse' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /users/{userId}:
+    parameters:
+      - $ref: '#/components/parameters/Authorization'
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: userId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      operationId: getAdministrator
+      summary: Get an administrator
+      responses:
+        '200': { description: Administrator, content: { application/json: { schema: { $ref: '#/components/schemas/Administrator' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      operationId: updateAdministrator
+      summary: Update an administrator
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/UpdateAdministratorRequest' } } }
+      responses:
+        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/Administrator' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      operationId: deleteAdministrator
+      summary: Delete an administrator
+      responses:
+        '204': { description: Deleted }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /users/{userId}/password:
+    parameters:
+      - $ref: '#/components/parameters/Authorization'
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: userId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    patch:
+      operationId: changeAdministratorPassword
+      summary: Change administrator password
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/AdministratorPasswordChangeRequest' } } }
+      responses:
+        '204': { description: Password changed }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /users/{userId}/enabled:
+    parameters:
+      - $ref: '#/components/parameters/Authorization'
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: userId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    patch:
+      operationId: updateAdministratorEnabled
+      summary: Enable or suspend an administrator
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/EnabledRequest' } } }
+      responses:
+        '204': { description: Updated }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /user-password-resets:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+    post:
+      operationId: requestAdministratorPasswordReset
+      summary: Request administrator password reset
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ResetRequest' } } }
+      responses:
+        '202': { description: Reset email queued, content: { application/json: { schema: { $ref: '#/components/schemas/ResetRequestResponse' } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /user-password-resets/{storeCode}/{token}:
+    parameters:
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+      - name: storeCode
+        in: path
+        required: true
+        schema: { type: string }
+      - name: token
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      operationId: verifyAdministratorPasswordReset
+      summary: Verify administrator reset token
+      responses:
+        '200': { description: Valid, content: { application/json: { schema: { $ref: '#/components/schemas/ResetTokenValidationResponse' } } } }
+        '410': { $ref: '#/components/responses/Gone' }
+    post:
+      operationId: completeAdministratorPasswordReset
+      summary: Complete administrator password reset
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ResetPasswordRequest' } } }
+      responses:
+        '204': { description: Password reset }
+        '410': { $ref: '#/components/responses/Gone' }
+        '422': { $ref: '#/components/responses/UnprocessableEntity' }
+  /external-identities:
+    parameters:
+      - $ref: '#/components/parameters/Authorization'
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/StoreId'
+      - $ref: '#/components/parameters/CorrelationId'
+    post:
+      operationId: linkExternalIdentity
+      summary: Link an external identity
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ExternalIdentityRequest' } } }
+      responses:
+        '201': { description: Linked, content: { application/json: { schema: { $ref: '#/components/schemas/ExternalIdentityConnection' } } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+components:
+  parameters:
+    Authorization:
+      name: Authorization
+      in: header
+      required: false
+      schema: { type: string }
+    TenantId:
+      name: x-tenant-id
+      in: header
+      required: true
+      schema: { type: string }
+    StoreId:
+      name: x-store-id
+      in: header
+      required: true
+      schema: { type: string }
+    CorrelationId:
+      name: x-correlation-id
+      in: header
+      required: true
+      schema: { type: string, format: uuid }
+    Page:
+      name: page
+      in: query
+      required: false
+      schema: { type: integer, minimum: 0, default: 0 }
+    PageSize:
+      name: pageSize
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 200, default: 20 }
+  responses:
+    BadRequest:
+      description: Bad request
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+    Unauthorized:
+      description: Authentication required or invalid
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+    Forbidden:
+      description: Authorization denied
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+    NotFound:
+      description: Resource not found
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+    Conflict:
+      description: Business conflict
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+    UnprocessableEntity:
+      description: Business validation failure
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+    Gone:
+      description: Expired or consumed token
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+    NotImplemented:
+      description: Advertised capability is not implemented
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+    InternalError:
+      description: Internal error
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [error, message, statusCode, timestamp]
+      properties:
+        error: { type: string }
+        message: { type: string }
+        statusCode: { type: integer, format: int32 }
+        timestamp: { type: string, format: date-time }
+        correlationId: { type: string, format: uuid }
+        details: { type: object, additionalProperties: true }
+    PaginationInfo:
+      type: object
+      required: [page, pageSize, totalItems, totalPages]
+      properties:
+        page: { type: integer, minimum: 0 }
+        pageSize: { type: integer, minimum: 1 }
+        totalItems: { type: integer, minimum: 0 }
+        totalPages: { type: integer, minimum: 0 }
+    Address:
+      type: object
+      required: [addressType, firstName, lastName, streetAddress, city, postalCode, countryCode]
+      properties:
+        addressType: { type: string, enum: [Billing, Delivery] }
+        firstName: { type: string }
+        lastName: { type: string }
+        companyName: { type: string }
+        streetAddress: { type: string }
+        city: { type: string }
+        postalCode: { type: string }
+        stateProvince: { type: string }
+        telephone: { type: string }
+        countryCode: { type: string }
+        zoneCode: { type: string }
+        latitude: { type: string }
+        longitude: { type: string }
+    CustomerAttribute:
+      type: object
+      required: [optionId, optionValueId]
+      properties:
+        optionId: { type: string, format: uuid }
+        optionValueId: { type: string, format: uuid }
+        textValue: { type: string }
+    Customer:
+      type: object
+      required: [id, storeId, loginName, emailAddress, status, defaultLanguageCode, reviewAverage, reviewCount]
+      properties:
+        id: { type: string, format: uuid }
+        storeId: { type: string }
+        loginName: { type: string }
+        emailAddress: { type: string, format: email }
+        gender: { type: string }
+        dateOfBirth: { type: string, format: date }
+        companyName: { type: string }
+        provider: { type: string }
+        status: { type: string, enum: [Pending, Active, Suspended, Deleted] }
+        defaultLanguageCode: { type: string }
+        reviewAverage: { type: number, format: double, minimum: 0, maximum: 5 }
+        reviewCount: { type: integer, minimum: 0 }
+        anonymous: { type: boolean }
+        billing: { $ref: '#/components/schemas/Address' }
+        delivery: { $ref: '#/components/schemas/Address' }
+        attributes: { type: array, items: { $ref: '#/components/schemas/CustomerAttribute' } }
+    CreateCustomerRequest:
+      type: object
+      required: [emailAddress, password, billing]
+      properties:
+        emailAddress: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+        firstName: { type: string }
+        lastName: { type: string }
+        gender: { type: string }
+        language: { type: string }
+        provider: { type: string }
+        billing: { $ref: '#/components/schemas/Address' }
+        delivery: { $ref: '#/components/schemas/Address' }
+        attributes: { type: array, items: { $ref: '#/components/schemas/CustomerAttribute' } }
+    UpdateCustomerRequest:
+      type: object
+      minProperties: 1
+      anyOf:
+        - required: [emailAddress]
+        - required: [firstName]
+        - required: [lastName]
+        - required: [gender]
+        - required: [language]
+        - required: [companyName]
+        - required: [attributes]
+      properties:
+        emailAddress: { type: string, format: email }
+        firstName: { type: string }
+        lastName: { type: string }
+        gender: { type: string }
+        language: { type: string }
+        companyName: { type: string }
+        attributes: { type: array, items: { $ref: '#/components/schemas/CustomerAttribute' } }
+    AddressUpdateRequest:
+      type: object
+      minProperties: 1
+      anyOf:
+        - required: [billing]
+        - required: [delivery]
+      properties:
+        billing: { $ref: '#/components/schemas/Address' }
+        delivery: { $ref: '#/components/schemas/Address' }
+    AuthenticationRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string }
+        password: { type: string }
+    AuthenticationResponse:
+      type: object
+      required: [subjectId, accessToken, tokenType]
+      properties:
+        subjectId: { type: string, format: uuid }
+        accessToken: { type: string }
+        tokenType: { type: string, enum: [Bearer] }
+        expiresAt: { type: string, format: date-time }
+    CustomerPasswordChangeRequest:
+      type: object
+      required: [currentPassword, newPassword, repeatPassword]
+      properties:
+        currentPassword: { type: string }
+        newPassword: { type: string, minLength: 8 }
+        repeatPassword: { type: string, minLength: 8 }
+    ResetRequest:
+      type: object
+      required: [username, returnUrl]
+      properties:
+        username: { type: string }
+        returnUrl: { type: string, format: uri }
+    ResetRequestResponse:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [ResetLinkSent] }
+    ResetPasswordRequest:
+      type: object
+      required: [password, repeatPassword]
+      properties:
+        password: { type: string, minLength: 8 }
+        repeatPassword: { type: string, minLength: 8 }
+    ResetTokenValidationResponse:
+      type: object
+      required: [valid]
+      properties:
+        valid: { type: boolean }
+        expiresAt: { type: string, format: date-time }
+    NewsletterSubscriptionRequest:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email }
+        firstName: { type: string }
+        lastName: { type: string }
+    NewsletterSubscription:
+      allOf:
+        - $ref: '#/components/schemas/NewsletterSubscriptionRequest'
+        - type: object
+          required: [id, storeId, campaignCode, status, subscribedAt]
+          properties:
+            id: { type: string, format: uuid }
+            storeId: { type: string }
+            campaignCode: { type: string }
+            status: { type: string, enum: [Subscribed, Unsubscribed] }
+            subscribedAt: { type: string, format: date-time }
+            unsubscribedAt: { type: string, format: date-time }
+    CreateCustomerReviewRequest:
+      type: object
+      required: [customerId, rating]
+      properties:
+        customerId: { type: string, format: uuid }
+        rating: { type: number, minimum: 1, maximum: 5 }
+        description: { type: string }
+    UpdateCustomerReviewRequest:
+      type: object
+      required: [rating]
+      properties:
+        rating: { type: number, minimum: 1, maximum: 5 }
+        description: { type: string }
+    CustomerReview:
+      type: object
+      required: [id, reviewerCustomerId, reviewedCustomerId, rating, status, reviewDate]
+      properties:
+        id: { type: string, format: uuid }
+        reviewerCustomerId: { type: string, format: uuid }
+        reviewedCustomerId: { type: string, format: uuid }
+        rating: { type: number, minimum: 1, maximum: 5 }
+        description: { type: string }
+        reviewDate: { type: string, format: date-time }
+        status: { type: string, enum: [Pending, Published, Rejected, Deleted] }
+    CustomerReviewListResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/CustomerReview' } }
+        pagination: { $ref: '#/components/schemas/PaginationInfo' }
+    Administrator:
+      type: object
+      required: [id, storeId, userName, emailAddress, isActive, groups]
+      properties:
+        id: { type: string, format: uuid }
+        storeId: { type: string }
+        userName: { type: string }
+        emailAddress: { type: string, format: email }
+        firstName: { type: string }
+        lastName: { type: string }
+        isActive: { type: boolean }
+        defaultLanguageCode: { type: string }
+        groups: { type: array, items: { type: string } }
+        permissions: { type: array, items: { type: string } }
+    CreateAdministratorRequest:
+      type: object
+      required: [userName, emailAddress, password, repeatPassword, groups]
+      properties:
+        userName: { type: string }
+        emailAddress: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+        repeatPassword: { type: string, minLength: 8 }
+        firstName: { type: string }
+        lastName: { type: string }
+        groups: { type: array, minItems: 1, items: { type: string } }
+        defaultLanguageCode: { type: string }
+    UpdateAdministratorRequest:
+      type: object
+      minProperties: 1
+      anyOf:
+        - required: [userName]
+        - required: [emailAddress]
+        - required: [firstName]
+        - required: [lastName]
+        - required: [groups]
+        - required: [storeId]
+        - required: [isActive]
+      properties:
+        userName: { type: string }
+        emailAddress: { type: string, format: email }
+        firstName: { type: string }
+        lastName: { type: string }
+        groups: { type: array, items: { type: string } }
+        storeId: { type: string }
+        isActive: { type: boolean }
+    AdministratorPasswordChangeRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword: { type: string }
+        newPassword: { type: string, minLength: 8 }
+    EnabledRequest:
+      type: object
+      required: [isActive]
+      properties:
+        isActive: { type: boolean }
+    AdministratorListResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Administrator' } }
+        pagination: { $ref: '#/components/schemas/PaginationInfo' }
+    CustomerListResponse:
+      type: object
+      required: [items, pagination]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/Customer' } }
+        pagination: { $ref: '#/components/schemas/PaginationInfo' }
+    UniqueUsernameRequest:
+      type: object
+      required: [username]
+      properties:
+        username: { type: string }
+    EntityExistsResponse:
+      type: object
+      required: [exists]
+      properties:
+        exists: { type: boolean }
+    ExternalIdentityRequest:
+      type: object
+      required: [userId, providerId, providerUserId]
+      properties:
+        userId: { type: string }
+        providerId: { type: string }
+        providerUserId: { type: string }
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        profileUrl: { type: string, format: uri }
+    ExternalIdentityConnection:
+      type: object
+      required: [userId, providerId, providerUserId]
+      properties:
+        userId: { type: string }
+        providerId: { type: string }
+        providerUserId: { type: string }
+        displayName: { type: string }
+        profileUrl: { type: string, format: uri }
+        imageUrl: { type: string, format: uri }
