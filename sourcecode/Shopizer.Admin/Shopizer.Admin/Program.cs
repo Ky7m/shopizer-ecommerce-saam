@@ -1,4 +1,5 @@
 using Shopizer.Admin.Components;
+using Shopizer.ServiceDefaults;
 
 var builder = WebApplication.CreateBuilder(args);
 

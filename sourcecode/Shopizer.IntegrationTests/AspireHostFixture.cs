@@ -1,5 +1,3 @@
-using System.Net;
-
 namespace Shopizer.IntegrationTests;
 
 public sealed class AspireHostFixture : IAsyncLifetime

@@ -1,3 +1,4 @@
+using Shopizer.ServiceDefaults;
 using Shopizer.Storefront.Components;
 
 var builder = WebApplication.CreateBuilder(args);
