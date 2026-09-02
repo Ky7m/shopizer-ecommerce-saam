@@ -10,7 +10,7 @@
 | In progress | 0 |
 | Blocked | 0 |
 | Started | 2026-09-01T12:52:17+04:00 |
-| Last updated | 2026-09-01T23:15:30+04:00 |
+| Last updated | 2026-09-02T09:41:05+04:00 |
 
 ## Tasks
 
@@ -37,7 +37,7 @@
 |---|---|---|
 | Generate all 05-dependencies.md files | DONE | 2026-09-01 — all 12 files written; graph CALLS edges resolved; explicit contract/event GAPs retained |
 | Reconcile synchronous consumer-provider contracts | DONE | 2026-09-01 — spec/shared/cross-service-contracts.md; 11 REST call rows, all RECONCILED |
-| Compile event schemas and shared conventions | IN_PROGRESS | 2026-09-01 — shared conventions reconciled after approval; typed event schemas compiled, MS-09→MS-12 and MS-11 publication events added, and residual publisher/consumer evidence gaps are explicit in the event index |
+| Compile event schemas and shared conventions | BLOCKED | 2026-09-02 — shared conventions reconciled after approval; typed event schemas compiled, but 23 publisher/consumer binding gaps are intentionally carried into Phase 4a by human decision |
 | Pin shared dependency versions | BLOCKED | 2026-09-01 — target is .NET 10, but no approved version source exists; `spec/shared/09-dependency-versions.md` remains intentionally unpinned |
 
 ### Stage 1.6–1.8 — Shared Compilation
