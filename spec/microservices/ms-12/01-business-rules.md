@@ -50,6 +50,8 @@ found no durable operation, outbox, retry, or replay store.
 
 **Statement:** Adapter discovery returns the definitions for the requested integration category, reusing that category’s cached projection and loading the repository only when the projection is absent.
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -102,6 +104,8 @@ RETURN modules
 
 **Statement:** A tenant and store can have only one active adapter projection for a category, code, and environment, and replacing it publishes either the complete new projection or leaves the previous projection active.
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -149,6 +153,8 @@ IF module == null OR parsing/replacement fails:
 
 **Statement:** Each adapter environment retains its own protocol, host, port, URI, and supplemental settings, and an operation uses only the projection for its requested environment.
 **Intent:** Routing
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 ```pseudocode
@@ -200,6 +206,8 @@ providerUri = selected.scheme + "://" + selected.host + ":" + selected.port + se
 
 **Statement:** Two supplemental adapter settings remain independently addressable, so supplying a second setting cannot replace the first setting.
 **Intent:** Validation
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 ```pseudocode
@@ -248,6 +256,8 @@ TARGET:
 
 **Statement:** UPS quoting is available only when the access key, user identifier, password, and at least one package type are configured.
 **Intent:** Validation
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -297,6 +307,8 @@ IF missing is not empty: throw IntegrationException(ERROR_VALIDATION_SAVE, missi
 
 **Statement:** USPS quoting is available only when the account identifier and at least one package or mail type are configured.
 **Intent:** Validation
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -344,6 +356,8 @@ IF missing is not empty: throw IntegrationException(ERROR_VALIDATION_SAVE, missi
 
 **Statement:** UPS quoting is offered only for a US or Canadian destination with a postal code, a store country accepted by the adapter, and a configured endpoint for the requested environment.
 **Intent:** Routing
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 ```pseudocode
@@ -392,6 +406,8 @@ FOR each moduleConfig:
 
 **Statement:** A UPS rating request carries authenticated origin and destination addresses, one provider package element for each package, a configured package type, provider weight units, and dimensions rounded to the provider precision.
 **Intent:** Calculation
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 ```pseudocode
@@ -443,6 +459,8 @@ POST XML to protocol + "://" + host + ":" + port + uri
 
 **Statement:** Each successful UPS rated shipment becomes a normalized carrier option with its service code, configured display name, monetary price, and estimated delivery days; provider errors and empty results are failures.
 **Intent:** Calculation
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 ```pseudocode
@@ -496,6 +514,8 @@ RETURN options
 
 **Statement:** USPS uses domestic rating for a US-origin shipment whose destination is also US and international rating otherwise; every package is converted to inches and pounds, and the aggregate length-plus-girth selects Regular, Large, or Oversize.
 **Intent:** Routing
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 ```pseudocode
@@ -552,6 +572,8 @@ ELSE: build IntlRateRequest with Pounds, Ounces, MailType, ValueOfContents, Coun
 
 **Statement:** USPS domestic and international response formats are exposed as the same normalized option shape, while provider errors and an empty option collection fail the rating operation.
 **Intent:** Calculation
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 ```pseudocode
@@ -606,6 +628,8 @@ RETURN parsed.options
 
 **Statement:** Distance enrichment is suppressed when the destination has no configured zone or postal code, or when its zone is not allowed; eligible destinations are geocoded and receive destination coordinates and route distance in kilometers.
 **Intent:** Calculation
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 ```pseudocode
@@ -663,6 +687,8 @@ IF both result arrays have length > 0:
 
 **Statement:** An IP address is resolved to coarse country, postal code, subdivision, and city data when the local GeoLite database contains it; an address absent from that database returns an unresolved result.
 **Intent:** Calculation
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 ```pseudocode
@@ -719,6 +745,8 @@ RETURN address
 
 **Statement:** Email delivery parses the store’s email configuration and passes that configuration to the sender implementation selected by the runtime application wiring.
 **Intent:** Routing
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 ```pseudocode
@@ -764,6 +792,8 @@ sender.send(email)
 
 **Statement:** SMTP delivery sends a UTF-8 text alternative and rendered HTML alternative from the selected template, while SES sends the rendered HTML with its UTF-8 text fallback; template preparation failures prevent provider submission.
 **Intent:** Routing
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 ```pseudocode
@@ -817,6 +847,8 @@ SES:
 
 **Statement:** An order-confirmation message contains localized billing information, optional delivery information, every product line’s name, SKU, quantity, and displayed price, every order total, payment information, shipping information when present, and the current order status.
 **Intent:** Calculation
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -871,6 +903,8 @@ emailService.sendHtmlEmail(merchantStore, email)
 
 **Statement:** Each operational notification selects its recipient, subject, locale, template, and payload by notification type: registration addresses the customer, contact sends to the store address, status uses the latest comment or localized status, downloads use the configured download period, and password-change notices use the change date without exposing credentials.
 **Intent:** Routing
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 ```pseudocode
@@ -930,6 +964,8 @@ all branches create Email with branch template and call emailService.sendHtmlEma
 
 **Statement:** A storage asset is addressed by store, content type, optional folder path, and file name, while the facade delegates that logical address to the selected filesystem, cache, S3, or GCP implementation without taking ownership of content metadata.
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -975,6 +1011,8 @@ removeFiles(...): removeFile.removeFiles(...)
 
 **Statement:** Upload writes the asset at its logical key, supported reads return the asset bytes with metadata, name listings expose recognized file types at the selected namespace, deletion targets one asset or a store namespace, and provider failures are surfaced rather than reported as success.
 **Intent:** Routing
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 ```pseudocode
@@ -1028,6 +1066,8 @@ S3/GCP:
 
 **Statement:** Folder creation, deletion, and listing are available only when the caller-selected storage provider supports the requested capability; an unsupported capability returns an explicit unsupported response.
 **Intent:** Validation
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 ```pseudocode
@@ -1081,6 +1121,8 @@ TARGET:
 
 **Statement:** Each single or batch storage upload carries a caller-provided idempotency key, and the durable operation record links that key to every provider attempt so a replayed request cannot submit the same logical item twice.
 **Intent:** Compliance
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 ```pseudocode
@@ -1127,6 +1169,8 @@ provider write uses the logical provider key; successful retry does not create a
 
 **Statement:** An external delivery has a bounded attempt budget, records each provider outcome, and schedules retryable failures with increasing delay without reopening a completed attempt.
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -1175,6 +1219,8 @@ ELSE:
 
 **Statement:** A delivery request is recorded before its queue event is published, replay creates a new attempt linked to a failed or dead-lettered attempt, and exhausted delivery failures remain observable without changing the owning business record.
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode

@@ -52,6 +52,8 @@ Order state and order-total mutations observed in the legacy source are recorded
 **Statement:** A payment method is available to a store only when its configured geographic region list contains the store’s country or the wildcard region. A method not eligible for the store must not be selectable or dispatched.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 - Read the registered payment-module metadata.
@@ -103,6 +105,8 @@ Order state and order-total mutations observed in the legacy source are recorded
 **Statement:** Each provider attempt must produce a durable payment transaction record containing its amount, operation type, provider reference, and result. The transaction may be associated with an order only after the order aggregate exists; payment persistence and order persistence must not be assumed to be one atomic cross-service transaction.
 
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 - Provider initialization creates a transaction before an order exists.
@@ -155,6 +159,8 @@ Order state and order-total mutations observed in the legacy source are recorded
 **Statement:** A capture may be requested only for a payment intent with a successful prior authorization and no completed capture, refund, or terminal failure. The capture amount must be positive, currency-compatible, and no greater than the authorized remaining balance.
 
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 - Load provider configuration for the order’s payment module.
@@ -208,6 +214,8 @@ Order state and order-total mutations observed in the legacy source are recorded
 **Statement:** A refund must be greater than zero and no greater than the payment’s captured amount remaining after all previously successful refunds. Refund validation uses exact currency arithmetic rather than binary floating-point comparison.
 
 **Intent:** Validation
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 - The legacy method compares the requested amount to `order.getTotal().doubleValue()`.
@@ -260,6 +268,8 @@ Order state and order-total mutations observed in the legacy source are recorded
 **Statement:** Card-number validation is applied only when the card-validation feature is enabled. When applied, the supplied card number must contain only permitted separators, match the selected card-type length and prefix rules, pass expiry validation, and pass the Luhn checksum.
 
 **Intent:** Validation
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 - If `coreConfiguration.getProperty("VALIDATE_CREDIT_CARD")` equals `"true"`, validate the card.
@@ -319,6 +329,8 @@ Order state and order-total mutations observed in the legacy source are recorded
 **Statement:** Provider execution is selected by the store’s active payment configuration and the registered provider code. A missing, inactive, invalid, or unregistered provider configuration prevents the payment operation.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 - Read the encrypted store payment-module configuration.
@@ -373,6 +385,8 @@ Order state and order-total mutations observed in the legacy source are recorded
 **Statement:** A successful capture changes payment state and emits an authenticated payment event; it does not directly change the order’s lifecycle state. MS-05 remains the sole owner of order transitions.
 
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 - Legacy code calls `orderService.addOrderStatusHistory()` and sets `order.status = PROCESSED`.
@@ -422,6 +436,8 @@ Order state and order-total mutations observed in the legacy source are recorded
 **Statement:** The sum of successful full and partial refunds for a payment must never exceed the amount successfully captured for that payment. A refund operation must reserve its amount before contacting the provider.
 
 **Intent:** Validation
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 - Legacy selection stores the latest `AUTHORIZECAPTURE` or `CAPTURE` transaction and the latest refund by transaction date.
@@ -473,6 +489,8 @@ Order state and order-total mutations observed in the legacy source are recorded
 **Statement:** Stripe classic operations require configured secret credentials and a client payment token. Missing credentials or tokens prevent gateway access; provider declines and validation failures are translated into stable payment error categories.
 
 **Intent:** Validation
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 - Require `secretKey` and `publishableKey` during module validation.
@@ -526,6 +544,8 @@ Order state and order-total mutations observed in the legacy source are recorded
 **Statement:** Stripe 3 initialization creates a PaymentIntent using the store currency and amount in minor units with manual capture. Authorization retrieves the client-supplied PaymentIntent and capture acts on that intent; the target must validate status, amount, currency, and provider reference before transitioning payment state.
 
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 - Require `secretKey` and `publishableKey`.
@@ -580,6 +600,8 @@ Order state and order-total mutations observed in the legacy source are recorded
 **Statement:** Braintree uses sandbox credentials when the configured environment is test and production credentials otherwise. Authorization and sale operations require a client payment nonce, and provider validation failures or missing transaction identifiers prevent success.
 
 **Intent:** Routing
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 - Require merchant ID, public key, private key, and tokenization key during configuration validation.
@@ -634,6 +656,8 @@ Order state and order-total mutations observed in the legacy source are recorded
 **Statement:** PayPal Express requires configured API credentials and an Express Checkout token. Initialization creates a redirect transaction from the immutable checkout amount, currency, line items, tax, shipping, and return/cancel URLs; completion retrieves payer details and commits either authorization or sale according to configured transaction mode.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 - Require `api`, `username`, and `signature`.
@@ -689,6 +713,8 @@ Order state and order-total mutations observed in the legacy source are recorded
 **Statement:** Beanstream operations select the configured test or production endpoint, submit form-encoded payment data, require an approval field in the response, and reject declined or structurally invalid responses. Sensitive payment data must never appear in diagnostic logs.
 
 **Intent:** Integration
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 - Require merchant ID, username, and password.
@@ -745,6 +771,8 @@ Order state and order-total mutations observed in the legacy source are recorded
 **Statement:** Money-order payment creates a local authorization-and-capture transaction without contacting an external payment provider. A configured remittance address is required, while separate capture and refund operations are unsupported by the legacy adapter.
 
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 - Require integration key `address`.
@@ -797,6 +825,8 @@ Recorded UI evidence: `initial-source/shopizer-shop-reactjs-main/src/pages/other
 **Statement:** A payment request must contain one canonical provider token field and must use the server-issued amount and currency snapshot associated with the checkout session. Client-provided display amounts are not authoritative.
 
 **Intent:** Validation
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 - The payment populator converts the request amount and maps `paymentToken` into payment metadata.
@@ -847,6 +877,8 @@ Recorded UI evidence: `initial-source/shopizer-shop-reactjs-main/src/pages/other
 **Statement:** Once a payment intent is created, its amount and currency are immutable. Authorization, capture, and refund operations must use compatible amounts and the same currency, and a stale checkout snapshot must be rejected rather than silently recalculated by MS-06.
 
 **Intent:** Compliance
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 - Legacy payment processing obtains amount from `order.getTotal()`.
@@ -899,6 +931,8 @@ Recorded UI evidence: `initial-source/shopizer-shop-reactjs-main/src/pages/other
 **Statement:** Payment state must be derived from operation sequence and provider-confirmed timestamps, not from lexicographic ordering of operation-type names. A transaction history query must produce deterministic chronological results.
 
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 - Legacy `lastTransaction()` collects transactions into a `TreeMap` keyed by transaction-type name and returns `map.lastEntry()`.
@@ -951,6 +985,8 @@ Recorded UI evidence: `initial-source/shopizer-shop-reactjs-main/src/pages/other
 **Statement:** Every payment-mutating command must carry an idempotency key scoped to tenant, store, payment intent, and operation type. A repeated request with the same fingerprint returns the original result; reuse of a key with different parameters is rejected.
 
 **Intent:** Compliance
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 - No idempotency-key field or dedicated idempotency table is present in the inspected legacy request, service, entity, or controller paths.
@@ -1005,6 +1041,8 @@ Recorded UI evidence: `initial-source/shopizer-shop-reactjs-main/src/pages/other
 **Statement:** A provider callback may change payment state only after its provider-specific adapter verifies the callback and correlates it to one payment intent and one provider reference. An unverified, duplicate, unknown, or ambiguous callback is recorded without changing payment state.
 
 **Intent:** Validation
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 - No confirmed generic callback controller or callback signature-verification path was found in the mandatory source set.

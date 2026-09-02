@@ -76,3 +76,7 @@ One rule (`BR-CAT-021`) preserves all eight dimensions without a gap. Remaining 
 - Business rules, domain model, API design, OpenAPI contract, completion summary, and extraction evidence are present.
 - API contract uses OpenAPI 3.1 and names all response schemas.
 - Source references use resolved local paths; the external `SearchModule` implementation is intentionally not fabricated.
+
+## Phase 4a BA disposition
+
+Mode A agent defaults were approved on 2026-09-02. 10 rules remain active after 0 approved obsolete-rule removal(s). Retained rules carry explicit Classification and Weight metadata; no rules were deferred, merged, or simplified without BA-specific guidance.

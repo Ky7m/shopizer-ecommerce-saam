@@ -30,6 +30,8 @@
 **Statement:** When a product has a selected default variant with at least one availability record containing prices, the pricing service must calculate the product price from that variant availability before considering product-level availability. If the selected variant has no usable priced availability, the service must fall back to the product’s availability records. Only availability records for the wildcard region `*` participate in this calculation. A missing usable price is an unavailable-price result, not a zero-priced product.
 
 **Intent:** Routing; Calculation; Validation
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```text
@@ -84,6 +86,8 @@ IF no primary or additional price was found:
 **Statement:** For each usable wildcard-region availability, the price marked as default is the primary product price. Prices that are not marked as default are returned as additional price lines. If no default price exists but at least one additional price exists, the first additional price is used as the fallback primary result. Additional prices marked as one-time charges contribute to the item subtotal when order totals are assembled; other price types remain separate from the one-time subtotal.
 
 **Intent:** Calculation; Routing
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```text
@@ -142,6 +146,8 @@ During subtotal assembly:
 **Statement:** A special amount replaces the base amount only when the special-price window is active at evaluation time. A bounded window is active when its start date is before the evaluation time and its end date is after the evaluation time. A window with no start date is active until its end date, provided the end date is still in the future. When both dates are absent, a positive special amount is treated as active. A future start date, an expired end date, or a non-positive special amount does not activate a discount.
 
 **Intent:** Calculation; Validation
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```text
@@ -204,6 +210,8 @@ IF discountActive = false:
 **Statement:** When a special price is active, the displayed discount percentage is calculated as `100 - (special amount / original amount × 100)` and converted to an integer by truncating the fractional part toward zero. The original amount remains the comparison basis, and the special amount is returned as the discounted amount. A percentage cannot be calculated from a zero original amount.
 
 **Intent:** Calculation; Validation
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 ```text
@@ -254,6 +262,8 @@ IF originalAmount = 0 AND discountActive:
 **Statement:** Selected product attributes increase the calculated price only when their individual price adjustments are greater than zero. For a request that supplies an attribute list, all positive adjustments in that list are summed and added to the final and original prices; if the item is discounted, the discounted-price value is also increased by the same sum. For a product-level calculation without an explicit list, only positive adjustments belonging to default attributes are included. Null or non-positive adjustments do not change the price.
 
 **Intent:** Calculation; Validation
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```text
@@ -314,6 +324,8 @@ IF attributeAdjustment > 0:
 **Statement:** A product-price request that includes a customer identity must produce the same product price as the equivalent request without customer identity. The current pricing implementation does not apply customer groups, customer accounts, or customer-specific price lists. Customer-specific pricing is therefore not inferred or invented by MS-07; adding it requires a new approved business rule and contract version.
 
 **Intent:** Calculation; Routing
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```text
@@ -360,6 +372,8 @@ calculateProductPrice(product, attributes, customer):
 **Statement:** A direct variant-price request must not return an untyped null result. The legacy pricing-service facade does not delegate direct variant requests to the variant-capable price utility and therefore provides no reliable direct-variant result. In the target contract, a variant request must either calculate from the variant’s usable wildcard-region availability or explicitly fall back to the parent product according to the caller-selected fallback policy. If neither is permitted or available, the service returns `VARIANT_PRICE_UNAVAILABLE`.
 
 **Intent:** Routing; Calculation; Validation
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 ```text
@@ -409,6 +423,8 @@ IF variantPriceMode = FALLBACK_TO_PRODUCT:
 **Statement:** The active order-total postprocessor registry contains the promotion-code processor. The legacy manufacturer/shipping-code discount processor is not registered and must not affect pricing. MS-07 must expose processor activation as configuration or health metadata so that a deployment cannot silently assume that an inactive processor is calculating discounts.
 
 **Intent:** Routing; Configuration
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```text
@@ -454,6 +470,8 @@ return processors
 **Statement:** When an order summary contains a non-blank promotion code, MS-07 evaluates the code against the active promotion rules using the current evaluation timestamp. If a rule returns a discount rate, MS-07 calculates the reduction from the calculated product final price multiplied by the discount rate and the cart-item quantity. A blank or whitespace-only code produces no promotion reduction. A code for which no rule matches produces an explicit invalid-or-ineligible result rather than a discount line.
 
 **Intent:** Calculation; Validation; Routing
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```text
@@ -493,50 +511,6 @@ ELSE:
 - **Error Input:** `POST /api/v1/pricing/promotions/evaluate` with `{"promoCode":"   ","items":[{"sku":"SKU-MUG-BLUE","quantity":2}]}`
 - **Error Output:** `200 {"promoCode":"","matched":false,"reduction":0.00,"reason":"PROMO_CODE_BLANK"}`
 
-### BR-PRC-010: The extracted promotion rule grants ten percent for `Test1234` before 31 October 2025
-
-**Source Reference:** `initial-source/shopizer-3.2.7/sm-core/src/main/resources/com/salesmanager/drools/rules/PromoCoupon.drl:1-16`  
-**Discovery Method:** Direct Source Read  
-**CAST Reference:** Promotion rule resource reached through `PromoCodeCalculatorModule`; no distinct promotion transaction is present in CAST.
-
-**Semantic Preservation:**
-
-| Dimension | Source | Spec | Status |
-|---|---:|---:|---|
-| Control-flow | 3 | 4 | GAP |
-| Data-flow | 2 | 2 | OK |
-| Constants | 3 | 3 | OK |
-| State transitions | 0 | 1 | GAP |
-| Outcomes | 2 | 3 | GAP |
-| Data writes | 1 | 0 | GAP |
-| Integrations | 0 | 0 | OK |
-| Error paths | 1 | 3 | GAP |
-
-**Preservation:** FLAGGED — the source rule’s visible date-bounded behavior is preserved, while the target exposes the expired state and avoids treating a global rule response as durable promotion state.
-
-**Statement:** The extracted rule named `Bam0520` matches promotion code `Test1234` only when the evaluation date is earlier than `31 October 2025`, and assigns a discount rate of `10%`. Because the current analysis date is `2026-09-01`, this extracted rule is expired and must not produce a discount for a current-time evaluation. The code and date are preserved as source evidence, not as an assertion that the campaign remains commercially active.
-
-**Intent:** Calculation; Validation; Compliance
-
-**Logic:**
-```text
-IF input.promoCode = 'Test1234'
-   AND input.evaluationDate < 2025-10-31:
-    response.discount = 0.10
-ELSE:
-    response.discount remains null
-```
-
-**Data Dependencies:** Promotion code, evaluation timestamp, rule identifier, discount rate, and promotion evaluation response.
-
-**Side Effects:** The rule sets the in-memory promotion response used by the promotion processor. It does not create a coupon record, redemption, or durable campaign mutation.
-
-**Concrete Example:**
-- **Input:** `POST /api/v1/pricing/promotions/evaluate` with `{"promoCode":"Test1234","items":[{"sku":"SKU-MUG-BLUE","quantity":1}],"evaluationDate":"2025-10-30T23:59:59Z"}`
-- **Success:** `200 {"promoCode":"Test1234","matched":true,"discountRate":0.10,"reduction":2.00}`
-- **Error Input:** The same request with `evaluationDate:"2026-09-01T12:00:00Z"`.
-- **Error Output:** `422 {"error":"PROMOTION_EXPIRED","message":"Promotion code Test1234 has no active rule at the requested evaluation time","statusCode":422}`
-
 ### BR-PRC-011: Promotion reductions are positive values subtracted during subtotal assembly
 
 **Source Reference:** `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/modules/order/total/PromoCodeCalculatorModule.java:85-109`; `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/services/order/OrderServiceImpl.java:283-301`  
@@ -561,6 +535,8 @@ ELSE:
 **Statement:** MS-07 returns a promotion reduction as a positive monetary amount. The consuming subtotal assembler subtracts that reduction from the pre-promotion subtotal. The promotion amount is calculated from the item’s effective final price, the matched discount rate, and the item quantity. MS-07 must never return the reduction as a negative amount and must not directly write the consumer’s subtotal or grand total.
 
 **Intent:** Calculation; Routing
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```text
@@ -608,6 +584,8 @@ consumer subtotal:
 **Statement:** Manufacturer-code and shipping-code discount behavior is not active in the extracted implementation because its processor is commented out of the registered processor list. A manufacturer or shipping code must therefore not reduce a product price or subtotal in MS-07. If the capability is required in the future, it must be introduced as a separately approved processor with its own eligibility, rate, and API contract.
 
 **Intent:** Routing; Validation; Configuration
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```text
@@ -654,6 +632,8 @@ IF a manufacturer/shipping code is supplied:
 **Statement:** The effective item prices and one-time additional prices form the pre-promotion merchandise subtotal. Applicable promotion reductions are then subtracted from that subtotal. The resulting merchandise subtotal is established before shipping and handling amounts are considered, and tax is evaluated after those downstream components. MS-07 supplies the merchandise and promotion calculation inputs/results but does not calculate shipping, handling, tax, or the final order grand total.
 
 **Intent:** Calculation; Routing
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 ```text

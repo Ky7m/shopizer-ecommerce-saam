@@ -93,3 +93,7 @@ No Phase 4b database placement decision is made here. Internal uniqueness, range
 ## Readiness
 
 The six requested files exist and are implementation-oriented: semantic rules with source evidence, executable PostgreSQL DDL, a 39-operation OpenAPI 3.1 contract, endpoint coverage, placement evidence, and explicit gaps. Human review is still required before Phase 4a sign-off.
+
+## Phase 4a BA disposition
+
+Mode A agent defaults were approved on 2026-09-02. 51 rules remain active after 0 approved obsolete-rule removal(s). Retained rules carry explicit Classification and Weight metadata; no rules were deferred, merged, or simplified without BA-specific guidance.

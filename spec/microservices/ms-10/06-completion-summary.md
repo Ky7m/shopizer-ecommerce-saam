@@ -71,3 +71,7 @@ Every rule contains a source reference, discovery method, CAST reference, semant
 ## Readiness
 
 The six requested files exist and are implementation-oriented: semantic rules with CAST/source evidence, executable PostgreSQL DDL, a 17-operation OpenAPI 3.1 contract, endpoint coverage, boundary notes, and explicit gaps. Human review remains required before Phase 4a sign-off.
+
+## Phase 4a BA disposition
+
+Mode A agent defaults were approved on 2026-09-02. 21 rules remain active after 0 approved obsolete-rule removal(s). Retained rules carry explicit Classification and Weight metadata; no rules were deferred, merged, or simplified without BA-specific guidance.

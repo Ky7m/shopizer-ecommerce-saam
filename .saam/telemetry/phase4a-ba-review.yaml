@@ -1,0 +1,43 @@
+schema_version: "1.0"
+phase: "P4A"
+started_at: "2026-09-02T08:05:26.678597+00:00"
+completed_at: "2026-09-02T08:16:55.483733+00:00"
+duration_hours: 0.191
+timing_source: "machine_recorded"
+calibration_eligible: true
+actor: "agent"
+mode: "agent_defaults"
+
+metrics:
+  total_br_reviewed: 306
+  br_approved_unchanged: 303
+  br_modified: 0
+  br_dropped_obsolete: 3
+  br_added_new: 0
+  br_reclassified: 0
+  br_deferred: 0
+  critical_br_count: 86
+  avg_review_time_per_br_minutes: 0.04
+  disputes_requiring_escalation: 0
+
+  invariants_reviewed: 111
+  unique_invariant_ids: 106
+  invariants_load_bearing: 111
+  invariants_legacy_artifact: 0
+  state_machine_closure_fixes: 0
+
+  extension_points_reviewed: 7
+  extension_points_reproduce: 7
+  extension_points_unify: 0
+  extension_points_drop: 0
+
+complexity_corrections:
+  false_flags_dismissed: 0
+  true_gaps_confirmed: 0
+  new_rules_added_from_flags: 0
+
+scope:
+  original_rule_count: 306
+  final_active_rule_count: 303
+  scope_reduction_percent: 0.98
+  unresolved_event_bindings_carried_forward: 23

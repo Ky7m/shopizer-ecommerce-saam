@@ -115,3 +115,7 @@ The count is a decomposition outcome from the CAST-guided deep read of product p
 ## Readiness
 
 The package is implementation-oriented and contains executable PostgreSQL DDL, closed entity state machines, invariants, 41 fully traced rules, a target API design, and an OpenAPI 3.1 contract. It is ready for validator execution and BA review, but not yet frozen for Phase 5 implementation.
+
+## Phase 4a BA disposition
+
+Mode A agent defaults were approved on 2026-09-02. 41 rules remain active after 0 approved obsolete-rule removal(s). Retained rules carry explicit Classification and Weight metadata; no rules were deferred, merged, or simplified without BA-specific guidance.

@@ -210,3 +210,7 @@ These scores are provisional until independent validation and BA sign-off.
 The MS-04 extraction package contains 20 uniquely identified rules, 10 executable target tables, 17 API operations with matching OpenAPI operations, explicit service ownership boundaries, source line evidence, hidden-engine findings, lifecycle models, invariants, and placement evidence.
 
 The package is ready for Phase 4a business-rule review and Phase 4b implementation-roadmap scoring. It is not marked 100% complete until those reviews are approved.
+
+## Phase 4a BA disposition
+
+Mode A agent defaults were approved on 2026-09-02. 20 rules remain active after 0 approved obsolete-rule removal(s). Retained rules carry explicit Classification and Weight metadata; no rules were deferred, merged, or simplified without BA-specific guidance.

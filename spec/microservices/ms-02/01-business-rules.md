@@ -37,6 +37,8 @@
 **Preservation:** OK  
 **Statement:** A product SKU must be unique within its owning store; two products in the same store cannot be created or updated to the same SKU. The same SKU may exist in another store.  
 **Intent:** Validation  
+**Classification:** Core
+**Weight:** Critical
 **Logic:** Before product creation or update, query the product identity scope for the candidate SKU and store. Reject a create when any matching product exists; on update, ignore the current product identity. Enforce the invariant again with a database unique constraint.  
 **Data:** `product.store_id`, `product.sku`, `product.id`; opaque store validation from MS-10.  
 **Side Effects:** No product write occurs on conflict; emit `ProductChanged.v1` only after a successful mutation.  
@@ -67,6 +69,8 @@
 **Preservation:** OK  
 **Statement:** A variant SKU must be unique among the variants of one parent product.  
 **Intent:** Validation  
+**Classification:** Core
+**Weight:** Critical
 **Logic:** Query variants by `product_id` and candidate `sku`; exclude the current variant during update; reject duplicates.  
 **Data:** `product_variant.product_id`, `product_variant.sku`, `product_variant.id`.  
 **Side Effects:** No variant write on conflict; successful changes publish `ProductChanged.v1`.  
@@ -97,6 +101,8 @@
 **Preservation:** OK  
 **Statement:** Category, catalog, product-option, option-value, and product-variation codes are unique within the owning merchant/store scope and may be reused by a different merchant/store.  
 **Intent:** Validation  
+**Classification:** Core
+**Weight:** High
 **Logic:** Resolve the owning store before checking a code. Apply uniqueness by `(store_id, code)` for each aggregate type.  
 **Data:** `category.store_id/code`, `catalog.store_id/code`, `product_option.store_id/code`, `product_option_value.store_id/code`, `product_variation.store_id/code`.  
 **Side Effects:** Conflicting aggregate is not persisted.  
@@ -127,6 +133,8 @@
 **Preservation:** OK  
 **Statement:** A product cannot be created or updated without at least one availability record describing where and how much stock can be sold.  
 **Intent:** Validation  
+**Classification:** Core
+**Weight:** High
 **Logic:** Reject a null or empty availability collection before persistence. The target additionally requires a positive quantity or an explicit unlimited-stock policy.  
 **Data:** `product_availability.product_id`, `region_code`, `quantity`, `active`.  
 **Side Effects:** Product transaction is rolled back; no media processing occurs.  
@@ -156,6 +164,8 @@
 **Preservation:** OK  
 **Statement:** Manufacturer, product-type, category, and language references supplied for a product must exist and belong to the product's current store or declared shared reference scope.  
 **Intent:** Validation  
+**Classification:** Core
+**Weight:** High
 **Logic:** Resolve each reference using the request store. Reject missing manufacturer/type/category/language references and reject a category belonging to another store.  
 **Data:** `product.store_id`, `category.store_id`, `manufacturer.store_id`, `product_type.store_id`, `language.code`.  
 **Side Effects:** No product write when any reference fails.  
@@ -185,6 +195,8 @@
 **Preservation:** OK  
 **Statement:** A new category receives a hierarchy path and depth derived from its validated parent; a root category has depth zero.  
 **Intent:** Calculation  
+**Classification:** Active
+**Weight:** Medium
 **Logic:** Persist the category identity, obtain the parent if supplied, set `depth = parent.depth + 1` and `lineage = parent.lineage + category.id`, or set root lineage to `/{id}/` and depth to `0`.  
 **Data:** `category.id`, `parent_id`, `depth`, `lineage`, `store_id`.  
 **Side Effects:** Category is written twice in the legacy flow; the target should calculate lineage before one atomic insert. Publish `CategoryChanged.v1`.  
@@ -214,6 +226,8 @@
 **Preservation:** FLAGGED  
 **Statement:** Moving a category changes its parent, depth, and lineage, and the same recalculation must be applied to every descendant in the moved subtree. A category cannot be moved beneath itself or one of its descendants.  
 **Intent:** State Transition  
+**Classification:** Core
+**Weight:** High
 **Logic:** Resolve the new parent in the same store; set the moved category's parent, depth, and lineage; recursively update descendants. The target adds cycle detection and performs the subtree change atomically.  
 **Data:** `category.parent_id`, `depth`, `lineage`, `store_id`.  
 **Side Effects:** Descendant rows are updated; publish one `CategoryChanged.v1` event with subtree version.  
@@ -243,6 +257,8 @@
 **Preservation:** FLAGGED  
 **Statement:** Deleting a category removes the category subtree. A product assigned to another category is detached from the deleted subtree; a product with no remaining category is deleted according to the approved catalog policy.  
 **Intent:** State Transition  
+**Classification:** Core
+**Weight:** High
 **Logic:** Build the subtree from lineage, process descendants deepest-first, load affected products, remove deleted category links, delete products with no remaining category, then delete categories. The target performs the operation atomically and emits product/category change events.  
 **Data:** `category.lineage`, `product_category`, `product.categories`, `product.id`.  
 **Side Effects:** Category links, products, media, and derived projections may be deleted or updated.  
@@ -272,6 +288,8 @@
 **Preservation:** OK  
 **Statement:** A storefront listing includes only products belonging to the requested store, active for sale, effective by date, translated into the requested language, and available for the requested region or the wildcard region.  
 **Intent:** Validation  
+**Classification:** Core
+**Weight:** High
 **Logic:** Filter by store, category scope, active product flag, `dateAvailable <= now`, language description, and availability region in `[* , requestedCountry]`.  
 **Data:** `product.store_id`, `available`, `date_available`, `product_description.language_code`, `product_availability.region_code`, `product_category`.  
 **Side Effects:** Read-only; no catalog writes.  
@@ -301,6 +319,8 @@
 **Preservation:** OK  
 **Statement:** A friendly URL identifies a product only when the slug, store, effective date, active status, and requested region all match.  
 **Intent:** Validation  
+**Classification:** Core
+**Weight:** High
 **Logic:** Query localized product descriptions by slug, join eligible availability rows, restrict product store and active/date predicates, and return one product or not found.  
 **Data:** `product_description.friendly_url`, `product.store_id`, `available`, `date_available`, `product_availability.region_code`.  
 **Side Effects:** Read-only.  
@@ -330,6 +350,8 @@
 **Preservation:** OK  
 **Statement:** When an inventory view needs one default availability, the wildcard region is selected over country-specific rows; if no wildcard exists, the target must apply an explicit fallback policy rather than selecting arbitrarily.  
 **Intent:** Routing  
+**Classification:** Active
+**Weight:** Low
 **Logic:** Iterate availability rows, prefer `region_code='*'`, otherwise use the configured deterministic fallback.  
 **Data:** `product_availability.region_code`, `quantity`, `active`.  
 **Side Effects:** Read-only for inventory lookup.  
@@ -359,6 +381,8 @@
 **Preservation:** OK  
 **Statement:** If a product has a default-selected variant with a usable priced availability, that variant supplies the product's displayed price; otherwise pricing falls back to the parent product's eligible availability.  
 **Intent:** Routing  
+**Classification:** Core
+**Weight:** High
 **Logic:** Find the default-selected variant, retain its availabilities containing prices, and use them if non-empty; otherwise use parent product availabilities.  
 **Data:** `product_variant.default_selection`, `product_variant.availability_id`, `product_availability`, `product_price`.  
 **Side Effects:** Read-only calculation.  
@@ -388,6 +412,8 @@
 **Preservation:** OK  
 **Statement:** Price resolution considers prices attached to wildcard availability first and selects the explicitly default price before additional prices.  
 **Intent:** Routing  
+**Classification:** Core
+**Weight:** High
 **Logic:** Filter eligible availabilities to the wildcard region, convert each price, retain the default price as primary, and expose other prices as additional choices.  
 **Data:** `product_availability.region_code`, `product_price.default_price`, `amount`, `currency_code`.  
 **Side Effects:** Read-only.  
@@ -417,6 +443,8 @@
 **Preservation:** OK  
 **Statement:** A special price is used only while its configured start/end window is active; an open-ended end date is not silently inferred unless the target policy explicitly allows it.  
 **Intent:** Validation  
+**Classification:** Core
+**Weight:** High
 **Logic:** If start and end dates exist, require `start < now < end`; when only an end date exists, apply the legacy active-until-end behavior. Calculate discount metadata from the selected special amount.  
 **Data:** `product_price.special_amount`, `special_start_at`, `special_end_at`, `amount`.  
 **Side Effects:** Read-only.  
@@ -446,6 +474,8 @@
 **Preservation:** OK  
 **Statement:** Each selected option value with a positive price adjustment increases the final, original, and discounted price by that adjustment. Zero and negative adjustments do not increase the price.  
 **Intent:** Calculation  
+**Classification:** Core
+**Weight:** High
 **Logic:** Start with the selected base price; for each selected attribute whose adjustment is greater than zero, add it to the final/original/discounted amounts.  
 **Data:** `product_attribute.product_option_id`, `product_option_value_id`, `price_adjustment`, selected option identifiers.  
 **Side Effects:** Read-only calculation.  
@@ -475,6 +505,8 @@
 **Preservation:** FLAGGED  
 **Statement:** If a variant has no usable variant-specific price, the product's eligible parent price is returned; the response identifies that fallback so clients do not mistake it for a variant price.  
 **Intent:** Routing  
+**Classification:** Active
+**Weight:** Medium
 **Logic:** The legacy variant pricing method returns null; the inventory service then calculates the parent product price. The target preserves fallback but emits `priceSource=parentProduct`.  
 **Data:** variant availability/price rows and parent product price rows.  
 **Side Effects:** Read-only.  
@@ -504,6 +536,8 @@
 **Preservation:** OK  
 **Statement:** Product metadata and media metadata are separate durable records; binary media is written through the provider boundary and linked to the product media record.  
 **Intent:** Routing  
+**Classification:** Core
+**Weight:** High
 **Logic:** Persist the product first, send new binary images to the image service/provider, save existing media metadata separately, and remove omitted media after reconciliation.  
 **Data:** `product.id`, `product_image.product_id`, `file_name`, `original_uri`, provider object key.  
 **Side Effects:** Product and media records change; object storage receives or deletes binary content; publish `MediaChanged.v1`.  
@@ -533,6 +567,8 @@
 **Preservation:** FLAGGED  
 **Statement:** Product metadata may remain saved when media persistence fails, but the target records the media failure, marks the media operation incomplete, and exposes the partial-success condition instead of silently swallowing it.  
 **Intent:** Routing  
+**Classification:** Core
+**Weight:** High
 **Logic:** Legacy catches media exceptions, logs them, and returns the product. Target preserves product success but records an outbox/media failure and returns `mediaStatus=Pending` or `Failed`.  
 **Data:** `product`, `product_image.media_status`, outbox/delivery-attempt record.  
 **Side Effects:** Product write succeeds; media retry event is emitted; failure is observable.  
@@ -562,6 +598,8 @@
 **Preservation:** OK  
 **Statement:** Deleting a product removes or detaches its media, reviews, relationships, categories, variants, availability, and prices before removing the product itself.  
 **Intent:** State Transition  
+**Classification:** Core
+**Weight:** High
 **Logic:** Validate product/store, reload attached entity, remove media through the provider, delete reviews and relationships, clear category associations, then delete the product aggregate.  
 **Data:** product and dependent tables: `product_image`, `product_review`, `product_relationship`, `product_category`, `product_variant`, `product_availability`, `product_price`.  
 **Side Effects:** Object storage deletion, dependent row deletion, `ProductChanged.v1` tombstone.  
@@ -591,6 +629,8 @@
 **Preservation:** FLAGGED  
 **Statement:** A product listing uses the requested page size, bounded by the API maximum; a page-size value must not be overwritten by the page number.  
 **Intent:** Calculation  
+**Classification:** Core
+**Weight:** High
 **Logic:** Legacy assigns `page` to page size and immediately replaces it with `count`. Target accepts zero-based `page` and `pageSize`, validates bounds, and applies them once.  
 **Data:** request `page/pageSize`, listing query offset/limit.  
 **Side Effects:** Read-only.  
@@ -620,6 +660,8 @@
 **Preservation:** GAP  
 **Statement:** The total count and returned product page must apply the same store, category, region, availability, date, language, and grouping predicates so pagination totals describe the actual result set.  
 **Intent:** Calculation  
+**Classification:** Active
+**Weight:** Medium
 **Logic:** Legacy count and fetch queries differ and the fetch query contains an unresolved merchant parameter expression. Target builds one predicate specification and reuses it for count and fetch, with distinct product IDs before pagination.  
 **Data:** product, availability, category, description, store, query criteria.  
 **Side Effects:** Read-only; mismatch telemetry is emitted if detected.  
@@ -649,6 +691,8 @@
 **Preservation:** GAP  
 **Statement:** A price lookup matches a product or variant SKU only within the requested store; store scope applies to both sides of the product/variant alternative.  
 **Intent:** Validation  
+**Classification:** Core
+**Weight:** High
 **Logic:** Replace the legacy `productSku = ? OR variantSku = ? AND merchant = ?` precedence with `(productSku = ? OR variantSku = ?) AND storeId = ?`.  
 **Data:** product/variant SKU, `product_price.availability_id`, `product_availability.store_id`.  
 **Side Effects:** Read-only; cross-store leakage is prevented and audited.  
@@ -678,6 +722,8 @@
 **Preservation:** OK  
 **Statement:** Product, category, variant, availability, and media mutations require an authenticated principal with catalog-management permission in the target store.  
 **Intent:** Authorization  
+**Classification:** Core
+**Weight:** High
 **Logic:** Require an authenticated user and membership in one of the approved administrative groups; additionally verify store scope through MS-10.  
 **Data:** identity claims, permission groups, `store_id`, resource owner.  
 **Side Effects:** Unauthorized attempts are audited; no mutation occurs.  
@@ -707,6 +753,8 @@
 **Preservation:** OK  
 **Statement:** A variation-price request is calculated from the option/value pairs selected by the shopper, and only pairs belonging to the requested product contribute to the price.  
 **Intent:** Calculation  
+**Classification:** Active
+**Weight:** Medium
 **Logic:** Load the product, match each requested option/value pair against product attributes, collect matching attributes, and calculate the resulting price.  
 **Data:** product attributes, option IDs, option-value IDs, adjustment amounts.  
 **Side Effects:** Read-only.  
@@ -736,6 +784,8 @@
 **Preservation:** GAP  
 **Statement:** When product inventory is derived from a variant, the target must require or explicitly select a valid availability; absence of a wildcard row must produce a validation error, never an unhandled null failure.  
 **Intent:** Validation  
+**Classification:** Active
+**Weight:** Medium
 **Logic:** Legacy calls `.get()` on the first wildcard match. Target searches variant and parent availability deterministically and returns `AVAILABILITY_REQUIRED` when none qualifies.  
 **Data:** variant availability region, parent availability region, quantity.  
 **Side Effects:** No product write when inventory cannot be derived.  
@@ -765,6 +815,8 @@
 **Preservation:** OK  
 **Statement:** Display-only product attributes are returned as properties, while shopper-selectable attributes are returned as options with selectable values, prices, images, and localized descriptions.  
 **Intent:** Routing  
+**Classification:** Active
+**Weight:** Medium
 **Logic:** Partition attributes by display-only flag; create property output for read-only attributes and grouped option output for selectable attributes; apply requested-language descriptions with deterministic fallback.  
 **Data:** product attributes, option/value codes, display-only flag, price adjustment, image reference, localized descriptions.  
 **Side Effects:** Read-only.  
@@ -794,6 +846,8 @@
 **Preservation:** GAP  
 **Statement:** MS-02 is the sole owner of inventory availability. A reservation atomically verifies available quantity, decreases sellable quantity, is idempotent by caller key, and can later be committed or released; cart and order services never mutate inventory directly.  
 **Intent:** State Transition  
+**Classification:** Core
+**Weight:** Critical
 **Logic:** The legacy facade checks quantity, while the order service decrements rows and logs insufficient stock instead of consistently rejecting. The target replaces both paths with `POST /inventory-reservations`, using a conditional update/transaction and idempotency key.  
 **Data:** `product_availability.quantity`, `reserved_quantity`, `inventory_reservation.idempotency_key`, product/variant identity.  
 **Side Effects:** Atomic availability update; `InventoryReservationChanged.v1` event.  
@@ -823,6 +877,8 @@
 **Preservation:** OK  
 **Statement:** Product image bytes are stored through a provider-neutral media boundary, while MS-02 persists only product-media metadata and provider references.  
 **Intent:** Routing  
+**Classification:** Core
+**Weight:** High
 **Logic:** Validate image content, call the configured product file manager, then save the media metadata and publish an image event.  
 **Data:** product image name/type, provider URI/key, product ID, image status.  
 **Side Effects:** Object storage write and metadata write.  
@@ -852,6 +908,8 @@
 **Preservation:** OK  
 **Statement:** When configured image dimensions are valid, the uploaded product image is validated and transformed into the configured catalog representation while preserving aspect ratio; invalid configuration or unreadable content fails the media operation.  
 **Intent:** Calculation  
+**Classification:** Active
+**Weight:** Medium
 **Logic:** Read bytes, decode an image, resolve configured width/height, reject non-positive dimensions, optionally crop, resize when source dimensions exceed the target, write the transformed representation, and upload it.  
 **Data:** image bytes, file name/content type, configured width/height, product/image ID.  
 **Side Effects:** Original and transformed provider objects are written; temporary files are deleted.  
@@ -881,6 +939,8 @@
 **Preservation:** OK  
 **Statement:** Catalog administrators must provide a non-empty alphanumeric SKU, and the form must reject it when another product in the same store already uses it.  
 **Intent:** Validation  
+**Classification:** Core
+**Weight:** Critical
 **Logic:** Apply required and alphanumeric client validation; call the uniqueness endpoint on change; server validation remains authoritative.  
 **Data:** request SKU, store scope, product identity.  
 **Side Effects:** No save on invalid or duplicate SKU.  
@@ -910,6 +970,8 @@
 **Preservation:** OK  
 **Statement:** A product is purchasable only when it is available, visible, explicitly purchasable, and has quantity greater than zero.  
 **Intent:** Validation  
+**Classification:** Core
+**Weight:** High
 **Logic:** The storefront add-to-cart control is enabled only when `available && canBePurchased && visible && quantity > 0`; the target API repeats the check server-side.  
 **Data:** product availability state, visibility, purchase flag, available quantity.  
 **Side Effects:** Add-to-cart is rejected when any condition fails.  
@@ -939,6 +1001,8 @@
 **Preservation:** OK  
 **Statement:** Product descriptions are collected per supported language; when a localized field is empty, the first non-empty value for that field is copied as a fallback, while name and friendly URL remain required.  
 **Intent:** Calculation  
+**Classification:** Active
+**Weight:** Medium
 **Logic:** Iterate descriptions in form order, retain the first non-empty value for each fallback field, require name/friendly URL/SKU/manufacturer, then fill empty localized values before submission.  
 **Data:** description language, name, friendly URL, title, keywords, metadata.  
 **Side Effects:** Product descriptions are written for each supported language.  
@@ -968,6 +1032,8 @@
 **Preservation:** OK  
 **Statement:** Category administration validates the category code, localized name, friendly URL, sort order, and selected parent as one hierarchy mutation; the selected store scope cannot be changed by a non-superadministrator.  
 **Intent:** Validation  
+**Classification:** Active
+**Weight:** Medium
 **Logic:** Validate form fields, resolve the selected parent to an ID/code pair, check code uniqueness, fill localized fallbacks, and submit a create/update operation.  
 **Data:** category code, parent ID, store scope, sort order, localized descriptions.  
 **Side Effects:** Category or subtree changes; `CategoryChanged.v1` event.  
@@ -997,6 +1063,8 @@
 **Preservation:** GAP  
 **Statement:** A product's visibility controls whether it can appear in storefront reads, but updating visibility must not silently replace a caller-supplied effective date with the current timestamp.  
 **Intent:** State Transition  
+**Classification:** Core
+**Weight:** High
 **Logic:** Legacy sets availability from visibility and initially resets the date to `new Date()`, then parses a supplied date if present. Target preserves a supplied date and uses current time only when no date is provided.  
 **Data:** product visibility, `date_available`, request date.  
 **Side Effects:** Product status/date update and `ProductChanged.v1`.  
@@ -1026,6 +1094,8 @@
 **Preservation:** OK  
 **Statement:** A localized product read selects the requested region and language before building the response, so price, availability, descriptions, options, and media represent one deterministic storefront context.  
 **Intent:** Routing  
+**Classification:** Core
+**Weight:** High
 **Logic:** Load an eligible product, set the selected availability for the locale, then select the requested language before population.  
 **Data:** product availability region, language ID/code, localized descriptions/prices.  
 **Side Effects:** Read-only.  
@@ -1055,6 +1125,8 @@
 **Preservation:** GAP  
 **Statement:** A category may move only to a parent in the same store and outside its own descendant subtree.  
 **Intent:** Validation  
+**Classification:** Core
+**Weight:** High
 **Logic:** Legacy resolves the parent and rewrites lineage but does not explicitly guard cycles or store mismatch. Target checks store equality and traverses ancestors before mutation.  
 **Data:** category IDs, parent IDs, store IDs, lineage.  
 **Side Effects:** No write on invalid move; rejected attempts are audited.  
@@ -1084,6 +1156,8 @@
 **Preservation:** GAP  
 **Statement:** Removing product media must publish a product projection change so consumers can remove stale media references; search projection ownership remains with MS-03.  
 **Intent:** Routing  
+**Classification:** Core
+**Weight:** High
 **Logic:** Legacy returns without reindexing after image deletion. Target emits `MediaChanged.v1`/`ProductChanged.v1`; MS-03 consumes it and refreshes its derived document.  
 **Data:** product ID, media ID, event version.  
 **Side Effects:** Event publication; no direct search write by MS-02.  
@@ -1113,6 +1187,8 @@
 **Preservation:** OK  
 **Statement:** A product, variant, attribute, or media change publishes a complete, current product aggregate to downstream projection consumers rather than a partial stale object.  
 **Intent:** Routing  
+**Classification:** Core
+**Weight:** High
 **Logic:** Reload the product by ID and store before processing the event; apply the changed child to the refreshed aggregate; publish a versioned change event.  
 **Data:** product ID/store, variants, attributes, images, aggregate version.  
 **Side Effects:** `ProductChanged.v1` event; MS-03 updates its projection.  
@@ -1142,6 +1218,8 @@
 **Preservation:** GAP  
 **Statement:** Repeating an inventory reservation request with the same caller-provided key returns the original reservation and must not reserve or decrement stock twice.  
 **Intent:** Validation  
+**Classification:** Core
+**Weight:** Critical
 **Logic:** Store `(store_id, reservation_key)` uniquely; on retry, return the existing reservation if request attributes match, otherwise return an idempotency conflict.  
 **Data:** reservation key, product/variant ID, quantity, state, request hash.  
 **Side Effects:** At most one availability decrement and one reservation event.  
@@ -1171,6 +1249,8 @@
 **Preservation:** OK  
 **Statement:** Product deletion is complete only when no category, relationship, review, media, variant, availability, price, or reservation record can still reference the deleted product.  
 **Intent:** Compliance  
+**Classification:** Core
+**Weight:** Critical
 **Logic:** Execute aggregate cleanup in one transaction with foreign-key constraints or explicit ordered deletion; reject/compensate if any dependent cleanup fails.  
 **Data:** all product-dependent tables and active reservations.  
 **Side Effects:** dependent records and provider objects are removed; tombstone event is emitted.  
@@ -1200,6 +1280,8 @@
 **Preservation:** GAP  
 **Statement:** A held reservation may be committed once or released once; after either terminal outcome, subsequent commit/release requests are idempotent and cannot change stock again.  
 **Intent:** State Transition  
+**Classification:** Core
+**Weight:** Critical
 **Logic:** Reservation states are `Held`, `Committed`, `Released`, and `Expired`. Commit changes `Held→Committed`; release changes `Held→Released`; terminal states reject the opposite transition without another stock mutation.  
 **Data:** reservation state, quantity, expiry, product availability, commit/release timestamps.  
 **Side Effects:** Commit finalizes decrement; release restores sellable quantity; events are published.  

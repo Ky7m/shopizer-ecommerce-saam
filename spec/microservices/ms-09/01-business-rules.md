@@ -53,6 +53,8 @@ no active origin exists, the store’s registered address, country, postal code,
 are used as the effective origin.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```text
@@ -109,6 +111,8 @@ international policy accepts only destination countries explicitly enabled for t
 Unsupported destinations produce no shipping quote and do not invoke a provider.
 
 **Intent:** Validation
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 ```text
@@ -160,6 +164,8 @@ and chooses the first active module that is not itself a pre/postprocessor. If n
 provider is available, the quote ends with a no-provider result.
 
 **Intent:** Routing
+**Classification:** Active
+**Weight:** Low
 
 **Logic:**
 ```text
@@ -224,6 +230,8 @@ is called. A preprocessor may select a different configured provider; the replac
 only when it is active and resolvable.
 
 **Intent:** Routing
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 ```text
@@ -285,6 +293,8 @@ the destination country equals the store country; an international policy applie
 eligible destinations.
 
 **Intent:** Calculation
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```text
@@ -347,6 +357,8 @@ as selected. Comparisons use truncated integer values in the legacy behavior; th
 replace this with exact decimal comparison unless BA review explicitly approves the defect.
 
 **Intent:** Calculation
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```text
@@ -419,6 +431,8 @@ stored as an immutable quote snapshot containing the cart, destination, provider
 price, handling, estimated days, quote time, and optional customer/order references.
 
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```text
@@ -484,6 +498,8 @@ mode is `ITEM`, and box-fit packaging when it is `BOX`. Missing shipping configu
 to item mode at the orchestration layer.
 
 **Intent:** Routing
+**Classification:** Active
+**Weight:** Low
 
 **Logic:**
 ```text
@@ -539,6 +555,8 @@ expanded into separate package facts. Product-attribute weight is added where th
 provides shipping weight.
 
 **Intent:** Calculation
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```text
@@ -602,6 +620,8 @@ percent of the box’s remaining volume. Otherwise a new box is created. Zero or
 capacity causes the calculation to fail.
 
 **Intent:** Calculation
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```text
@@ -671,6 +691,8 @@ weight while constructing every returned box fact; this is a fidelity defect req
 classification before implementation.
 
 **Intent:** Calculation
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 ```text
@@ -720,6 +742,8 @@ greater eligible distances use `3` per kilometre. The current source attempts to
 below 1 km after calculating the total, so the clamp does not affect the returned price.
 
 **Intent:** Calculation
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```text
@@ -775,6 +799,8 @@ coordinates on the delivery snapshot, and records route distance in kilometres. 
 HTTP calls, retries, and provider response handling belong to MS-12.
 
 **Intent:** Calculation
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```text
@@ -846,6 +872,8 @@ A Canadian Quebec shipment over either threshold selects distance pricing. If no
 the provider remains unchanged.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```text
@@ -920,6 +948,8 @@ salience, while the second rule set contains non-overlapping bands (`<=40`, `41�
 `81–2550`). Rule ordering must be made deterministic in the target.
 
 **Intent:** Calculation
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 ```text
@@ -982,6 +1012,8 @@ Carrier-specific country restrictions remain adapter capabilities, but they cann
 MS-09 eligibility decision.
 
 **Intent:** Compliance
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 ```text
@@ -1031,6 +1063,8 @@ shipping cost. The target must explicitly decide whether the zero-cost quote is 
 checkout reproducibility.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```text
@@ -1080,6 +1114,8 @@ IF eligibleFreeShipping:
 resulting provider code and must not select or replace providers themselves.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```text
@@ -1130,6 +1166,8 @@ distance fact. Missing, disallowed, or failed geocoding does not result in a fab
 distance-based price.
 
 **Intent:** Validation
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```text
@@ -1179,6 +1217,8 @@ IF quote.distance > 150:
 that satisfies multiple rules cannot produce an implementation-dependent price.
 
 **Intent:** Compliance
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 ```text
@@ -1229,6 +1269,8 @@ than or equal to the shipment weight supplies the price. No matching region or b
 no option.
 
 **Intent:** Calculation
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 ```text
@@ -1287,6 +1329,8 @@ Its price comes from configured module data, its identifier includes the destina
 it becomes the initial selected option when no option has previously been selected.
 
 **Intent:** Calculation
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```text
@@ -1344,6 +1388,8 @@ IF quote.selectedOption is null:
 MS-09 supplies shipping and handling facts but never changes cart or order lifecycle state.
 
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 ```text
@@ -1394,6 +1440,8 @@ expressions. String criterion values are serialized as single-element arrays; no
 retain their original representation.
 
 **Intent:** Validation
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```text

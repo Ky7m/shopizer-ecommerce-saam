@@ -182,3 +182,7 @@ replacement, free-shipping threshold, option-selection policy, quote persistence
 packaging, `.75` box-fit factor, distance cap/rates, Maps preprocessing, KIE decisions,
 weight brackets, pickup processing, and carrier adapter boundaries. Known legacy defects and
 ownership decisions are explicitly flagged for Phase 4a/4b rather than silently reproduced.
+
+## Phase 4a BA disposition
+
+Mode A agent defaults were approved on 2026-09-02. 24 rules remain active after 0 approved obsolete-rule removal(s). Retained rules carry explicit Classification and Weight metadata; no rules were deferred, merged, or simplified without BA-specific guidance.

@@ -176,3 +176,7 @@ All cross-service identifiers are non-FK boundary values. Internal FKs exist onl
 - [ ] DTO generation
 - [ ] Implementation
 - [ ] Test generation
+
+## Phase 4a BA disposition
+
+Mode A agent defaults were approved on 2026-09-02. 20 rules remain active after 0 approved obsolete-rule removal(s). Retained rules carry explicit Classification and Weight metadata; no rules were deferred, merged, or simplified without BA-specific guidance.

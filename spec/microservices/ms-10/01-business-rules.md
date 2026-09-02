@@ -13,6 +13,8 @@
 
 **Statement:** A store identifier is mandatory, uses only letters, digits, and underscores, and is at most 100 characters long.
 **Intent:** Validation
+**Classification:** Core
+**Weight:** High
 **Logic:** Reject blank or overlong codes; reject characters outside `[A-Za-z0-9_]`; otherwise persist the supplied code.
 **Data Dependencies:** Reads/writes `MERCHANT_STORE.STORE_CODE`.
 **Side Effects:** Calls store uniqueness lookup.
@@ -36,6 +38,8 @@
 
 **Statement:** A store must have a name, phone, city, postal code, syntactically valid email, and a resolvable country before persistence.
 **Intent:** Validation
+**Classification:** Core
+**Weight:** High
 **Logic:** Validate required contact fields; resolve `request.address.country` through the country reference service; map resolved country and contact values to the store.
 **Data Dependencies:** Reads `MERCHANT_STORE.*`, `COUNTRY.ID`; writes store contact and country fields.
 **Side Effects:** Calls shared country reference service.
@@ -59,6 +63,8 @@
 
 **Statement:** A store code identifies at most one store within a tenant; a duplicate create request is rejected.
 **Intent:** Validation
+**Classification:** Core
+**Weight:** Critical
 **Logic:** Query by code before creation and reject an existing result; retain a database unique constraint for race-free enforcement.
 **Data Dependencies:** Reads/writes `MERCHANT_STORE.STORE_CODE`.
 **Side Effects:** Performs a uniqueness query.
@@ -82,6 +88,8 @@
 
 **Statement:** When a new store omits measurement settings, the system assigns the platform defaults for dimension and weight units.
 **Intent:** Validation
+**Classification:** Core
+**Weight:** High
 **Logic:** If dimension or weight is absent, resolve the configured default unit and assign it before persistence; preserve explicit valid values.
 **Data Dependencies:** Reads store request and unit reference data; writes `MERCHANT_STORE.DIMENSION` and `MERCHANT_STORE.WEIGHT`.
 **Side Effects:** Calls shared unit/reference services.
@@ -105,6 +113,8 @@
 
 **Statement:** A store modification changes the identified store while preserving fields not supplied by the request.
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** High
 **Logic:** Load the store by identifier, map supplied editable fields onto the existing entity, validate the merged result, then save it.
 **Data Dependencies:** Reads/writes `MERCHANT_STORE` identity, contact, language, currency, and branding fields.
 **Side Effects:** Emits a store-updated integration event in the target.
@@ -128,6 +138,8 @@
 
 **Statement:** The platform’s designated default store is protected from deletion.
 **Intent:** Compliance
+**Classification:** Core
+**Weight:** Critical
 **Logic:** Compare the target code with the configured default-store code; reject deletion when they match, otherwise delete the store.
 **Data Dependencies:** Reads `MERCHANT_STORE.STORE_CODE` and default-store configuration; writes/deletes store record.
 **Side Effects:** May cascade child-store deletion after authorization.
@@ -151,6 +163,8 @@
 
 **Statement:** A child store may reference only an existing different parent store.
 **Intent:** Validation
+**Classification:** Core
+**Weight:** High
 **Logic:** Resolve the requested parent; reject a missing parent or a parent whose identifier equals the child identifier; persist the hierarchy link only after validation.
 **Data Dependencies:** Reads/writes `MERCHANT_STORE.PARENT_ID`.
 **Side Effects:** Calls store lookup.
@@ -174,6 +188,8 @@
 
 **Statement:** Only a retailer store may expose its child-store collection.
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** High
 **Logic:** Load the requested store; return children only when its retailer flag is enabled; otherwise reject the hierarchy query.
 **Data Dependencies:** Reads `MERCHANT_STORE.RETAILER` and `MERCHANT_STORE.PARENT_ID`.
 **Side Effects:** None.
@@ -197,6 +213,8 @@
 
 **Statement:** Deleting a parent store must not leave child stores orphaned; the configured deletion policy is applied atomically.
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** High
 **Logic:** Resolve children before parent deletion and either cascade the deletion or reject the parent deletion according to the target policy; never commit a dangling parent reference.
 **Data Dependencies:** Reads/writes `MERCHANT_STORE.ID` and `MERCHANT_STORE.PARENT_ID`.
 **Side Effects:** May delete multiple store rows in one transaction.
@@ -220,6 +238,8 @@
 
 **Statement:** A request without an explicit store context is resolved against the configured default store.
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 **Logic:** Read the request store parameter; when absent, resolve the configured default code and load that store; reject when the configured default cannot be found.
 **Data Dependencies:** Reads request context and `MERCHANT_STORE.STORE_CODE`.
 **Side Effects:** None.
@@ -243,6 +263,8 @@
 
 **Statement:** An authenticated administrator may operate only on a store permitted by the request context and the administrator’s store hierarchy.
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** High
 **Logic:** Resolve the target store from URI/context; load the authenticated administrator’s permitted stores; reject a target outside that set.
 **Data Dependencies:** Reads administrator/store membership and `MERCHANT_STORE` hierarchy.
 **Side Effects:** Security rejection is audited.
@@ -266,6 +288,8 @@
 
 **Statement:** A store’s effective language is the requested supported language, otherwise its configured default, otherwise the platform default.
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 **Logic:** Accept a requested language only when associated with the store; fall back to store default and then system default; reject an unsupported explicit language.
 **Data Dependencies:** Reads store-language associations and `LANGUAGE.CODE`; writes no store data during reads.
 **Side Effects:** Calls shared language reference service.
@@ -289,6 +313,8 @@
 
 **Statement:** Store administration screens and API calls display and modify only the store selected by the active store context.
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** High
 **Logic:** Resolve the active store before controller execution and bind all read/write operations to that resolved store.
 **Data Dependencies:** Reads request context and store identity; writes only the selected store.
 **Side Effects:** None.
@@ -314,6 +340,8 @@
 
 **Statement:** Store codes are normalized consistently before duplicate detection so equivalent identifiers cannot bypass uniqueness.
 **Intent:** Validation
+**Classification:** Core
+**Weight:** Critical
 **Logic:** Trim the submitted code, apply the target case policy, then perform lookup and persistence using the normalized value.
 **Data Dependencies:** Reads/writes `MERCHANT_STORE.STORE_CODE`.
 **Side Effects:** None.
@@ -337,6 +365,8 @@
 
 **Statement:** A store modification cannot silently change its identity or move it to another tenant; identity changes use a separate controlled operation.
 **Intent:** Compliance
+**Classification:** Core
+**Weight:** Critical
 **Logic:** Load the existing store, ignore or reject immutable code/tenant changes, merge editable metadata, and save under the original identity.
 **Data Dependencies:** Reads/writes `MERCHANT_STORE.ID`, `STORE_CODE`, and tenant/store ownership.
 **Side Effects:** Emits an audit record for rejected identity changes.
@@ -360,6 +390,8 @@
 
 **Statement:** A store is created only when identity, references, hierarchy, and defaults all validate; a failure leaves no partially created store.
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** High
 **Logic:** Validate code/contact, resolve country/language/units/parent, persist the store and language links in one transaction, roll back on any service exception.
 **Data Dependencies:** Reads reference data and `MERCHANT_STORE`; writes store and store-language rows.
 **Side Effects:** Publishes `StoreCreated` after commit.
@@ -383,6 +415,8 @@
 
 **Statement:** Store collection endpoints return bounded pages with stable ordering and report the total matching store count.
 **Intent:** Calculation
+**Classification:** Core
+**Weight:** High
 **Logic:** Apply tenant/store hierarchy criteria, create a page request from `page` and `pageSize`, order by normalized store code, and return items plus pagination metadata.
 **Data Dependencies:** Reads `MERCHANT_STORE` identity and hierarchy fields.
 **Side Effects:** None.
@@ -406,6 +440,8 @@
 
 **Statement:** Retailer hierarchy queries include only descendants that the requesting administrator is authorized to administer.
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** High
 **Logic:** Resolve the retailer root, traverse child relationships, intersect the result with the administrator’s permitted stores, then paginate.
 **Data Dependencies:** Reads store parent/retailer fields and administrator store permissions.
 **Side Effects:** Security denials are auditable.
@@ -429,6 +465,8 @@
 
 **Statement:** Branding metadata belongs to one store, while logo bytes are stored through the configured file provider and are not part of the store database record.
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** High
 **Logic:** Authorize the store, persist template/branding metadata, and call the file-provider boundary for logo upload or deletion; do not store provider bytes in the store row.
 **Data Dependencies:** Reads/writes store branding metadata and provider object references.
 **Side Effects:** Calls external file storage.
@@ -452,6 +490,8 @@
 
 **Statement:** A store’s configured default language must be one of its supported languages.
 **Intent:** Validation
+**Classification:** Active
+**Weight:** Low
 **Logic:** Resolve requested supported language codes; reject a default code not present in the association set; persist the default and associations together.
 **Data Dependencies:** Reads/writes store-language associations and `LANGUAGE.CODE`.
 **Side Effects:** Calls shared language reference service.
@@ -475,6 +515,8 @@
 
 **Statement:** Lightweight store-name lists are restricted to the administrator’s permitted hierarchy and exclude unauthorized tenants.
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** High
 **Logic:** Resolve permitted store IDs from the active administrator context, query only those stores, order by display name, and return code/name pairs.
 **Data Dependencies:** Reads `MERCHANT_STORE.ID`, `STORE_CODE`, and `STORE_NAME`.
 **Side Effects:** None.

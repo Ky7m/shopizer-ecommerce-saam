@@ -34,7 +34,7 @@ The deep read confirmed several implementation-critical findings that are preser
 
 | Artifact | Count |
 |---|---:|
-| Business rules | 13 |
+| Business rules | 12 |
 | Owned tables | 5 |
 | PostgreSQL indexes | 7 |
 | Unique API path templates | 10 |
@@ -141,3 +141,7 @@ The listed legacy source files do not publish equivalent events. Target event pu
 - `04-api-contract.yaml` defines the matching OpenAPI 3.1 schemas, paths, operations, headers, status codes, and error responses.
 - `extraction-evidence.md` records all source files read, CAST scope, source sections, and rule coverage.
 - Phase 4a classification and Phase 4b automatibility scoring remain pending.
+
+## Phase 4a BA disposition
+
+Mode A agent defaults were approved on 2026-09-02. 12 rules remain active after 1 approved obsolete-rule removal(s). Retained rules carry explicit Classification and Weight metadata; no rules were deferred, merged, or simplified without BA-specific guidance.

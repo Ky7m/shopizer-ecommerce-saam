@@ -30,6 +30,8 @@ MS-04 does not own product facts or inventory, price and promotion algorithms, t
 **Statement:** Every newly created cart must belong to exactly one tenant and store, may optionally be associated with a customer, and must expose a unique opaque client code when the caller does not supply one.
 
 **Intent:** State Transition / Authorization
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -90,6 +92,8 @@ persist cart
 **Statement:** A cart can contain a product only when the product is found by SKU in the requested store, belongs to that store, is marked available, has configured inventory, and is available for sale at the current time.
 
 **Intent:** Validation / Authorization
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -168,6 +172,8 @@ cartItem.variant = first variant id when present
 **Statement:** A selected product option may be attached to a cart line only when its product association matches the line product; unrelated or removed options must not become part of the cart or checkout snapshot.
 
 **Intent:** Validation
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -230,6 +236,8 @@ FOR persistedAttribute IN cartItem.attributes:
 **Statement:** When a physical product without selected attributes is added to a cart that already contains the same product without attributes, the existing line absorbs the new quantity instead of creating a second line. Attribute-bearing lines remain distinct.
 
 **Intent:** Calculation / State Transition
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -293,6 +301,8 @@ IF duplicateFound == false:
 **Statement:** A cart update with quantity zero means removal, and removal must delete the selected-attribute rows before deleting the cart-line row. Positive quantities replace the existing line quantity.
 
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -366,6 +376,8 @@ deleteShoppingCartItem(itemId):
 **Statement:** Every cart read used for display, total calculation, or checkout must re-resolve each SKU, restore valid attributes, calculate the current price, calculate the line subtotal, and mark the cart obsolete when no usable line remains.
 
 **Intent:** Calculation / State Transition
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -459,6 +471,8 @@ IF cartIsObsolete:
 **Statement:** When an authenticated customer adopts an anonymous cart, only carts from the same tenant and store may be merged; existing customer lines are preserved, compatible duplicates are combined, and the anonymous cart is removed after a successful merge.
 
 **Intent:** Authorization / State Transition
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -536,6 +550,8 @@ RETURN customerCart
 **Statement:** A shipping request must include only lines that are both non-virtual and shippable; a cart containing no such lines must not request a carrier quote.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -602,6 +618,8 @@ IF shippingProducts is empty:
 **Statement:** For a physical cart, the quote request must use the customer's delivery address when it has a postal code; otherwise it must use the billing address, and an anonymous request must construct delivery data from the supplied postal and country values.
 
 **Intent:** Routing / Validation
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -672,6 +690,8 @@ quote = shippingService.getShippingQuote(
 **Statement:** The current checkout total is the sum of line subtotals, applicable price variations, shipping, eligible handling, tax, and the final total; the result must be returned with each component identified.
 
 **Intent:** Calculation
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -770,6 +790,8 @@ RETURN subtotal, taxTotal, totals, total
 **Statement:** A promotion code is associated with the cart at the time it is added and is eligible for calculation only while its recorded calendar date is before tomorrow; an expired code must be cleared before the next cart total is calculated.
 
 **Intent:** Validation / State Transition
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -836,6 +858,8 @@ ELSE:
 **Statement:** An authenticated operation must resolve the customer from the authenticated principal and must not expose or mutate a cart whose customer association differs from that principal.
 
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -898,6 +922,8 @@ IF cart.customerId is null OR cart.customerId != customer.id:
 **Statement:** An anonymous checkout must provide customer details and may create a customer account only when credentials are supplied and the email is not already registered in the store.
 
 **Intent:** Validation / Authorization
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -973,6 +999,8 @@ process checkout using customer context
 **Statement:** Checkout must freeze the current cart into an immutable snapshot containing the resolved SKU, product name, quantity, selected attributes, current price allocations, currency, addresses, shipping reference, and calculated totals before publication to MS-05.
 
 **Intent:** State Transition / Compliance
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 ```pseudocode
@@ -1046,6 +1074,8 @@ transition checkout_session from Quoted to Frozen
 **Statement:** Checkout submission is accepted only when the caller's amount, normalized to the store's currency precision, exactly equals the server-calculated grand total for the current cart and selected shipping quote.
 
 **Intent:** Validation / Compliance
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 ```pseudocode
@@ -1107,6 +1137,8 @@ checkout_total_snapshot.grand_total = calculatedAmount
 **Statement:** MS-04 may hand off a payment request only after the selected payment method is configured and active for the store; provider selection, provider credentials, transaction state, and authorization results belong to MS-06.
 
 **Intent:** Routing / Authorization
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 ```pseudocode
@@ -1176,6 +1208,8 @@ publish PaymentRequested with:
 **Statement:** Every payment-sensitive checkout submission must carry a caller-supplied idempotency key scoped to tenant, store, customer, cart, and operation; a retry with the same key must return the original result without repeating payment, inventory, order-submission, or notification side effects.
 
 **Intent:** Compliance / State Transition
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 ```pseudocode
@@ -1243,6 +1277,8 @@ RETURN original response
 **Statement:** A checkout session must progress only through `Open`, `Quoted`, `Frozen`, `Submitted`, `Failed`, or `Expired`; `Submitted`, `Failed`, and `Expired` are terminal states and a terminal session cannot be reused.
 
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -1310,6 +1346,8 @@ Submitted, Failed, Expired:
 
 **Statement:** MS-04 must commit its cart/checkout freeze, total snapshot, idempotency record, and outbox entry locally before publishing the immutable order submission; MS-05, MS-06, and MS-02 then perform their owned work asynchronously with retries and compensation.
 
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 BEGIN local MS-04 transaction
@@ -1379,6 +1417,8 @@ MS-12 owns email/download delivery
 **Statement:** MS-04 may coordinate downstream capabilities, but it must not create or transition order records, mutate payment-provider transactions, calculate provider-owned prices or taxes, call shipping providers directly, or decrement inventory directly.
 
 **Intent:** Authorization / Routing
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 ```pseudocode

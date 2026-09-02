@@ -39,6 +39,8 @@ Source references use the repository-relative path required by the SAAM extracti
 **Statement:** A merchant store cannot contain two CMS items with the same content code, regardless of whether the existing item is a page or a content box. The uniqueness scope is the merchant store, not the global platform.
 
 **Intent:** Validation
+**Classification:** Core
+**Weight:** Critical
 
 **Acceptance Criteria:** Given an existing `about-us` item in store `DEFAULT`, when a page or box with code `about-us` is created in that store, then creation is rejected. The same code may be created in a different merchant store.
 
@@ -106,6 +108,8 @@ IF existingContent != null:
 **Statement:** A page endpoint creates or updates an item classified as `PAGE`, and a box endpoint creates or updates an item classified as `BOX`. The requested operation determines the type; a client cannot change a page into a box by supplying another content type.
 
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** Given a page request containing any client-supplied content type, when it is processed through the page operation, then the persisted item has type `PAGE`. The equivalent box operation persists type `BOX`.
 
@@ -183,6 +187,8 @@ convertContentBoxToContent(store, model, content):
 **Statement:** Each submitted localized description is matched to an existing description for the same language code. A matching description is updated in place; a language not already present creates a new localized description. The submitted description collection becomes the content item's localized description collection, so omitted languages are not retained by this conversion path.
 
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** Given an English description already exists, when an update supplies English content, then the existing English row is updated rather than duplicated. When French is supplied for the first time, a French row is added. When a previously stored German description is omitted from the submitted list, the target must make the replacement semantics explicit; the legacy conversion replaces the collection.
 
@@ -265,6 +271,8 @@ buildDescriptions(contentModel, persistableDescriptions):
 **Statement:** A read with a requested language returns a single-language projection containing the matching localized description. A read without a language returns an all-language projection containing the available descriptions. A missing content code is an error in both modes.
 
 **Intent:** Routing
+**Classification:** Active
+**Weight:** Medium
 
 **Acceptance Criteria:** Given a page with English and French descriptions, when English is requested, then the response contains the English description projection. When no language is supplied through the internal read path, then the response contains both descriptions.
 
@@ -343,6 +351,8 @@ convertContentToReadableContentPage(store, language, content):
 **Statement:** A public page lookup by friendly URL is eligible only when the localized friendly URL belongs to the requested merchant store and the content item is visible. An invisible item must not be published through this lookup.
 
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** Given a visible page with friendly URL `terms`, when `GET /content/pages/name/terms` is requested for its store, then the page is returned. If the same page is invisible, the public lookup returns no page.
 
@@ -429,6 +439,8 @@ getContentPageByName(name, store, language):
 **Statement:** Content visibility and menu association are independent publication policies. Changing one does not automatically change the other, and a public friendly-URL lookup must exclude content that is not visible.
 
 **Intent:** Compliance
+**Classification:** Core
+**Weight:** Critical
 
 **Acceptance Criteria:** A visible page may be excluded from menu navigation, and a page linked to the menu may be invisible. The target must preserve these as separate fields and define publication behavior explicitly rather than treating menu linkage as publication.
 
@@ -494,6 +506,8 @@ getByCode(...):
 **Statement:** Page and box list operations return only the requested content type for the requested merchant store, order results by ascending `sortOrder`, and apply the supplied page and count values through the persistence paging query.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** Given three pages with sort orders `20`, `5`, and `10`, when page `0` with count `2` is requested, then the first page contains the items ordered `5`, `10` and reports the persistence page totals.
 
@@ -567,6 +581,8 @@ getContentPages(...):
 **Statement:** A localized response exposes the language code, name, title, description, friendly URL, and identifier of the selected description. The language-specific content-box read wraps its description in CDATA after removing carriage-return/newline and tab characters; the page projection returns the description without that CDATA transformation.
 
 **Intent:** Routing
+**Classification:** Active
+**Weight:** Low
 
 **Acceptance Criteria:** A box containing `"\r\nPromo\ttext"` returns `<![CDATA[Promo text]]>` through the language-specific box endpoint. The page endpoint returns the source description value without the box-specific wrapper.
 
@@ -645,6 +661,8 @@ convertContentToReadableContentPage(...):
 **Statement:** A content item may be deleted only through the merchant-store scope to which it belongs. An identifier belonging to another merchant store must be treated as not found and must not be deleted.
 
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** Given content ID `1213` belongs to `DEFAULT`, a delete scoped to `DEFAULT` succeeds. The same ID scoped to `CA-STORE` is rejected without a delete.
 
@@ -716,6 +734,8 @@ deleteContent(id, merchantStore):
 **Statement:** An upload submitted through the content facade is classified as an API image when the MIME-type major component is `image`; all other MIME-type major components are classified as a static file. The service converts `API_IMAGE` to `IMAGE` and `API_FILE` to `STATIC_FILE` before storage.
 
 **Intent:** Routing
+**Classification:** Active
+**Weight:** Medium
 
 **Acceptance Criteria:** `hero.png` with MIME type `image/png` is stored in the `IMAGE` category. `manual.pdf` with MIME type `application/pdf` is stored in the `STATIC_FILE` category.
 
@@ -800,6 +820,8 @@ ContentService.addContentFile(...):
 **Statement:** The administrative image-upload operation accepts only safe basenames. An invalid filename returns a failed upload result and does not call content storage. The separate generic file-upload endpoints do not apply this stricter image-upload validation.
 
 **Intent:** Validation
+**Classification:** Active
+**Weight:** Medium
 
 **Acceptance Criteria:** An upload named `hero.png` passes filename validation and is sent to storage. An upload named `../hero.png` is rejected with `success:false` and `error:"Invalid filename"`.
 
@@ -870,6 +892,8 @@ upload(qqfile, qquuid, qqfilename, ...):
 **Statement:** A stored content file is addressed by merchant store code, file-content type, and file name. Files with the same name in different stores or different content-type namespaces are distinct. Writing the same name into the same namespace replaces the existing object in the cache and local providers.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** `logo.png` for store `DEFAULT` is not returned for store `CA-STORE`. `logo.png` in `IMAGE` is distinct from `logo.png` in `LOGO`. Re-uploading `hero.png` to the same store and namespace replaces the existing bytes.
 
@@ -951,6 +975,8 @@ Infinispan.getFile(store, path, fileType, fileName):
 **Statement:** Renaming a file preserves its bytes and media metadata under the new name. The operation must either be atomic or expose a recoverable failure that prevents an apparent success when the original has already been removed.
 
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** Renaming `hero.png` to `banner.png` preserves bytes and MIME type. Renaming a missing file returns a not-found error. A provider failure during recreation must not leave an unexplained successful response.
 
@@ -1012,163 +1038,6 @@ renameFile(merchantStoreCode, fileContentType, path, originalName, newName):
 
 ---
 
-### BR-MER-026: Folder paths use Linux-style directory syntax, but folder enumeration and deletion are incomplete
-
-**Source Reference:** `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/services/content/ContentServiceImpl.java` : `addFolder()` lines 459-472; `isValidLinuxDirectory()` lines 490-493; `listFolders()` lines 474-479; `removeFolder()` lines 481-488  
-**Cross-Reference:** `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/modules/cms/content/infinispan/CmsStaticContentFileManagerImpl.java` : `addFolder()` lines 427-458; `removeFolder()` and `listFolders()` lines 460-470; `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/modules/cms/content/local/CmsStaticContentFileManagerImpl.java` : folder methods lines 399-477  
-**Discovery Method:** Direct Source Read | CAST Imaging (Hybrid)  
-**CAST Reference:** Transaction 244038 `GET api/v1/private/content/folder`; transaction 244063 `DELETE api/v1/content/folder`
-
-**Semantic Preservation:**
-
-| Dimension | Source | Spec | Status |
-|---|---:|---:|---|
-| Control-flow | 5 | 5 | OK |
-| Data-flow | 5 | 5 | OK |
-| Constants | 2 | 3 | GAP (target rejects path characters accepted by the legacy pattern) |
-| State transitions | 2 | 2 | OK |
-| Outcomes | 3 | 3 | OK |
-| Data writes | 1 | 1 | OK |
-| Integrations | 1 | 1 | OK |
-| Error paths | 2 | 2 | OK |
-
-**Preservation:** GAP — the target intentionally tightens path validation beyond the legacy regular expression; this policy change is forwarded to Phase 4a.
-
-**Statement:** The target accepts only `/` or slash-prefixed folder segments containing letters, digits, underscores, and hyphens. Folder creation, listing, and deletion capabilities must be explicit because storage backends do not provide identical folder semantics; the legacy implementation accepted some broader paths.
-
-**Intent:** Validation
-
-**Acceptance Criteria:** `/marketing/summer-2026` is a valid folder path. `/marketing/summer 2026` is rejected by the target validation policy, even though the legacy regular expression accepted it. The target must not claim portable folder listing or recursive deletion unless those capabilities are implemented.
-
-**Logic:**
-```pseudocode
-isValidLinuxDirectory(path):
-    linuxDirectoryPattern = "^/|(/[a-zA-Z0-9_-]+)+$"
-    RETURN path != null
-       AND NOT path.trim().isEmpty()
-       AND linuxDirectoryPattern.matcher(path).matches()
-
-addFolder(store, path, folderName):
-    Validate.notNull(store, "MerchantStore cannot be null")
-    Validate.notNull(folderName, "Folder name cannot be null")
-
-    IF path.isPresent():
-        IF NOT isValidLinuxDirectory(path.get()):
-            THROW ServiceException(
-                "Path format [" + path.get() +
-                "] not a valid directory format"
-            )
-
-    contentFileManager.addFolder(store.getCode(), folderName, path)
-
-Infinispan.addFolder(...):
-    nodePath = getNodePath(store, FileContentType.IMAGE)
-    append optional path
-    create parent node if absent
-    append folderName
-    add child folder node
-
-Infinispan.removeFolder(...):
-    // TODO — no removal behavior
-
-Infinispan.listFolders(...):
-    // TODO — returns null
-```
-
-**Data Dependencies:**
-- Reads: `merchant_store.code`; provider folder path
-- Writes: provider folder node/directory under the image namespace
-- No relational folder table is used
-
-**Side Effects:**
-- Calls provider folder operations
-- Invalid paths produce a service exception
-- Infinispan `removeFolder()` and `listFolders()` are TODO implementations
-- Local `listFolders()` returns `null`
-
-**Concrete Example:**
-- **API Input:** Target folder operation equivalent to `POST /api/v1/private/content/folders`  
-  `{"path":"/marketing/summer-2026","folderName":"banners","store":"DEFAULT"}`
-- **Success Output:** `201 {"path":"/marketing/summer-2026/banners"}`
-- **Error Input:** `{"path":"/marketing/summer 2026","folderName":"banners","store":"DEFAULT"}`
-- **Error Output:** `400 {"message":"Path format [/marketing/summer 2026] not a valid directory format"}`
-- **Legacy defect:** `GET /api/v1/private/content/folder?path=/marketing&store=DEFAULT` can return a folder containing files but provider `listFolders()` itself is `null`; target must specify a real folder-list contract rather than copy the null behavior
-
----
-
-### BR-MER-027: Legacy download and folder controller operations contain explicit nonfunctional behavior
-
-**Source Reference:** `initial-source/shopizer-3.2.7/sm-shop/src/main/java/com/salesmanager/shop/store/api/v1/content/ContentAdministrationApi.java` : `download()` lines 164-184; `initial-source/shopizer-3.2.7/sm-shop/src/main/java/com/salesmanager/shop/store/api/v1/content/ContentApi.java` : `addFolder()` lines 324-328; deprecated `pagesSummary()` lines 99-109  
-**Cross-Reference:** `initial-source/shopizer-3.2.7/sm-shop/src/main/java/com/salesmanager/shop/store/facade/content/ContentFacadeImpl.java` : `download()` lines 840-850; `getContentBoxes(ContentType,String,...)` lines 439-456  
-**Discovery Method:** Direct Source Read | CAST Imaging (Hybrid)  
-**CAST Reference:** Transaction 244040 `GET api/v1/content/images/download`; transaction 244063 `DELETE api/v1/content/folder`; transaction 244046 `GET api/v1/content/summary`
-
-**Semantic Preservation:**
-
-| Dimension | Source | Spec | Status |
-|---|---:|---:|---|
-| Control-flow | 4 | 4 | OK |
-| Data-flow | 4 | 4 | OK |
-| Constants | 2 | 2 | OK (`null`, error prefix) |
-| State transitions | 0 | 0 | OK |
-| Outcomes | 4 | 4 | OK |
-| Data writes | 0 | 0 | OK |
-| Integrations | 2 | 2 | OK (`ContentFacade.download`, content-box prefix path) |
-| Error paths | 3 | 3 | OK |
-
-**Preservation:** OK — defect behavior recorded explicitly
-
-**Statement:** A content API must not represent an unimplemented download, folder, summary, or compatibility operation as a successful content response with an empty value. Each exposed operation must either perform its declared function or return an explicit unsupported/retired error.
-
-**Intent:** Routing
-
-**Acceptance Criteria:** A target download endpoint must either return file bytes or a documented not-found/error response. A target folder-create/list endpoint must implement its declared operation or be removed from the public contract.
-
-**Logic:**
-```pseudocode
-ContentAdministrationApi.download(path, store, language):
-    fileName = path.substring(path.lastIndexOf("/") + 1, path.length())
-    TRY:
-        // contentFacade.download(...) is commented out
-        RETURN null
-    CATCH Exception e:
-        THROW ServiceRuntimeException(
-            "Error while downloading file [" + fileName + "]"
-        )
-
-ContentApi.addFolder(parent, folder, store, language):
-    // empty method body; no facade call and no storage write
-
-ContentApi.pagesSummary(...):
-    // contentFacade.getContentBoxes(...) is commented out
-    RETURN null
-
-ContentFacadeImpl.getContentBoxes(type, codePrefix, store, language, page, count):
-    // intended contentService.getByCodeLike(...) is commented out
-    RETURN null
-```
-
-**Data Dependencies:**
-- Download would read provider file bytes but the active controller does not do so
-- Prefix listing would read `content.code`, `content.content_type`, `content.merchant_id`, `content_description.language_id`, but the active implementation does not query them
-- Writes: none for these inactive paths
-
-**Side Effects:**
-- Legacy download returns a null body
-- Legacy folder endpoint produces no side effect
-- Deprecated summary and prefix operations return null
-- Target must expose explicit `404`, `501`, or a real implementation rather than silent null success
-
-**Concrete Example:**
-- **API Input:** `GET /api/v1/content/images/download?path=%2Fhero.png&store=DEFAULT`
-- **Success Output:** **Legacy defect:** `200` with a `null` body; **target-only required output:** `200` with `image/png` bytes when found
-- **Error Input:** The same request for `missing.png`
-- **Error Output:** **Target-only required output:** `404 {"message":"File missing.png was not found for store DEFAULT"}`
-- **Legacy folder input:** `DELETE /api/v1/content/folder?parent=/&folder=banners&store=DEFAULT`
-- **Legacy output:** `201` with an empty body and no folder operation; target must not preserve this status/behavior
-
----
-
 ### BR-MER-028: Image listings are store-scoped and expose generated static-image paths
 
 **Source Reference:** `initial-source/shopizer-3.2.7/sm-shop/src/main/java/com/salesmanager/shop/store/facade/content/ContentFacadeImpl.java` : `getContentFolder()` lines 75-95; `convertToContentImage()` lines 97-103; `initial-source/shopizer-3.2.7/sm-shop/src/main/java/com/salesmanager/shop/store/api/v1/content/ContentAdministrationApi.java` : `list()` lines 83-96 and `convertToImageFile()` lines 240-249  
@@ -1194,6 +1063,8 @@ ContentFacadeImpl.getContentBoxes(type, codePrefix, store, language, page, count
 **Statement:** An image listing is scoped to the merchant store and retrieves names from the `IMAGE` file namespace. Each returned image includes the file name and a generated static-image path derived from the store and file name. The requested folder path is URL-decoded for the administration list, except blank paths and paths containing `/images`, which resolve to `/`.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** Listing images for store `DEFAULT` returns only that store's image names and generated URLs. `parentPath=%2Fimages` resolves to the root path `/`.
 
@@ -1275,6 +1146,8 @@ convertToContentImage(name, store):
 **Statement:** A merchant configuration is selected by the combination of merchant store and configuration key. The same key may exist for different stores, but a store has one configuration record for a given key.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** Reading key `PAYMENT_MODULES` for store `DEFAULT` must never return the encrypted configuration belonging to `CA-STORE`. Saving a known key updates the existing store-scoped record rather than creating an unrelated record.
 
@@ -1341,6 +1214,8 @@ saveOrUpdate(entity):
 **Statement:** Merchant configuration serializes the commerce-display flags as JSON booleans. Search defaults are represented as language-code-to-boolean and language-code-to-path maps. Null search maps are omitted; blank search paths are omitted; nonblank paths and non-null booleans are retained.
 
 **Intent:** Calculation
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** A configuration with `allowPurchaseItems:true`, `displaySearchBox:false`, and `useDefaultSearchConfig.en:true` serializes those values as booleans. A blank search path is not emitted.
 
@@ -1426,6 +1301,8 @@ saveMerchantConfig(config, store):
 **Statement:** The public configuration response exposes the merchant's purchase, search, contact, customer, featured-item cart, customer-agreement, and pages-menu display choices. Internal configuration fields such as `testMode`, `debugMode`, and search configuration paths are not copied into this public projection.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** A stored `allowPurchaseItems:false` is returned as `allowOnlinePurchase:false`. Internal credentials or raw configuration JSON must not appear in the public response.
 
@@ -1495,6 +1372,8 @@ getMerchantConfig(merchantStore, language):
 **Statement:** Public configuration reads the merchant-scoped values for Facebook, Google Analytics, Instagram, and Pinterest using their dedicated configuration keys. A missing key is omitted from the public projection rather than replaced with an arbitrary value.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** If the Facebook configuration exists for store `DEFAULT`, the public response contains its value under `facebook`. If the Instagram key is absent, `instagram` is not populated by this lookup.
 
@@ -1566,6 +1445,8 @@ getConfigValue(keyConstant, merchantStore):
 **Statement:** The public `displayShipping` value starts as false. When the platform property is nonblank, its Boolean representation overrides the default. A blank property leaves the value false, and any value other than `"true"` resolves to false rather than enabling shipping.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** A property value of `"true"` returns `displayShipping:true`. An absent or blank property returns false. A value such as `"not-a-boolean"` also returns false because `Boolean.valueOf()` treats every value other than `"true"` as false.
 
@@ -1626,6 +1507,8 @@ RETURN readableConfig
 **Statement:** Stored payment and shipping module configuration is encrypted at rest. Reads decrypt the merchant configuration value before converting the JSON array into module configuration objects. Saves merge the selected module into the existing configuration set, serialize the set, encrypt the serialized value, and persist it under the store-scoped integration key.
 
 **Intent:** Compliance
+**Classification:** Core
+**Weight:** Critical
 
 **Acceptance Criteria:** A stored encrypted payment configuration is never parsed as plaintext. A successful save writes ciphertext rather than the raw `integrationKeys` map. A blank encrypted value is treated as no configured module set.
 
@@ -1728,6 +1611,8 @@ savePaymentModuleConfiguration(configuration, store):
 **Statement:** Module configuration must preserve provider options independently from credential values. A configuration containing options but no credentials must still parse and validate its options without failing because the credential collection is absent.
 
 **Intent:** Validation
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** A target parser must load `integrationOptions` whenever that field is present, independently of `integrationKeys`. A configuration with only options must not fail because keys are absent.
 
@@ -1808,6 +1693,8 @@ FOR object IN mapper.readValue(value, Map[].class):
 **Statement:** An integration-module definition may contain a module family, code, type, image, custom-module flag, supported regions, arbitrary display details, and environment-specific connection configuration. The loader preserves these values in both structured transient objects and JSON strings used for persistence.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** A module definition for `paypal-express-checkout` retains its module family `PAYMENT`, code, type, regions, image, and `TEST`/`PROD` configuration entries. A string `"true"` custom-module value is interpreted as boolean true.
 
@@ -1914,6 +1801,8 @@ loadModule(object):
 **Statement:** Each module environment may define separate primary and secondary connection values in addition to its protocol, host, port, and URI. The two connection values must remain distinct when module metadata is loaded from configuration files or persistence.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** A module with `TEST.config1="test-url"` and `TEST.config2="test-token"` returns those values in their respective fields after discovery. `config2` must not overwrite `config1`.
 
@@ -1984,6 +1873,8 @@ ModuleConfigurationServiceImpl.getIntegrationModules(module):
 **Statement:** Creating or updating an integration module identifies the module by its code. If a record with that code already exists, it is deleted and the newly loaded definition is created. Modules with different codes are not replaced even when they belong to the same payment or shipping family.
 
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** Submitting code `ups` replaces the existing `ups` metadata record. Submitting code `usps` does not replace `ups`.
 
@@ -2046,6 +1937,8 @@ createOrUpdateModule(json):
 **Statement:** Module discovery first checks the cached result for the requested module family. On a cache miss it loads persisted module records, hydrates regions, details, and environment configurations, appends available runtime payment implementations, stores the result in cache, and returns the module list.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** Critical
 
 **Acceptance Criteria:** A cached payment module list is returned without a database reload. On a miss, persisted payment modules and discovered payment starters are combined. Shipping discovery does not append payment starters because starters are explicitly marked as payment modules.
 
@@ -2148,6 +2041,8 @@ getIntegrationModules(module):
 **Statement:** A payment or shipping module is available to a merchant store when the module declares the store country's ISO code or declares the wildcard region `*`. A module restricted to another country is excluded from the available-module list.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** A store in `US` sees `usps`, `ups`, and wildcard modules. A store in `CA` sees `canadapost`, `ups`, and wildcard modules. A `US`-only module is not offered to a store in `FR`.
 
@@ -2225,6 +2120,8 @@ getShippingMethods(store):
 **Statement:** A payment or shipping configuration may be persisted only when the requested module is available to the merchant store and the provider-specific validation boundary accepts its integration keys and options. Provider execution and provider-specific validation remain outside MS-11, but MS-11 must invoke that boundary before saving configuration state.
 
 **Intent:** Validation
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** Stripe configuration must contain both `secretKey` and `publishableKey`. USPS configuration must provide the provider-required account and package options. A module code that is not available for the store is rejected before persistence.
 
@@ -2327,6 +2224,8 @@ StripePayment.validateModuleConfiguration(configuration, store):
 **Statement:** A module summary marks `configured:true` when a merchant configuration entry exists for the module code. It marks `active:true` only when that configured entry has `active:true`. An available but unconfigured module is neither configured nor active.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** A Stripe module with a stored inactive configuration returns `configured:true, active:false`. A module with no stored configuration returns `configured:false, active:false`.
 
@@ -2388,6 +2287,8 @@ integrationModule(module, configuredModules):
 **Statement:** A store with no public-configuration record receives the documented platform-default public configuration. The public API must never expose an accidental null response or an unhandled configuration lookup failure.
 
 **Intent:** Validation
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** A store without a configuration record receives the platform-default public configuration. It must not receive an accidental null body or an unhandled null dereference.
 
@@ -2469,6 +2370,8 @@ MerchantConfigurationFacadeImpl.getMerchantConfig(store, language):
 **Statement:** The deployment's configured content-storage provider supplies file upload, retrieval, removal, folder, and listing capabilities through one provider-neutral boundary. Unsupported capabilities or provider initialization failures must be reported explicitly; the service must not silently switch providers.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** With `config.cms.method=default`, content operations use the default cache-backed provider. With `httpd`, they use the local file provider. With `aws`, they use the S3 provider. An unavailable selected provider fails the operation rather than silently switching storage backends.
 
@@ -2547,6 +2450,8 @@ StaticContentFileManagerImpl.listFolders(...):
 **Statement:** Provider object keys begin with the content root and merchant store code. Nondefault file-content types receive an additional type segment; `IMAGE` and `STATIC_FILE` use the base store namespace. The same key-generation rule must be used for upload, retrieval, listing, rename, and removal.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** The `LOGO` object `brand.png` for store `DEFAULT` is addressed separately from the `IMAGE` object `brand.png`. Retrieval with a different store code cannot access the original object.
 
@@ -2625,6 +2530,8 @@ GCP.addFile(store, folderPath, input):
 **Statement:** Configured content-storage backends may differ in retrieval, listing, folder, and deletion capabilities. The target contract must advertise only supported operations and normalize missing objects, unsupported capabilities, and provider failures into explicit API outcomes.
 
 **Intent:** Validation
+**Classification:** Core
+**Weight:** Critical
 
 **Acceptance Criteria:** A missing file is a not-found result, not an empty successful file. A provider that cannot retrieve files must return a capability error. Folder operations must not return success when the selected provider did not perform the operation.
 
@@ -2708,6 +2615,8 @@ S3/GCP/Local provider exceptions:
 **Statement:** Runtime payment implementations are projected into the payment module catalog with their unique code, payment family, supported countries, logo, and configurable metadata. They are appended to persisted payment module metadata before the result is cached.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** A runtime payment starter with unique code `acme-pay`, supported country `US`, logo data, and configuration metadata appears in the payment module list even if it is not present in the reference JSON file.
 
@@ -2785,6 +2694,8 @@ cache.putInCache(
 **Statement:** MS-11 owns merchant-scoped module configuration state, including active/default-selection flags and integration data, but provider execution remains behind payment and shipping service boundaries. MS-11 must not execute payment charges, calculate shipping quotes, or write provider-owned operational tables; it may invoke provider validation and discovery before persisting configuration state.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** Saving Stripe credentials persists configuration state after Stripe validation, but does not charge a card. Saving UPS configuration persists module state after UPS validation, but does not calculate a shipping quote.
 
@@ -2868,6 +2779,8 @@ MS-11 target boundary:
 **Statement:** Module discovery results must reflect a completed module replacement on the next read. Replacing a module therefore requires invalidating or versioning the affected family’s cached discovery result.
 
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** After replacing `ups` image metadata, the next shipping module discovery must return the new image rather than an old cached record.
 
@@ -2941,6 +2854,8 @@ createOrUpdateModule(json):
 **Statement:** Module detail responses may expose identity, activation state, and non-sensitive configuration metadata needed by administration, but must never expose encrypted storage values or provider credentials to public callers. Sensitive fields must be classified and masked or omitted.
 
 **Intent:** Compliance
+**Classification:** Core
+**Weight:** Critical
 
 **Acceptance Criteria:** A payment detail response may indicate that Stripe is active and configurable, but must return masked or write-only secret fields. The encrypted `merchant_configuration.value` must never be serialized into an API response.
 
@@ -3033,6 +2948,8 @@ PaymentApi.paymentModule(code, merchantStore, language):
 **Statement:** Module metadata may declare wildcard availability or explicit country availability and may provide distinct TEST and PROD connection endpoints. Environment endpoint metadata is descriptive configuration for downstream provider use; selecting an environment or executing a provider call is outside MS-11 content persistence.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** `weightBased` is available in all regions because it declares `*`. USPS exposes separate testing and production hosts. The target preserves both environment entries without replacing one with the other.
 
@@ -3119,6 +3036,8 @@ loadModule(object):
 **Statement:** A renamed content file retains the original file-content type and MIME metadata when recreated under the new name. The target must not infer a different content type solely from the new extension after the rename operation has selected the original file.
 
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** High
 
 **Acceptance Criteria:** Renaming `hero.jpeg` to `hero.bin` through the image rename operation retains the image content classification and original MIME metadata unless the target explicitly rejects the incompatible new name.
 
@@ -3199,6 +3118,8 @@ contentFileManager.addFile(
 **Statement:** File deletion must be scoped to one merchant store, content category, and file name, while bulk removal must be scoped to that merchant’s content namespace. The API must define one consistent outcome for deleting an object that is already absent.
 
 **Intent:** Compliance
+**Classification:** Core
+**Weight:** Critical
 
 **Acceptance Criteria:** Deleting `hero.png` for `DEFAULT` and type `IMAGE` must not affect `hero.png` for another store or type. Bulk store cleanup must not delete another store's namespace.
 

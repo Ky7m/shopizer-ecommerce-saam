@@ -156,3 +156,7 @@ Terminal states are explicit. All transitions reference BR-IDs.
 ## Completion Decision
 
 The extraction package is structurally complete for Phase 4 extraction and ready for Phase 4a BA review. It is not semantically frozen until the target-only rules and cross-service event contracts are approved.
+
+## Phase 4a BA disposition
+
+Mode A agent defaults were approved on 2026-09-02. 23 rules remain active after 0 approved obsolete-rule removal(s). Retained rules carry explicit Classification and Weight metadata; no rules were deferred, merged, or simplified without BA-specific guidance.

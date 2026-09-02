@@ -27,6 +27,8 @@ The target specification explicitly corrects or resolves these legacy behaviors:
 **Statement:** Each store has a tax configuration. If no configuration has been saved, tax calculation uses the shipping address as its jurisdiction basis, permits collection in other provinces, and does not replace a foreign customer jurisdiction with the store jurisdiction.
 
 **Intent:** Routing / Compliance
+**Classification:** Core
+**Weight:** Critical
 
 **Source Reference:** `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/services/tax/TaxServiceImpl.java:41-70,108-137`
 
@@ -92,6 +94,8 @@ return taxConfiguration
 **Statement:** Saving a store's tax configuration must preserve the jurisdiction basis, province policy, and different-country behavior so that a subsequent calculation observes the values that an administrator saved.
 
 **Intent:** Configuration / Compliance
+**Classification:** Core
+**Weight:** Critical
 
 **Source Reference:** `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/services/tax/TaxServiceImpl.java:74-89`; `initial-source/shopizer-3.2.7/sm-core-model/src/main/java/com/salesmanager/core/model/tax/TaxConfiguration.java:13-53`
 
@@ -159,6 +163,8 @@ saveOrUpdate(configuration)
 **Statement:** A tax class code may be created only once within the requesting tenant and store. The store scope is taken from authenticated request context, not from a client-supplied store value.
 
 **Intent:** Validation / Authorization
+**Classification:** Core
+**Weight:** Critical
 
 **Source Reference:** `initial-source/shopizer-3.2.7/sm-shop/src/main/java/com/salesmanager/shop/store/facade/tax/TaxFacadeImpl.java:59-83`; `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/repositories/tax/TaxClassRepository.java:18-19`; `initial-source/shopizer-3.2.7/sm-core-model/src/main/java/com/salesmanager/core/model/tax/taxclass/TaxClass.java:28-32,45-67`
 
@@ -214,6 +220,8 @@ return saved.id
 **Statement:** Tax-class lists and lookups must return only tax classes belonging to the authenticated tenant and store; a class belonging to another store is not visible.
 
 **Intent:** Authorization / Routing
+**Classification:** Core
+**Weight:** Critical
 
 **Source Reference:** `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/services/tax/TaxClassServiceImpl.java:29-42`; `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/repositories/tax/TaxClassRepository.java:12-19`; `initial-source/shopizer-3.2.7/sm-shop/src/main/java/com/salesmanager/shop/store/facade/tax/TaxFacadeImpl.java:108-129,158-181`
 
@@ -268,6 +276,8 @@ get by code:
 **Statement:** A tax class can be updated or deleted only when the identified class belongs to the authenticated tenant and store. Missing classes return not-found; classes owned by another store return unauthorized.
 
 **Intent:** Authorization / State Transition
+**Classification:** Core
+**Weight:** High
 
 **Source Reference:** `initial-source/shopizer-3.2.7/sm-shop/src/main/java/com/salesmanager/shop/store/facade/tax/TaxFacadeImpl.java:85-106,135-156`; `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/services/tax/TaxClassServiceImpl.java:44-50,66-74`
 
@@ -328,6 +338,8 @@ IF operation = DELETE:
 **Statement:** A tax-rate code may be created only once within the requesting tenant and store. The rate must identify a tax class, country, percentage, and localized description.
 
 **Intent:** Validation / Compliance
+**Classification:** Core
+**Weight:** Critical
 
 **Source Reference:** `initial-source/shopizer-3.2.7/sm-shop/src/main/java/com/salesmanager/shop/store/facade/tax/TaxFacadeImpl.java:260-291`; `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/repositories/tax/TaxRateRepository.java:18-19`; `initial-source/shopizer-3.2.7/sm-core-model/src/main/java/com/salesmanager/core/model/tax/taxrate/TaxRate.java:54-110`
 
@@ -387,6 +399,8 @@ return rate.id
 **Statement:** Updating a tax rate replaces its editable rate, priority, classification, geography, compound flag, and descriptions while retaining the rate identifier and authenticated tenant/store ownership.
 
 **Intent:** State Transition / Validation
+**Classification:** Core
+**Weight:** High
 
 **Source Reference:** `initial-source/shopizer-3.2.7/sm-shop/src/main/java/com/salesmanager/shop/store/facade/tax/TaxFacadeImpl.java:293-314`; `initial-source/shopizer-3.2.7/sm-shop/src/main/java/com/salesmanager/shop/mapper/tax/PersistableTaxRateMapper.java:38-75`
 
@@ -452,6 +466,8 @@ save model
 **Statement:** A store's tax-rate list is limited to the requested tenant/store and language, and rates are returned in ascending priority order.
 
 **Intent:** Routing / Compliance
+**Classification:** Core
+**Weight:** Critical
 
 **Source Reference:** `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/services/tax/TaxRateServiceImpl.java:31-41`; `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/repositories/tax/TaxRateRepository.java:15-16`; `initial-source/shopizer-3.2.7/sm-shop/src/main/java/com/salesmanager/shop/store/facade/tax/TaxFacadeImpl.java:330-352`
 
@@ -501,6 +517,8 @@ return items with total count and one-page legacy-compatible pagination
 **Statement:** A tax rate can be read or deleted only through a store-scoped lookup. The operation must never expose or delete a rate belonging to another store.
 
 **Intent:** Authorization / State Transition
+**Classification:** Core
+**Weight:** High
 
 **Source Reference:** `initial-source/shopizer-3.2.7/sm-shop/src/main/java/com/salesmanager/shop/store/facade/tax/TaxFacadeImpl.java:220-258`; `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/services/tax/TaxRateServiceImpl.java:77-80`; `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/repositories/tax/TaxRateRepository.java:21-22`
 
@@ -555,6 +573,8 @@ IF operation = DELETE:
 **Statement:** A rate uniqueness check returns `true` when the store contains the requested code and `false` when it does not; absence is not a not-found error.
 
 **Intent:** Validation
+**Classification:** Core
+**Weight:** Critical
 
 **Source Reference:** `initial-source/shopizer-3.2.7/sm-shop/src/main/java/com/salesmanager/shop/store/facade/tax/TaxFacadeImpl.java:316-328`; `initial-source/shopizer-3.2.7/sm-shop/src/main/java/com/salesmanager/shop/store/facade/tax/TaxFacadeImpl.java:195-218`
 
@@ -604,6 +624,8 @@ ELSE:
 **Statement:** A tax calculation without a customer context produces no tax result, while a calculation with an order summary but no product items produces an empty tax-item list. The target API rejects structurally incomplete requests before domain execution.
 
 **Intent:** Validation / Calculation
+**Classification:** Active
+**Weight:** Medium
 
 **Source Reference:** `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/services/tax/TaxServiceImpl.java:91-105`
 
@@ -656,6 +678,8 @@ target:
 **Statement:** Tax jurisdiction is selected from the store address, shipping address, or billing address according to the store's configured basis. Shipping is the default basis; if shipping address data is absent, the existing billing-derived jurisdiction is retained.
 
 **Intent:** Routing / Compliance
+**Classification:** Core
+**Weight:** Critical
 
 **Source Reference:** `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/services/tax/TaxServiceImpl.java:107-137`
 
@@ -725,6 +749,8 @@ ELSE IF basis = STOREADDRESS:
 **Statement:** When the store configuration disallows tax collection in other provinces, a customer jurisdiction is taxable only when its zone or province matches the store's configured jurisdiction; otherwise the calculation returns no tax.
 
 **Intent:** Compliance / Routing
+**Classification:** Core
+**Weight:** Critical
 
 **Source Reference:** `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/services/tax/TaxServiceImpl.java:139-158`
 
@@ -779,6 +805,8 @@ IF collectTaxIfDifferentProvinceOfStoreCountry = false:
 **Statement:** For a customer in a different country, the configured country behavior determines whether tax uses the customer's jurisdiction, the store jurisdiction, or produces no tax; the behavior must not be inferred from a boolean with ambiguous naming.
 
 **Intent:** Compliance / Routing
+**Classification:** Core
+**Weight:** Critical
 
 **Source Reference:** `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/services/tax/TaxServiceImpl.java:160-166`; `initial-source/shopizer-3.2.7/sm-core-model/src/main/java/com/salesmanager/core/model/tax/TaxConfiguration.java:36-51`
 
@@ -833,6 +861,8 @@ ELSE IF differentCountryBehavior = NoTax:
 **Statement:** Tax calculation proceeds only when the selected jurisdiction has either a zone or a nonblank province/state; without either geographic discriminator, the result contains no tax.
 
 **Intent:** Validation / Compliance
+**Classification:** Core
+**Weight:** Critical
 
 **Source Reference:** `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/services/tax/TaxServiceImpl.java:168-170`
 
@@ -876,6 +906,8 @@ IF selected_zone is null AND selected_stateProvince is blank:
 **Statement:** Each line contributes unit amount multiplied by quantity to the subtotal of its tax class. A line without a tax class is assigned to the store's `DEFAULT` tax class.
 
 **Intent:** Calculation / Compliance
+**Classification:** Core
+**Weight:** Critical
 
 **Source Reference:** `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/services/tax/TaxServiceImpl.java:172-195`; `initial-source/shopizer-3.2.7/sm-core-model/src/main/java/com/salesmanager/core/model/tax/taxclass/TaxClass.java:35-38`
 
@@ -932,6 +964,8 @@ FOR each item in orderSummary.products:
 **Statement:** When shipping is positive, shipping is taxable under the default tax class; positive handling is added to the same default-class taxable amount. Zero or negative shipping and handling are excluded.
 
 **Intent:** Calculation / Compliance
+**Classification:** Core
+**Weight:** Critical
 
 **Source Reference:** `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/services/tax/TaxServiceImpl.java:197-220`
 
@@ -989,6 +1023,8 @@ taxableAmountByClass[defaultClass.id] = amount
 **Statement:** A tax calculation may apply only rates belonging to the current tenant/store, selected country and geographic basis, requested language, and line tax class. Rates are evaluated in ascending priority.
 
 **Intent:** Routing / Compliance
+**Classification:** Core
+**Weight:** Critical
 
 **Source Reference:** `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/services/tax/TaxServiceImpl.java:223-237`; `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/services/tax/TaxRateServiceImpl.java:50-58`; `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/repositories/tax/TaxRateRepository.java:27-31`
 
@@ -1045,6 +1081,8 @@ FOR each taxClassId:
 **Statement:** A non-compound rate is calculated from the original tax-class taxable amount. A compound rate is calculated from the running amount after earlier tax has been added. Each tax amount is rounded to two decimal places using half-up rounding.
 
 **Intent:** Calculation / Compliance
+**Classification:** Core
+**Weight:** Critical
 
 **Source Reference:** `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/services/tax/TaxServiceImpl.java:239-265`; `initial-source/shopizer-3.2.7/sm-core-model/src/main/java/com/salesmanager/core/model/tax/taxrate/TaxRate.java:73-85`
 
@@ -1107,6 +1145,8 @@ FOR rate ordered by priority:
 **Statement:** Tax items with the same tax code are returned as one item whose tax amount equals the sum of all contributing items. If no applicable rate produces a tax item, the calculation returns an empty tax result rather than a fabricated tax line.
 
 **Intent:** Calculation / Compliance
+**Classification:** Core
+**Weight:** Critical
 
 **Source Reference:** `initial-source/shopizer-3.2.7/sm-core/src/main/java/com/salesmanager/core/business/services/tax/TaxServiceImpl.java:269-297`
 

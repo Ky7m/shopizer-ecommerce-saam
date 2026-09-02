@@ -61,6 +61,8 @@ The following remain outside MS-05:
 **Statement:** Every newly accepted order starts in `ORDERED`. The order must have an initial lifecycle-history entry dated at acceptance time. A submission comment may be recorded as an additional history entry without changing the order state.
 
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 ```pseudocode
@@ -147,6 +149,8 @@ if order.comments is not blank:
 **Statement:** An order preserves the customer identity, store identity, email address, billing address, delivery address, currency, payment method, shipping method, customer agreement, and address-confirmation values that applied when the order was accepted. Later customer-profile changes must not rewrite the accepted order snapshot.
 
 **Intent:** Compliance
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 ```pseudocode
@@ -226,6 +230,8 @@ modelOrder.locale = LocaleUtils.getLocale(store)
 **Statement:** Each accepted order line stores the purchased SKU, product name, quantity, one-time charge, selected attributes, attribute prices, selected price records, and any digital-file metadata as a historical snapshot. The order detail must remain readable even if the catalog later changes.
 
 **Intent:** Calculation
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 ```pseudocode
@@ -310,6 +316,8 @@ for each selectedAttribute in source.attributes:
 **Statement:** MS-05 stores the validated total supplied by the checkout boundary and its component lines as immutable order facts. MS-05 does not recalculate pricing, promotions, tax, or shipping after acceptance.
 
 **Intent:** Calculation
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 ```pseudocode
@@ -380,6 +388,8 @@ for each total in orderTotalSummary.totals:
 **Statement:** Payment authorization, capture, refund, and provider-specific transaction state belong to MS-06. MS-05 records only the authenticated payment outcome and correlates it to the order; it must not own provider credentials or write the payment provider ledger.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 ```pseudocode
@@ -454,6 +464,8 @@ if caller supplied transaction exists:
 **Statement:** When an accepted purchased product has a digital file, the order receives one download entitlement containing the file name, an initial download count of zero, and the configured entitlement duration. The entitlement is tied to the purchased order line, not to the mutable product catalog.
 
 **Intent:** Routing
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 ```pseudocode
@@ -522,6 +534,8 @@ if digitalProduct exists:
 **Statement:** A submission must not remain partially accepted when an order-line, inventory-reservation, payment, or persistence step fails. The target uses a saga: order acceptance is durable only when local order writes succeed, and every completed external reservation or payment action has an explicit compensating action or retry state.
 
 **Intent:** Routing
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 ```pseudocode
@@ -600,6 +614,8 @@ target:
 **Statement:** The order lifecycle is closed: `ORDERED` is the initial state; `PROCESSED`, `DELIVERED`, `REFUNDED`, and `CANCELED` are the only declared states. The target rejects arbitrary state changes and rejects transitions out of terminal states.
 
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 ```pseudocode
@@ -677,6 +693,8 @@ The legacy `updateOrderStatus()` only checks whether the requested status differ
 **Statement:** Every accepted lifecycle transition creates an append-only history record containing the resulting status, timestamp, actor/source, and optional comment. Existing history records cannot be overwritten or deleted through the order API.
 
 **Intent:** Compliance
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 ```pseudocode
@@ -745,6 +763,8 @@ orderRepository.save(order)
 **Statement:** MS-05 applies only authenticated payment outcomes from MS-06. A successful capture may move an eligible `ORDERED` order to `PROCESSED`; a payment failure does not advance the order; a duplicate or stale payment event must not reverse a later order state.
 
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 ```pseudocode
@@ -822,6 +842,8 @@ The legacy code couples provider processing and order updates; target behavior s
 **Statement:** The administrative payment-action projection returns `CAPTURE` after authorization, `REFUND` after capture or authorize-and-capture, and `OK` after refund or when no supported next action exists. The target derives this from timestamp-ordered payment outcomes supplied by MS-06, not from transaction-type ordering.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 ```pseudocode
@@ -884,6 +906,8 @@ The legacy `lastTransaction` behavior is identified by the brief as ordering by 
 **Statement:** An order is capturable only when it has an authorization outcome within the requested date range and has no capture, authorize-and-capture, or refund outcome in that outcome set.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -952,6 +976,8 @@ for orderId, outcomes in transactionsByOrder:
 **Statement:** A refund cannot exceed the captured amount less refunds already accepted. Partial refunds accumulate against a durable refund balance, and duplicate refund outcomes do not reduce the remaining balance twice. MS-06 owns provider execution; MS-05 owns the order-facing reconciliation.
 
 **Intent:** Calculation
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 ```pseudocode
@@ -1028,6 +1054,8 @@ The legacy refund endpoint is a stub and the brief reports uncertainty around pa
 **Statement:** An order may be canceled only before a terminal state and only when the requested cancellation is compatible with payment and fulfillment state. Cancellation must release any MS-02 reservation, request payment void/refund through MS-06 when required, transition the order to `CANCELED`, append history, and publish a compensating event.
 
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -1098,6 +1126,8 @@ publish OrderCanceled
 **Statement:** After an order is payment-ready and contains physical items, MS-05 may publish a fulfillment request containing the immutable delivery snapshot and purchased lines. Shipment updates are accepted from MS-09/MS-12 and may move fulfillment to `REQUESTED`, `IN_PROGRESS`, `SHIPPED`, `DELIVERED`, or `CANCELED`; carrier execution remains outside MS-05.
 
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -1168,6 +1198,8 @@ on ShipmentStatusUpdated:
 **Statement:** Every order query and mutation is scoped to both the authenticated tenant and store. An order identifier from another tenant or store is indistinguishable from not found to unauthorized callers.
 
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 ```pseudocode
@@ -1225,6 +1257,8 @@ if no row:
 **Statement:** An authenticated customer may list and retrieve only orders associated with that customer and current store. Administrative order access is not implied by customer authentication.
 
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -1285,6 +1319,8 @@ for detail:
 **Statement:** Administrative order listing, detail, status, history, customer-snapshot, capture, and refund operations require an authenticated principal in an allowed order-administration group and a matching tenant/store context.
 
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -1342,6 +1378,8 @@ authorizationUtils.authorizeUser(user, allowedGroups, merchantStore)
 **Statement:** An authorized administrator may correct the order's stored email, billing-address snapshot, and delivery-address snapshot without modifying the customer master record.
 
 **Intent:** Compliance
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 ```pseudocode
@@ -1412,6 +1450,8 @@ orderService.saveOrUpdate(modelOrder)
 **Statement:** Order lists use store-scoped filters and pagination, while order detail returns the accepted order snapshot, purchased lines, totals, attributes, history, and download entitlements. List reads must use projections rather than loading every child collection into memory.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode
@@ -1471,6 +1511,8 @@ detail fetches:
 **Statement:** Repeating the same order submission or payment/fulfillment event must produce the original result without creating a second order, second entitlement, second history transition, or duplicate compensation.
 
 **Intent:** Compliance
+**Classification:** Core
+**Weight:** Critical
 
 **Logic:**
 ```pseudocode
@@ -1533,6 +1575,8 @@ commit
 **Statement:** An invoice request uses the immutable order snapshot. MS-05 does not claim a durable invoice artifact or invoice table exists in the legacy implementation; it publishes an invoice-generation request to MS-12 and exposes the resulting artifact only after MS-12 confirms availability.
 
 **Intent:** Routing
+**Classification:** Active
+**Weight:** Medium
 
 **Logic:**
 ```pseudocode
@@ -1601,6 +1645,8 @@ The active `ODSInvoiceModule.createInvoice()` implementation throws `"Not implem
 **Statement:** The administration order-detail experience requires order detail, lifecycle history, payment transactions, next payment action, customer/address correction, capture, refund, and status-update operations. Capture, refund, and authorization are target capabilities even though their legacy endpoint wrappers are stub-like.
 
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 
 **Logic:**
 ```pseudocode

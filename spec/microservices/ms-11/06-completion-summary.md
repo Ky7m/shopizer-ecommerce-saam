@@ -10,8 +10,8 @@
 
 | Artifact | Count |
 |---|---:|
-| Business rules | 41 |
-| Semantic preservation tables | 41 |
+| Business rules | 39 |
+| Semantic preservation tables | 39 |
 | Semantic preservation dimensions | 328 |
 | Target database tables | 5 |
 | Data invariants | 24 |
@@ -121,3 +121,7 @@ approved yet.
 for Phase 4a business-rule validation. `05-dependencies.md`, DTOs, workflows,
 tests, and shared contract reconciliation remain deferred to their defined
 later stages.
+
+## Phase 4a BA disposition
+
+Mode A agent defaults were approved on 2026-09-02. 39 rules remain active after 2 approved obsolete-rule removal(s). Retained rules carry explicit Classification and Weight metadata; no rules were deferred, merged, or simplified without BA-specific guidance.

@@ -17,6 +17,8 @@ Statements are target-domain statements. Legacy identifiers appear only in evide
 
 **Statement:** A customer login identifier may be used once within a store, while the same identifier may be used in another store.
 **Intent:** Validation
+**Classification:** Core
+**Weight:** Critical
 **Logic:**
 ```pseudocode
 IF userName is non-blank AND store != null
@@ -52,6 +54,8 @@ ELSE RETURN false
 
 **Statement:** A valid customer reset request creates a random token that expires two days after issuance, stores it for the selected store, and sends a reset link by email.
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** Critical
 **Logic:**
 ```pseudocode
 customer = customerService.getByNick(customerName, store.id)
@@ -88,6 +92,8 @@ sendHtmlEmail(store, customer.emailAddress, resetLink)
 
 **Statement:** A reset token is valid only for the store that issued it and until its expiry instant; missing or expired tokens are rejected.
 **Intent:** Compliance
+**Classification:** Core
+**Weight:** Critical
 **Logic:**
 ```pseudocode
 customer = customerService.getByPasswordResetToken(store, token)
@@ -123,6 +129,8 @@ RETURN customer
 
 **Statement:** Completing a reset requires matching non-blank passwords, a valid token, and the configured password policy; successful completion stores the encoded password and invalidates the token.
 **Intent:** Compliance
+**Classification:** Core
+**Weight:** Critical
 **Logic:**
 ```pseudocode
 REQUIRE password and repeatPassword are non-blank and equal
@@ -160,6 +168,8 @@ customerService.save(customer)
 
 **Statement:** A signed-in customer may change a password only after proving the current password and submitting matching new-password fields.
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** Critical
 **Logic:**
 ```pseudocode
 customer = getCustomerByUserName(passwordRequest.username, store)
@@ -194,6 +204,8 @@ changePassword(customer, password)
 
 **Statement:** Every access token identifies its subject, is marked for the API audience, records issuance time, and expires after the configured lifetime.
 **Intent:** Compliance
+**Classification:** Core
+**Weight:** Critical
 **Logic:**
 ```pseudocode
 createdDate = DateUtil.getDate()
@@ -227,6 +239,8 @@ Jwts.builder().setSubject(userDetails.username).setAudience("api")
 
 **Statement:** An access token is accepted only when its subject matches the loaded identity, it is not expired, and it was issued after the identity's last password reset.
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** Critical
 **Logic:**
 ```pseudocode
 usernameEquals = token.subject == user.username
@@ -260,6 +274,8 @@ RETURN usernameEquals AND NOT expired AND NOT createdBeforeReset
 
 **Statement:** A refresh token request may issue a replacement only when the token is not invalidated by a password reset and is unexpired, except for explicitly supported mobile/tablet audiences.
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 created = issuedAt(token)
@@ -292,6 +308,8 @@ RETURN NOT createdBeforeLastPasswordReset(created, lastPasswordReset)
 
 **Statement:** The refresh decision must evaluate token validity; it must never return success for every input.
 **Intent:** Compliance
+**Classification:** Core
+**Weight:** Critical
 **Logic:**
 ```pseudocode
 legacy canTokenBeRefreshedWithGrace computes predicates t/u/v and then returns true
@@ -325,6 +343,8 @@ target returns the predicate result and records a security event for rejected re
 
 **Statement:** Customer requests with a bearer header must extract the token, resolve its subject, load the customer, and validate the token before establishing authentication.
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** Critical
 **Logic:**
 ```pseudocode
 requestHeader = request.getHeader(tokenHeader)
@@ -364,6 +384,8 @@ IF userDetails != null AND validateToken(authToken, userDetails) authenticate
 
 **Statement:** An administrator authenticates only when the submitted password matches the stored encoded administrator password.
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** Critical
 **Logic:**
 ```pseudocode
 user = jwtAdminDetailsService.loadUserByUsername(auth.name)
@@ -400,6 +422,8 @@ legacy code passes auth.name as the encoded-password argument; target uses user.
 
 **Statement:** An administrator can be created only if its username is unused in the store, the two submitted passwords match and satisfy policy, and at least one valid group is assigned.
 **Intent:** Validation
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 REQUIRE user and store and username
@@ -435,6 +459,8 @@ userModel.adminPassword = encode(password); save
 
 **Statement:** Administrator listings use the requested store, expand retailer stores to their permitted store collection, and return a paginated result.
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 store = merchantStoreService.getByCode(criteria.storeCode)
@@ -470,6 +496,8 @@ select listByStoreIds OR listAll OR listByStore
 
 **Statement:** A non-super administrator cannot grant the super-administrator group to another user.
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 currentUser = userService.getByUserName(authenticatedUser)
@@ -503,6 +531,8 @@ FOR requestedGroup IN user.groups
 
 **Statement:** An administrator may modify only the intended user in an authorized store; self-edits cannot move ownership to another store, and protected super-administrator membership and fields are preserved unless the actor is a super administrator.
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 userModel = userService.getById(id); REQUIRE userModel.id == id
@@ -543,6 +573,8 @@ save updated model
 
 **Statement:** A super-administrator account cannot be deleted; other accounts may be deleted only after store scoping and authorization checks.
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 user = userService.findByStore(id, merchant)
@@ -578,6 +610,8 @@ userService.delete(user)
 
 **Statement:** Changing an administrator password requires the current password, a policy-compliant new password, and persistence of the encoded replacement.
 **Intent:** Compliance
+**Classification:** Core
+**Weight:** Critical
 **Logic:**
 ```pseudocode
 auth = userService.getByUserName(authenticatedUser)
@@ -615,6 +649,8 @@ userService.update(userModel)
 
 **Statement:** A valid administrator reset request stores a random token for two days, scoped to the store, and emails a reset link to the administrator.
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** Critical
 **Logic:**
 ```pseudocode
 user = userService.getByUserName(userName, store.code)
@@ -651,6 +687,8 @@ send reset link to user.adminEmail
 
 **Statement:** An administrator reset token must be valid and unexpired, and successful completion stores an encoded policy-compliant password and consumes the token.
 **Intent:** Compliance
+**Classification:** Core
+**Weight:** Critical
 **Logic:**
 ```pseudocode
 user = verifyUserLink(token, store)
@@ -687,6 +725,8 @@ userService.save(user)
 
 **Statement:** An administrator account marked inactive cannot access its authenticated profile or protected operations until re-enabled.
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 user = userFacade.findByUserName(principal.name, null, language)
@@ -718,6 +758,8 @@ IF NOT user.active reject UnauthorizedException("User ... not active")
 
 **Statement:** Only an administrator authorized for a store may change the active flag of a user belonging to that store.
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 modelUser = userService.findByStore(user.id, store.code)
@@ -751,6 +793,8 @@ userService.saveOrUpdate(modelUser)
 
 **Statement:** A remote identity connection is uniquely identified by local user identity, provider, and provider-user identity.
 **Intent:** Validation
+**Classification:** Active
+**Weight:** Medium
 **Logic:**
 ```pseudocode
 primaryKey = (userId, providerId, providerUserId)
@@ -783,6 +827,8 @@ reject a second connection with the same composite key
 
 **Statement:** A customer may submit at most one review for a given reviewed customer.
 **Intent:** Validation
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 existing = customerReviewService.getByReviewerAndReviewed(review.customerId, customerId)
@@ -814,6 +860,8 @@ IF existing != null reject duplicate
 
 **Statement:** A customer review rating must be within the inclusive range from one through five.
 **Intent:** Validation
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 IF review.rating > Constants.MAX_REVIEW_RATING_SCORE (5) reject
@@ -845,6 +893,8 @@ target.reviewedCustomer = customerId
 
 **Statement:** After a new review is accepted, the reviewed customer's average rating is recalculated from the prior average and count, and the count increases by one.
 **Intent:** Calculation
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 count = reviewedCustomer.customerReviewCount or 0
@@ -882,6 +932,8 @@ update(reviewedCustomer)
 
 **Statement:** Updating a review requires ownership by the target customer, validates the rating range, persists the new content, and recalculates the target aggregate by replacing the prior rating rather than adding another review.
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 customerReview = getCustomerReviewById(reviewId)
@@ -918,6 +970,8 @@ replace it, persist review, and recompute average/count
 
 **Statement:** Deleting a review requires ownership by the target customer and must remove the review while recomputing the target average and count from the remaining reviews.
 **Intent:** Calculation
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 review = getCustomerReviewById(reviewId)
@@ -956,6 +1010,8 @@ save target
 
 **Statement:** Repeated newsletter enrollment for the same email, store, and campaign updates the subscriber profile instead of creating a duplicate; a first enrollment creates a dated subscription.
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** Critical
 **Logic:**
 ```pseudocode
 optinDef = optinService.getOptinByCode(store, NEWSLETTER)
@@ -990,6 +1046,8 @@ save(subscription)
 
 **Statement:** The same email may subscribe independently in different stores; uniqueness is scoped by store and newsletter campaign.
 **Intent:** Compliance
+**Classification:** Core
+**Weight:** Critical
 **Logic:**
 ```pseudocode
 legacy entity unique constraint is (EMAIL, OPTIN_ID) and omits MERCHANT_ID
@@ -1022,6 +1080,8 @@ target database unique key = (merchant_id, optin_id, normalized_email)
 
 **Statement:** Newsletter modification and unsubscribe endpoints are advertised by the legacy surface but do not execute; the target must expose a deliberate unsubscribe capability rather than silently returning success.
 **Intent:** Validation
+**Classification:** Active
+**Weight:** Medium
 **Logic:**
 ```pseudocode
 PUT /newsletter/{email} -> throw UnsupportedOperationException
@@ -1055,6 +1115,8 @@ DELETE /newsletter/{email} -> throw UnsupportedOperationException
 
 **Statement:** Customer profile screens and APIs must allow billing and delivery addresses to be edited independently while preserving state, postal code, country, and zone values.
 **Intent:** Validation
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 authenticated address request selects billing or delivery
@@ -1086,6 +1148,8 @@ CustomerPopulator maps sourceBilling and sourceShipping into separate embedded o
 
 **Statement:** Review modification and deletion links use the same canonical review identifier and must bind it to the target customer.
 **Intent:** Routing
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 legacy update mapping declares {reviewid} but method expects reviewId
@@ -1118,6 +1182,8 @@ target contract uses /reviews/{reviewId} for both operations
 
 **Statement:** Self-service registration uses the submitted email address as the customer's login identifier.
 **Intent:** Routing
+**Classification:** Active
+**Weight:** Medium
 **Logic:**
 ```pseudocode
 customer.userName = customer.emailAddress
@@ -1149,6 +1215,8 @@ IF customerFacade.checkIfUserExists(customer.userName, merchantStore) THEN rejec
 
 **Statement:** A new customer cannot be registered unless a billing country is supplied and resolves to a supported country.
 **Intent:** Validation
+**Classification:** Active
+**Weight:** Medium
 **Logic:**
 ```pseudocode
 REQUIRE customer.billing != null
@@ -1182,6 +1250,8 @@ IF no match THEN ConversionException("Unsuported country code ...")
 
 **Statement:** Every newly persisted customer is assigned the store's customer group and receives authenticated-customer permissions.
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 IF customer has no groups
@@ -1214,6 +1284,8 @@ IF customer has no groups
 
 **Statement:** A customer password is never stored in clear text; registration and password changes persist only a one-way encoded value.
 **Intent:** Compliance
+**Classification:** Core
+**Weight:** Critical
 **Logic:**
 ```pseudocode
 IF source.password is not blank
@@ -1246,6 +1318,8 @@ During registration, getCustomerModel may encode customer.password again before 
 
 **Statement:** Customer identity and profile reads must resolve the customer within the requested store boundary.
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 customerService.getByNick(userName, merchantStore.id)
@@ -1277,6 +1351,8 @@ repository predicate includes c.merchantStore.id = :mId
 
 **Statement:** A customer may read, modify, change the address of, or delete only the profile identified by the authenticated principal.
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 principal = request.userPrincipal.name
@@ -1311,6 +1387,8 @@ customerFacade.getCustomerByUserName(principal, merchantStore)
 
 **Statement:** Only super administrators, administrators, or retail administrators may delete a customer through the administrative API.
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 authenticatedUser = userFacade.authenticatedUser()
@@ -1344,6 +1422,8 @@ customerFacade.deleteById(id)
 
 **Statement:** Administrative customer listings are limited to the selected store and return a bounded page with a total count.
 **Intent:** Validation
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 criteria.startIndex = page when provided
@@ -1377,6 +1457,8 @@ object query applies firstResult and maxResults
 
 **Statement:** Name, email, and country filters must never return a customer from outside the requested store; combined filters apply to the same customer.
 **Intent:** Compliance
+**Classification:** Core
+**Weight:** Critical
 **Logic:**
 ```pseudocode
 legacy name predicate appends "and firstName like :nm or lastName like :nm" without parentheses
@@ -1409,6 +1491,8 @@ target query must group OR terms under store predicate and use billing.firstName
 
 **Statement:** A billing or delivery address may reference only a supported country and, when supplied, a supported zone; an unknown code is rejected.
 **Intent:** Validation
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 country = countries.get(address.country)
@@ -1443,6 +1527,8 @@ IF address.zone is not blank
 
 **Statement:** A billing address change requires street address, city, postal code, and country.
 **Intent:** Validation
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 IF billing != null
@@ -1477,6 +1563,8 @@ IF billing != null
 
 **Statement:** When no delivery address is supplied, the service creates one from billing; partial delivery input is completed from billing values.
 **Intent:** Calculation
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 IF delivery == null delivery = billing
@@ -1511,6 +1599,8 @@ ELSE IF delivery.countryCode blank legacy code assigns delivery.address = delive
 
 **Statement:** Delivery state/province and postal code are separate address attributes and must be persisted to their corresponding fields.
 **Intent:** Compliance
+**Classification:** Core
+**Weight:** Critical
 **Logic:**
 ```pseudocode
 delivery.postalCode = sourceShipping.postalCode
@@ -1542,6 +1632,8 @@ delivery.state = sourceShipping.stateProvince
 
 **Statement:** A customer attribute can be saved only when both its option and option value exist and belong to the selected store.
 **Intent:** Validation
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 option = customerOptionService.getById(attr.customerOption.id)
@@ -1576,6 +1668,8 @@ REQUIRE value.merchantStore.id == store.id
 
 **Statement:** A customer receives a default gender value when absent and a default language from the request or store context when absent.
 **Intent:** Calculation
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 IF source.gender != null AND target.gender == null target.gender = CustomerGender.valueOf(source.gender)
@@ -1610,6 +1704,8 @@ IF target.defaultLanguage == null
 
 **Statement:** Deleting a customer also removes all customer-specific attribute assignments.
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 customer = getById(customer.id)
@@ -1643,6 +1739,8 @@ customerRepository.delete(customer)
 
 **Statement:** Removing an attribute option or value first removes customer assignments and option-collection links that depend on it.
 **Intent:** State Transition
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 FOR attribute in getByOptionId(option.store, option.id) delete(attribute)
@@ -1676,6 +1774,8 @@ For a value, use getByCustomerOptionValueId and listByOptionValue before delete(
 
 **Statement:** A customer receives an access token only after the submitted credentials authenticate successfully; invalid credentials return unauthorized.
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** Critical
 **Logic:**
 ```pseudocode
 authentication = jwtCustomerAuthenticationManager.authenticate(username, password)
@@ -1711,6 +1811,8 @@ return AuthenticationResponse(user.id, token)
 
 **Statement:** Authenticated customer authorities are the authenticated-customer role plus permissions associated with every assigned group.
 **Intent:** Authorization
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```pseudocode
 user = customerService.getByNick(userName)

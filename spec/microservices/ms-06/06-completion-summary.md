@@ -146,3 +146,7 @@ The OpenAPI contract contains the same **12 operation methods**.
 ## Deferred Deliverables
 
 The user-requested package intentionally contains six files. Cross-service `05-dependencies.md`, `07-workflows.md`, shared event schemas, BA review, graph import, telemetry, and Phase 4b placement decisions remain pending.
+
+## Phase 4a BA disposition
+
+Mode A agent defaults were approved on 2026-09-02. 19 rules remain active after 0 approved obsolete-rule removal(s). Retained rules carry explicit Classification and Weight metadata; no rules were deferred, merged, or simplified without BA-specific guidance.

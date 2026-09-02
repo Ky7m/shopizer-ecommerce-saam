@@ -11,6 +11,8 @@
 **Discovery Method:** Hybrid — CAST transactions 243993, 243994, 243998 plus direct source read  
 **Statement:** Product search, autocomplete, and indexing operate only when indexing is enabled for the deployment and a configured search provider is available. Disabled or unavailable search must return a defined service outcome without issuing provider calls or dereferencing an absent response.  
 **Intent:** Validation; Routing  
+**Classification:** Active
+**Weight:** Medium
 **Logic:**
 ```text
 enabled = configuration.INDEX_PRODUCTS
@@ -47,6 +49,8 @@ target maps unavailable reads to 503 SEARCH_UNAVAILABLE
 **Discovery Method:** Hybrid — CAST transaction 243998 plus direct source read  
 **Statement:** Each searchable product description produces one localized document identified by tenant, store, product, and locale. English and French descriptions for one product therefore remain separate searchable documents.  
 **Intent:** Calculation; State Transition  
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```text
 languages = product.descriptions.map(description.language.code)
@@ -83,6 +87,8 @@ FOR EACH description:
 **Discovery Method:** Hybrid — CAST transaction 243998 plus direct source read  
 **Statement:** A localized search document includes the searchable product text, store context, product and variant inventory/price entries, and available localized merchandising information such as brand, category, attributes, image, reviews, and product link.  
 **Intent:** Calculation  
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```text
 image = default product image OR first image
@@ -124,6 +130,8 @@ provider.index(item)
 **Discovery Method:** Hybrid — CAST transaction 243998 plus direct source read  
 **Statement:** Product, variant, image, or attribute changes that can affect search visibility or displayed data refresh the parent product projection. Product deletion removes all localized documents, and variant deletion refreshes the parent without the deleted variant.  
 **Intent:** Routing; State Transition  
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```text
 IF indexing disabled: ignore event
@@ -159,6 +167,8 @@ ELSE IF image/attribute deleted: reload parent, remove component, index parent
 **Discovery Method:** Hybrid — CAST transaction 243994 plus direct source read  
 **Statement:** Autocomplete accepts a non-empty term with store and locale context, delegates a keyword search, and returns at most fifteen suggestion strings. Category facets are not included in this response.  
 **Intent:** Validation; Calculation  
+**Classification:** Active
+**Weight:** Low
 **Logic:**
 ```text
 require word, language, and store
@@ -193,6 +203,8 @@ return response.items.map(item.suggestions)
 **Discovery Method:** Hybrid — CAST full-index/event paths plus direct source read  
 **Statement:** Deployment configuration can disable provider initialization and event-driven indexing without disabling catalog operations. Catalog events are acknowledged without search mutation while the feature is disabled.  
 **Intent:** Routing; Compliance  
+**Classification:** Core
+**Weight:** Critical
 **Logic:**
 ```text
 noIndex = configuration.search.noindex OR false
@@ -227,6 +239,8 @@ ON product event:
 **Discovery Method:** Hybrid — CAST provider path plus direct source read  
 **Statement:** MS-03 configures the selected search provider with deployment hosts, credentials, supported locales, and locale-specific mappings, then delegates product, keyword, and document operations through a provider-neutral adapter.  
 **Intent:** Routing; Validation  
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```text
 configuration = clusterName + hosts + credentials + searchLanguages
@@ -264,6 +278,8 @@ getDocument -> provider.getDocument
 **Discovery Method:** Hybrid — CAST transaction 243998 plus direct source read  
 **Statement:** Reindexing replaces all current localized documents for a product with the latest catalog projection. A store-wide rebuild runs asynchronously and records requested, running, and terminal outcomes.  
 **Intent:** State Transition; Calculation  
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```text
 ON product index:
@@ -301,6 +317,8 @@ ON rebuild(store):
 **Discovery Method:** Hybrid — CAST transaction 243998 plus direct source read  
 **Statement:** When an image or attribute changes, the refreshed product projection retains unrelated components and replaces or removes only the component identified by the event. A component event with no usable identity is rejected rather than corrupting the projection.  
 **Intent:** Validation; State Transition  
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```text
 legacy save filters compare each component ID to itself and therefore discard existing components
@@ -335,6 +353,8 @@ target indexes the resulting parent projection
 **Discovery Method:** Hybrid — CAST transaction 243993 plus direct source read  
 **Statement:** Product search honors a non-negative offset and a result limit from one through one hundred. Response pagination reports the applied values even when the external provider does not enforce them.  
 **Intent:** Validation; Calculation  
+**Classification:** Core
+**Weight:** High
 **Logic:**
 ```text
 default count = 100

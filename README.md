@@ -21,7 +21,7 @@
 | Phase 2: Top-Down | ✅ Complete | 2026-08-31 |
 | Phase 3: Convergence | ✅ Complete | 2026-09-01 |
 | Phase 4: Specification | — | — |
-| Phase 4a: Rule Validation | — | — |
+| Phase 4a: Rule Validation | ✅ Complete | 2026-09-02 |
 | Phase 4b: Roadmap | — | — |
 | Phase 4c: Test Suites | — | — |
 | Phase 5: Implementation | — | — |
@@ -61,6 +61,10 @@ Phase 3 artifacts are under `assessment/` and `validation/`: the complete featur
 gap analysis, comprehensive validation summary, updated decision register, convergence tracker,
 and `.saam/telemetry/phase3-convergence.yaml`. Phase 4 specification generation is not activated;
 the operator will start it manually.
+
+## Phase 4a Completion Summary
+
+Phase 4a used Mode A agent defaults, approved by the operator on 2026-09-02. The 306 specification rules were reconciled to 303 active rules and 3 obsolete rules were moved to service appendices (0.98% scope reduction). Retained rules are classified as Core or Active and carry Critical, High, Medium, or Low impact weights. 86 active rules have Critical weight. No rules were deferred, merged, or simplified. The 23 unresolved Stage 1.5 event bindings remain explicit review items for downstream planning.
 
 ## Analysis Scope
 
