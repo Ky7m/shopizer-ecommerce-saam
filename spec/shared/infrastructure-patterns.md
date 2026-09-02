@@ -62,6 +62,22 @@ messaging, and observability behavior across all services.
 - Messaging connects after the database is ready; `/health/ready` waits for both dependencies.
 - Graceful shutdown drains in-flight requests, stops consumers, flushes telemetry, and exits.
 
+## Local orchestration
+
+- .NET Aspire AppHost is the local development and test orchestrator.
+- The solution follows the Aspire Shop layout: an `AppHost` project defines resources and
+  references, a `ServiceDefaults` class library provides shared hosting defaults, each backend
+  service has an independent ASP.NET Core project, and each frontend has its own Blazor Web App
+  project.
+- Project names use the `Shopizer.<Role>` convention (`Shopizer.AppHost`,
+  `Shopizer.ServiceDefaults`, `Shopizer.Admin`, `Shopizer.Storefront`, and
+  `Shopizer.<ServiceName>`). The solution file is `Shopizer.slnx`.
+- Aspire starts service projects and containerized PostgreSQL, RabbitMQ, and Redis resources
+  with explicit health/readiness dependencies.
+- Docker/OCI images remain the packaging boundary for every service.
+- Production hosting is not selected yet; local service discovery must therefore use Aspire
+  resource references and environment configuration rather than a cloud-specific assumption.
+
 ## Logging and observability
 
 - Structured logs use JSON in production and readable console output in development.

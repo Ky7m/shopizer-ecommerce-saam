@@ -1,0 +1,36 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.2.0">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Shopizer.CustomerIdentity\Shopizer.CustomerIdentity.csproj" />
+    <ProjectReference Include="..\Shopizer.CatalogProduct\Shopizer.CatalogProduct.csproj" />
+    <ProjectReference Include="..\Shopizer.Search\Shopizer.Search.csproj" />
+    <ProjectReference Include="..\Shopizer.CartCheckout\Shopizer.CartCheckout.csproj" />
+    <ProjectReference Include="..\Shopizer.OrderManagement\Shopizer.OrderManagement.csproj" />
+    <ProjectReference Include="..\Shopizer.Payments\Shopizer.Payments.csproj" />
+    <ProjectReference Include="..\Shopizer.PricingPromotions\Shopizer.PricingPromotions.csproj" />
+    <ProjectReference Include="..\Shopizer.Tax\Shopizer.Tax.csproj" />
+    <ProjectReference Include="..\Shopizer.Shipping\Shopizer.Shipping.csproj" />
+    <ProjectReference Include="..\Shopizer.MerchantAdministration\Shopizer.MerchantAdministration.csproj" />
+    <ProjectReference Include="..\Shopizer.ContentConfiguration\Shopizer.ContentConfiguration.csproj" />
+    <ProjectReference Include="..\Shopizer.PlatformIntegrations\Shopizer.PlatformIntegrations.csproj" />
+    <ProjectReference Include="..\Shopizer.Admin\Shopizer.Admin\Shopizer.Admin.csproj" />
+    <ProjectReference Include="..\Shopizer.Storefront\Shopizer.Storefront\Shopizer.Storefront.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="13.5.3" />
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="13.5.3" />
+    <PackageReference Include="Aspire.Hosting.RabbitMQ" Version="13.5.3" />
+    <PackageReference Include="Aspire.Hosting.Redis" Version="13.5.3" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>916e054c-58d3-4ccf-9ae6-826d2782f425</UserSecretsId>
+    <AspireUseCliBundle>true</AspireUseCliBundle>
+  </PropertyGroup>
+
+</Project>

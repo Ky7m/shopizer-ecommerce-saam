@@ -13,7 +13,7 @@ cross-service contract.
 | SAAM lead architect | 1.0 | Own roadmap, traceability, gates, and cross-service decisions | All waves; resolves deviations |
 | Domain/service architect | 1.0 | Validate service boundaries, invariants, and event choreography | MS-02, MS-04, MS-05, MS-06 |
 | .NET implementation engineers | 3.0 | Generate and wire service APIs, domain logic, persistence, and messaging | Two parallel service tracks |
-| Platform/infrastructure engineer | 1.0 | Shared runtime, PostgreSQL, RabbitMQ, Redis, containers, CI/CD, test-mode wiring | Foundation and every wave |
+| Platform/infrastructure engineer | 1.0 | Aspire AppHost, Docker, PostgreSQL, RabbitMQ, Redis, CI/CD, test-mode wiring | Foundation and every wave |
 | QA/test engineer | 1.0 | Phase 4c suites, contract tests, integration tests, and BR traceability | Starts before Wave 1 implementation |
 | Payments/tax/shipping SME | 0.5 shared | Review Mode A assumptions and provider behavior | MS-06, MS-08, MS-09 |
 | Product/merchant SME | 0.25 shared | Review promotion, store lifecycle, and content semantics | MS-07, MS-10, MS-11 |

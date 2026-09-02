@@ -13,7 +13,7 @@
 | R-07 | Search or content projections become stale and degrade storefront discovery | Medium | Medium | Experience lead | Versioned events, rebuild endpoint, freshness metric, replayable event history, fallback catalog query | Projection lag exceeds SLO; serve direct catalog search or rebuild index |
 | R-08 | External email, file, map, carrier, or search adapters fail during checkout/admin work | High | Medium | Integration lead | Adapter isolation, bounded retries, dead-letter queues, circuit breakers, asynchronous delivery where possible | Error-rate threshold; use cached/manual fallback and expose degraded status |
 | R-09 | Shared legacy schema assumptions prevent independent service deployment | High | High | Data migration lead | Ownership matrix, schema extraction, anti-corruption adapters, no cross-service writes, phased table retirement | Unowned table or write detected; pause migration and assign explicit owner |
-| R-10 | Azure Container Apps or managed dependencies cannot meet peak commerce load | High | Low | SRE lead | Load tests, queue-depth autoscaling, database capacity plan, rate limits, canary rollout, restore drills | SLO breach or saturation; scale, shed non-critical work, or roll back revision |
+| R-10 | Deferred production hosting target or managed dependencies cannot meet peak commerce load | High | Medium | Platform/SRE lead | Keep Docker/OCI images portable, validate Aspire local topology, load-test candidate platforms, maintain database capacity plan, rate limits, and restore drills | SLO breach or saturation; select an alternative hosting target before production rollout |
 
 ## Risk governance
 
@@ -36,4 +36,3 @@ flowchart TD
     Observe -->|fail| Rollback[Rollback gateway route and repair]
     Rollback --> Shadow
 ```
-

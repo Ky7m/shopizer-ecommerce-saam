@@ -241,11 +241,19 @@ def regress_failing_br_ids(driver, service: str, failing_br_ids: list[str], time
 
 
 def update_service_state(driver, service: str, artifact: dict, timestamp: str):
-    """Update service node with latest validation results."""
+    """Update service node with shell, Aspire, and combined validation results."""
     test_exec = artifact.get("test_execution", {})
+    integration_exec = artifact.get("integration_execution", {})
+    combined_exec = artifact.get("combined_execution", {})
     pass_rate = test_exec.get("pass_rate", 0)
     total = test_exec.get("total", 0)
     passed = test_exec.get("passed", 0)
+    integration_pass_rate = integration_exec.get("pass_rate", 0)
+    integration_total = integration_exec.get("total", 0)
+    integration_passed = integration_exec.get("passed", 0)
+    integration_failed = integration_exec.get("failed", 0)
+    combined_pass_rate = combined_exec.get("pass_rate", pass_rate)
+    validation_gate = combined_exec.get("gate", "pass" if pass_rate >= 0.99 else "fail")
 
     with driver.session() as session:
         session.run("""
@@ -254,9 +262,22 @@ def update_service_state(driver, service: str, artifact: dict, timestamp: str):
             SET s.integration_pass_rate = $passRate,
                 s.integration_tests_total = $total,
                 s.integration_tests_passed = $passed,
+                s.aspire_integration_pass_rate = $integrationPassRate,
+                s.aspire_integration_tests_total = $integrationTotal,
+                s.aspire_integration_tests_passed = $integrationPassed,
+                s.aspire_integration_tests_failed = $integrationFailed,
+                s.combined_validation_pass_rate = $combinedPassRate,
+                s.validation_gate = $validationGate,
                 s.last_validated_at = $timestamp
         """, service=service, passRate=float(pass_rate),
-            total=int(total), passed=int(passed), timestamp=timestamp)
+            total=int(total), passed=int(passed),
+            integrationPassRate=float(integration_pass_rate),
+            integrationTotal=int(integration_total),
+            integrationPassed=int(integration_passed),
+            integrationFailed=int(integration_failed),
+            combinedPassRate=float(combined_pass_rate),
+            validationGate=str(validation_gate),
+            timestamp=timestamp)
 
 
 def resolve_passing_deviations(driver, service: str, passing_br_ids: list[str], timestamp: str):
@@ -414,6 +435,17 @@ def main():
         # Print summary
         print(f"\n  [reconcile] Service: {service}")
         print(f"  [reconcile] Pass rate: {pass_rate:.1%} ({test_exec.get('passed', 0)}/{test_exec.get('total', 0)})")
+        integration_exec = artifact.get("integration_execution", {})
+        if integration_exec.get("available", False):
+            print(
+                "  [reconcile] Aspire.Hosting.Testing: "
+                f"{integration_exec.get('pass_rate', 0):.1%} "
+                f"({integration_exec.get('passed', 0)}/{integration_exec.get('total', 0)})"
+            )
+            print(
+                "  [reconcile] Combined gate: "
+                f"{artifact.get('combined_execution', {}).get('gate', 'unknown')}"
+            )
         print(f"  [reconcile] BR-IDs promoted to Passing: {promoted}")
         print(f"  [reconcile] Deviations created: {deviations_created}")
         print(f"  [reconcile] Deviations resolved: {resolved}")

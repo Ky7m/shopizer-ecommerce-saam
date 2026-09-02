@@ -1,0 +1,25 @@
+<Solution>
+  <Folder Name="/Shopizer.Admin/">
+    <Project Path="Shopizer.Admin/Shopizer.Admin.Client/Shopizer.Admin.Client.csproj" />
+    <Project Path="Shopizer.Admin/Shopizer.Admin/Shopizer.Admin.csproj" />
+  </Folder>
+  <Folder Name="/Shopizer.Storefront/">
+    <Project Path="Shopizer.Storefront/Shopizer.Storefront.Client/Shopizer.Storefront.Client.csproj" />
+    <Project Path="Shopizer.Storefront/Shopizer.Storefront/Shopizer.Storefront.csproj" />
+  </Folder>
+  <Project Path="Shopizer.IntegrationTests/Shopizer.IntegrationTests.csproj" />
+  <Project Path="Shopizer.AppHost/Shopizer.AppHost.csproj" />
+  <Project Path="Shopizer.CartCheckout/Shopizer.CartCheckout.csproj" />
+  <Project Path="Shopizer.CatalogProduct/Shopizer.CatalogProduct.csproj" />
+  <Project Path="Shopizer.ContentConfiguration/Shopizer.ContentConfiguration.csproj" />
+  <Project Path="Shopizer.CustomerIdentity/Shopizer.CustomerIdentity.csproj" />
+  <Project Path="Shopizer.MerchantAdministration/Shopizer.MerchantAdministration.csproj" />
+  <Project Path="Shopizer.OrderManagement/Shopizer.OrderManagement.csproj" />
+  <Project Path="Shopizer.Payments/Shopizer.Payments.csproj" />
+  <Project Path="Shopizer.PlatformIntegrations/Shopizer.PlatformIntegrations.csproj" />
+  <Project Path="Shopizer.PricingPromotions/Shopizer.PricingPromotions.csproj" />
+  <Project Path="Shopizer.Search/Shopizer.Search.csproj" />
+  <Project Path="Shopizer.ServiceDefaults/Shopizer.ServiceDefaults.csproj" />
+  <Project Path="Shopizer.Shipping/Shopizer.Shipping.csproj" />
+  <Project Path="Shopizer.Tax/Shopizer.Tax.csproj" />
+</Solution>

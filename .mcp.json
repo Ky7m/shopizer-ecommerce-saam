@@ -15,6 +15,14 @@
         "NEO4J_USER": "neo4j",
         "NEO4J_PASSWORD": "saamgraph"
       }
+    },
+    "aspire": {
+      "type": "stdio",
+      "command": "aspire",
+      "args": [
+        "agent",
+        "mcp"
+      ]
     }
   }
 }
