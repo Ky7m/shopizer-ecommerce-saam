@@ -370,7 +370,7 @@ After each reconciliation run, produce `assessment/graph-validation-report.md`:
 
 ## Graph Storage and Tooling
 
-The SAAM Knowledge Graph is stored in Neo4j (Community Edition, running as a Podman container) and accessed via the `saam-graph` MCP server. The agent never manipulates the graph directly — it uses MCP tools.
+The SAAM Knowledge Graph is stored in Neo4j (Community Edition, running as a Podman or Docker container) and accessed via the `saam-graph` MCP server. The agent never manipulates the graph directly — it uses MCP tools.
 
 ### Infrastructure
 
@@ -400,17 +400,20 @@ Add to GitHub Copilot MCP configuration:
 ```json
 {
   "saam-graph": {
+    "type": "stdio",
     "command": "uv",
     "args": ["--directory", "graph-mcp", "run", "saam-graph"],
     "env": {
-      "NEO4J_URI": "bolt://localhost:7687",
       "NEO4J_USER": "neo4j",
       "NEO4J_PASSWORD": "saamgraph"
-    },
-    "disabled": false
+    }
   }
 }
 ```
+
+Do not hardcode `NEO4J_URI`. Run `graph-mcp/scripts/ensure_neo4j.sh` first;
+it writes the actual per-project Bolt port and URI to `graph-mcp/.env`, which
+the server loads at startup.
 
 ### Available MCP Tools
 

@@ -5,11 +5,11 @@ Neo4j-backed knowledge graph for SAAM modernization engagements. Provides tracea
 ## Quick Start
 
 ```bash
-# Start Neo4j (podman preferred, docker also works)
+# Start Neo4j and write the project-specific ports to .env
 cd graph-mcp
-podman compose up -d
+bash scripts/ensure_neo4j.sh
 
-# Wait for Neo4j to be ready (browser at http://localhost:7474)
+# Neo4j Browser is available at http://localhost:<NEO4J_HTTP_PORT from .env>
 # Default credentials: neo4j / saamgraph
 
 # Initialize schema (constraints + indexes)
@@ -36,9 +36,9 @@ uv run saam-graph
 │  • Schema validation                        │
 │  • Confidence propagation logic             │
 └─────────────────┬───────────────────────────┘
-                  │ Bolt (7687)
+                  │ Bolt (dynamic port from graph-mcp/.env)
 ┌─────────────────▼───────────────────────────┐
-│  Neo4j 5 Community (Podman container)       │
+│  Neo4j 5 Community (Podman or Docker container) │
 │  • Graph storage                            │
 │  • Cypher query execution                   │
 │  • APOC library (graph algorithms)          │
@@ -87,10 +87,10 @@ Add to `.kiro/settings/mcp.json`:
 {
   "mcpServers": {
     "saam-graph": {
+      "type": "stdio",
       "command": "uv",
       "args": ["--directory", "<path-to-graph-mcp>", "run", "saam-graph"],
       "env": {
-        "NEO4J_URI": "bolt://localhost:7687",
         "NEO4J_USER": "neo4j",
         "NEO4J_PASSWORD": "saamgraph"
       },
@@ -107,10 +107,10 @@ Add to `.mcp.json` or your MCP client configuration:
 {
   "mcpServers": {
     "saam-graph": {
+      "type": "stdio",
       "command": "uv",
       "args": ["--directory", "graph-mcp", "run", "saam-graph"],
       "env": {
-        "NEO4J_URI": "bolt://localhost:7687",
         "NEO4J_USER": "neo4j",
         "NEO4J_PASSWORD": "saamgraph"
       }
@@ -118,6 +118,47 @@ Add to `.mcp.json` or your MCP client configuration:
   }
 }
 ```
+
+`NEO4J_URI` is intentionally omitted. `scripts/ensure_neo4j.sh` discovers the
+actual per-project Bolt port and writes `NEO4J_URI` to `graph-mcp/.env`; the
+server loads that file on startup. Do not hardcode `bolt://localhost:7687` in
+the MCP configuration.
+
+## Troubleshooting
+
+### `Failed to connect to Neo4j` or `Connection refused`
+
+The project uses isolated, dynamic host ports derived from the workspace name.
+The container's internal Bolt port is `7687`, but the host port is recorded in
+`graph-mcp/.env` as `NEO4J_BOLT_PORT` and `NEO4J_URI`.
+
+From the repository root, refresh the container and generated connection
+settings:
+
+```bash
+bash graph-mcp/scripts/ensure_neo4j.sh
+grep -E '^(NEO4J_BOLT_PORT|NEO4J_URI)=' graph-mcp/.env
+```
+
+Keep `NEO4J_URI` out of `.mcp.json`. A stale `NEO4J_URI` inherited by the MCP
+client can override the project's dynamic port. The effective configuration
+precedence is:
+
+1. `NEO4J_URI` loaded from `graph-mcp/.env`
+2. `NEO4J_URI` inherited from the environment
+3. `NEO4J_BOLT_PORT`
+4. `bolt://localhost:7687` fallback
+
+Verify Copilot's parsed workspace configuration and the server directly:
+
+```bash
+copilot mcp list
+copilot mcp get saam-graph
+uv --directory graph-mcp run saam-graph
+```
+
+The direct startup should log `Connected to Neo4j`. Reload or restart the MCP
+client after changing `.mcp.json`.
 
 ## Schema
 
@@ -132,13 +173,14 @@ See `saam-graph-schema.yaml` for the formal definition of:
 
 The graph also powers context hooks (or harness adapters) that inject context automatically:
 
-### Kiro IDE Hooks (`.kiro/hooks/`)
+### Kiro IDE Hooks (`.kiro/hooks/`, when using the Kiro harness)
 | Hook | Trigger | Script | What It Provides |
 |------|---------|--------|-----------------|
 | `graph-session-context.json` | SessionStart | `scripts/session_context.py` | Engagement overview, service progress, open deviations, pending work |
 | `graph-file-context.json` | PreToolUse (fs_write/str_replace/fs_append) | `scripts/file_context.py` | Service endpoints, contract field names, pending BR-IDs (only for `sourcecode/` paths) |
 
 ### GitHub Copilot Hook Adapter (`.github/hooks/`)
-- `saam-copilot-adapter.ts`: executes SessionStart and PreToolUse context injection in Copilot workspace runtime.
+- `saam-hooks.json` registers the Copilot lifecycle commands.
+- `saam-copilot-adapter.ts` executes SessionStart, PreToolUse, PostToolUse, and AgentStop context handling.
 
 Both scripts connect to Neo4j directly (not through the MCP server) for minimal latency. They exit 1 silently if Neo4j is unavailable — no disruption to normal workflow.

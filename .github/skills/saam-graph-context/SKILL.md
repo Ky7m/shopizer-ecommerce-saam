@@ -66,13 +66,20 @@ The Core Graph activates when:
 
 ## Automatic Context Injection (Hooks)
 
-The SAAM Knowledge Graph hooks are always active (installed during bootstrapping):
+The SAAM Knowledge Graph hooks are always active (installed during bootstrapping). While Kiro IDE executes standalone JSON hook configurations directly, GitHub Copilot routes lifecycle events through a TypeScript adapter shim (`.github/hooks/saam-copilot-adapter.ts`) configured in `.github/hooks/saam-hooks.json`. The adapter parses event payloads and delegates execution to the corresponding Python context scripts.
 
 ### Hook 1: SessionStart — Engagement Status
 
-**File:** `.github/hooks/graph-session-context.json`
-**Script:** `graph-mcp/scripts/session_context.py`
-**Trigger:** Every new session
+**Kiro IDE Configuration:**
+- **File:** `.github/hooks/graph-session-context.json`
+- **Script:** `graph-mcp/scripts/session_context.py`
+- **Trigger:** `SessionStart` on every new session
+
+**GitHub Copilot Configuration:**
+- **File:** `.github/hooks/saam-hooks.json`
+- **Script:** `graph-mcp/scripts/session_context.py`
+- **Adapter:** `.github/hooks/saam-copilot-adapter.ts`
+- **Trigger:** `sessionStart` on every new session
 
 On session start, the agent automatically receives:
 - Engagement overview (component count, rule count, service count, test count)
@@ -87,9 +94,16 @@ On session start, the agent automatically receives:
 
 ### Hook 2: PreToolUse — Service Context on File Writes
 
-**File:** `.github/hooks/graph-file-context.json`
-**Script:** `graph-mcp/scripts/file_context.py`
-**Trigger:** Before `fs_write`, `str_replace`, or `fs_append` on files matching `sourcecode/`
+**Kiro IDE Configuration:**
+- **File:** `.github/hooks/graph-file-context.json`
+- **Script:** `graph-mcp/scripts/file_context.py`
+- **Trigger:** `PreToolUse` before `fs_write`, `str_replace`, or `fs_append` on files matching `sourcecode/`
+
+**GitHub Copilot Configuration:**
+- **File:** `.github/hooks/saam-hooks.json`
+- **Script:** `graph-mcp/scripts/file_context.py`
+- **Adapter:** `.github/hooks/saam-copilot-adapter.ts`
+- **Trigger:** `preToolUse` when the target path contains `sourcecode/`
 
 When the agent is about to write to a file in `sourcecode/<service>/`, it automatically receives:
 - The service's API endpoints (paths, methods, expected status codes)

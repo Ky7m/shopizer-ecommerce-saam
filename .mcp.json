@@ -6,6 +6,15 @@
       "headers": {
         "x-api-key": "41iSzZ4X.i1B1qtrWZxC3WeweOxC1iFSJL5TQeDKz"
       }
+    },
+    "saam-graph": {
+      "type": "stdio",
+      "command": "uv",
+      "args": ["--directory", "graph-mcp", "run", "saam-graph"],
+      "env": {
+        "NEO4J_USER": "neo4j",
+        "NEO4J_PASSWORD": "saamgraph"
+      }
     }
   }
 }

@@ -37,8 +37,8 @@ def load_env():
 
 
 ENV = load_env()
-NEO4J_BOLT_PORT = ENV.get("NEO4J_BOLT_PORT", "7687")
-NEO4J_URI = f"bolt://localhost:{NEO4J_BOLT_PORT}"
+NEO4J_BOLT_PORT = ENV.get("NEO4J_BOLT_PORT") or os.environ.get("NEO4J_BOLT_PORT", "7687")
+NEO4J_URI = ENV.get("NEO4J_URI") or os.environ.get("NEO4J_URI") or f"bolt://localhost:{NEO4J_BOLT_PORT}"
 NEO4J_USER = os.environ.get("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "saamgraph")
 PROJECT_NAME = ENV.get("SAAM_PROJECT_NAME", "Unknown Project")
