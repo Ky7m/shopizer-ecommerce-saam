@@ -3,13 +3,13 @@
 import json
 from typing import Any
 
-from mcp.server import MCPServer
+from mcp.server.fastmcp import FastMCP
 
 from saam_graph.db import GraphDB
 from saam_graph.tools.mutations import VALID_NODE_TYPES, VALID_EDGE_TYPES, _get_id_field
 
 
-def register_query_tools(server: MCPServer) -> None:
+def register_query_tools(server: FastMCP) -> None:
     """Register graph query tools with the MCP server."""
 
     @server.tool()

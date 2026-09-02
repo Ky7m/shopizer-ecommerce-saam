@@ -3,12 +3,12 @@
 import json
 from typing import Any
 
-from mcp.server import MCPServer
+from mcp.server.fastmcp import FastMCP
 
 from saam_graph.db import GraphDB
 
 
-def register_context_tools(server: MCPServer) -> None:
+def register_context_tools(server: FastMCP) -> None:
     """Register graph context construction tools with the MCP server."""
 
     @server.tool()

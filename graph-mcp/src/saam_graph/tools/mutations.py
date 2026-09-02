@@ -4,7 +4,7 @@ import json
 from datetime import datetime, timezone
 from typing import Any
 
-from mcp.server import MCPServer
+from mcp.server.fastmcp import FastMCP
 
 from saam_graph.db import GraphDB
 
@@ -65,7 +65,7 @@ def _get_id_field(node_type: str) -> str:
     return id_fields.get(node_type, "id")
 
 
-def register_mutation_tools(server: MCPServer) -> None:
+def register_mutation_tools(server: FastMCP) -> None:
     """Register graph mutation tools with the MCP server."""
 
     @server.tool()

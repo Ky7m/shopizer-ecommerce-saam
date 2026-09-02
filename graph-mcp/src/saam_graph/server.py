@@ -8,7 +8,7 @@ import asyncio
 import logging
 import sys
 
-from mcp.server import MCPServer
+from mcp.server.fastmcp import FastMCP
 
 from saam_graph.db import GraphDB
 from saam_graph.tools.mutations import register_mutation_tools
@@ -20,9 +20,9 @@ from saam_graph.tools.context import register_context_tools
 logger = logging.getLogger("saam-graph")
 
 
-def create_server() -> MCPServer:
+def create_server() -> FastMCP:
     """Create and configure the MCP server with all tool registrations."""
-    server = MCPServer("saam-graph")
+    server = FastMCP("saam-graph")
 
     # Register all tool groups
     register_mutation_tools(server)

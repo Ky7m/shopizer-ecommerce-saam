@@ -124,6 +124,11 @@ actual per-project Bolt port and writes `NEO4J_URI` to `graph-mcp/.env`; the
 server loads that file on startup. Do not hardcode `bolt://localhost:7687` in
 the MCP configuration.
 
+The server pins the MCP Python SDK to the 1.x line because GitHub Copilot's
+stdio connector uses the 2025-11-25 initialize handshake. MCP SDK 2.x selects
+the newer 2026-07-28 stateless protocol and is not compatible with that
+connector.
+
 ## Troubleshooting
 
 ### `Failed to connect to Neo4j` or `Connection refused`
