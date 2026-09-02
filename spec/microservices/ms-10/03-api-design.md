@@ -125,3 +125,12 @@ All non-CRUD operations have driving rules. `GET /stores/{storeCode}` is a stand
 `StoreCreated` is published after the store and store-language transaction commits. Its payload
 is defined by `spec/shared/event-schemas/store-created.yaml`. `StoreConfigured` is a retired
 sequence alias and is not published.
+
+## Phase 4b inferred lifecycle clarifications
+
+- `[Inferred in Phase 4b — Mode A]` Child-store creation requires an active parent; deleting a
+  protected default store or a store with active children returns `409`.
+- `[Inferred in Phase 4b — Mode A]` Language updates are idempotent and reject a request that
+  removes the current default language from the supported set.
+- `[Inferred in Phase 4b — Mode A]` Signup verification tokens are single-use, store-bound,
+  valid for 24 hours, and return `410` after expiry or consumption.

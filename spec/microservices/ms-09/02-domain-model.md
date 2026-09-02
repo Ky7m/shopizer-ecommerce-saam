@@ -248,3 +248,16 @@ and Drools replacement logic remain app-tier by default.
 - Provider/module configuration remains in MS-11. MS-09 consumes a normalized configuration
   projection.
 - No foreign key is created to MS-01, MS-02, MS-04, MS-10, MS-11, or MS-12 schemas.
+
+## Phase 4b inferred data clarifications
+
+- `[Inferred in Phase 4b — Mode A]` Quote persistence includes normalized package dimensions
+  and weight, source distance, selected rate, provider code, and quoted timestamp so a result
+  can be reproduced without re-reading another service's tables.
+- `[Inferred in Phase 4b — Mode A]` Quote idempotency is scoped by tenant, store, and request
+  fingerprint; a retry returns the original quote rather than creating another final option.
+
+CREATE INDEX IF NOT EXISTS shipping_quote_scope_created_idx
+    ON shipping.shipping_quote (tenant_id, store_id, quoted_at);
+CREATE INDEX IF NOT EXISTS shipping_quote_idempotency_idx
+    ON shipping.shipping_quote (tenant_id, store_id, idempotency_key);

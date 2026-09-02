@@ -734,3 +734,9 @@ components:
       content:
         application/json:
           schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+# [Inferred in Phase 4b — Mode A]
+x-phase4b-inferred-assumptions:
+  - Provider requests include destination, tax class, taxable lines, and currency.
+  - Provider responses include rate, amount, jurisdiction, and provider reference.
+  - Timeout or rejection uses a typed provider error unless an approved fallback applies.

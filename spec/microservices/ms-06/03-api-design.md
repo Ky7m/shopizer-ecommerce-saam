@@ -169,3 +169,14 @@ Payment-mutating operations additionally require `Idempotency-Key`, represented 
 - Circuit breaker: per provider and store, opened after five failures in one minute with 50% half-open sampling.
 - Callback processing: at-least-once delivery with inbox deduplication.
 - Outbox publishing: at-least-once delivery with event ID deduplication by consumers.
+
+## Phase 4b inferred provider contract
+
+- `[Inferred in Phase 4b — Mode A]` Provider authorization, capture, and refund responses
+  must include provider operation ID, status, amount, currency, and provider timestamp.
+- `[Inferred in Phase 4b — Mode A]` Callback intake verifies signature, event ID, tenant/store
+  scope, payment intent, amount, currency, and status before applying a state transition.
+- `[Inferred in Phase 4b — Mode A]` A callback outside the 15-minute freshness window is
+  acknowledged for reconciliation and does not directly transition payment state.
+- `[Inferred in Phase 4b — Mode A]` Refund requests above the locally computed refundable
+  balance return `422` and never invoke the external provider.

@@ -713,3 +713,11 @@ These events are target architecture contracts. The listed legacy source files d
 - The API does not expose the legacy KIE session or Drools resource path.
 - The API does not expose manufacturer/shipping-code discount behavior as active capability.
 - Product price administration is store-scoped even when the legacy query predicate did not group all `OR` conditions explicitly.
+
+## Phase 4b inferred pricing clarifications
+
+- `[Inferred in Phase 4b — Mode A]` Promotion evaluation is deterministic: exclusive
+  promotions run first, followed by stackable promotions in descending priority and stable ID
+  order.
+- `[Inferred in Phase 4b — Mode A]` Coupon reservation is idempotent by checkout idempotency
+  key; expired, disabled, exhausted, or store-mismatched coupons return `422`.

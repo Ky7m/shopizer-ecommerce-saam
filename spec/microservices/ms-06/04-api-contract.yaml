@@ -726,3 +726,9 @@ components:
       content:
         application/json:
           schema: { $ref: "#/components/schemas/ErrorResponse" }
+
+# [Inferred in Phase 4b — Mode A]
+x-phase4b-inferred-assumptions:
+  - Provider responses include operation ID, status, amount, currency, and provider timestamp.
+  - Callbacks verify signature, scope, intent, amount, currency, status, and event freshness.
+  - Refunds above the computed refundable balance return 422 without a provider call.

@@ -536,3 +536,16 @@
 ## Rule coverage notes
 
 The 13 assigned Phase 3 rules are re-extracted above. Eight net-new rules capture normalization, immutable identity, transactional creation, deterministic pagination, bounded hierarchy expansion, branding-provider separation, language-set coherence, and authorized name lookup discovered during the Phase 4 deep read.
+
+## Phase 4b inferred clarifications
+
+The following assumptions were applied in Mode A and are not validated by a domain expert:
+
+- `[Inferred in Phase 4b — Mode A]` A child store may be created only under an active
+  retailer/store parent; a child cannot be left orphaned by parent suspension or deletion.
+- `[Inferred in Phase 4b — Mode A]` Deleting a protected default store or a store with active
+  children is rejected with a typed conflict response.
+- `[Inferred in Phase 4b — Mode A]` Language-set updates are idempotent and the default
+  language must remain a member of the supported-language set after every successful update.
+- `[Inferred in Phase 4b — Mode A]` Signup tokens are store-bound, single-use, and expire
+  after 24 hours; expired or consumed tokens return `410`.

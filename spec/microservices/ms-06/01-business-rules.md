@@ -1094,3 +1094,16 @@ Recorded UI evidence: `initial-source/shopizer-shop-reactjs-main/src/pages/other
 - Transaction “last” selection uses lexicographic transaction-type ordering rather than chronological ordering.
 - Legacy payment methods directly mutate order status and totals; MS-06 must replace these writes with events.
 - No confirmed generic provider callback endpoint or callback verification implementation was found.
+
+## Phase 4b inferred clarifications
+
+The following assumptions were applied in Mode A and are not validated by a domain expert:
+
+- `[Inferred in Phase 4b — Mode A]` A provider callback is accepted only when signature,
+  tenant/store scope, payment intent reference, amount, currency, and provider status agree
+  with the locally stored intent.
+- `[Inferred in Phase 4b — Mode A]` A callback older than 15 minutes is treated as stale and
+  routed to reconciliation instead of changing payment state.
+- `[Inferred in Phase 4b — Mode A]` The refundable balance is
+  `capturedAmount - SUM(successfulRefunds + reservedRefunds)`; a refund above that balance is
+  rejected without a provider call.

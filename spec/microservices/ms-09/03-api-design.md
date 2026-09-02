@@ -115,3 +115,12 @@ cross the service boundary.
 | MS-11 | Upstream | Event/projection | Shipping configuration, package, and module projections |
 | MS-12 | Downstream | Internal REST/event | Carrier and Maps adapter execution |
 | MS-05 | Downstream | Event/REST | Quote snapshot consumption; no order transition |
+
+## Phase 4b inferred calculation clarifications
+
+- `[Inferred in Phase 4b — Mode A]` Package dimensions and weight are normalized before
+  provider selection; the normalized values are part of the quote audit payload.
+- `[Inferred in Phase 4b — Mode A]` Distance pricing uses `distanceKm * applicableRate`,
+  and missing distance or rate returns `DISTANCE_UNAVAILABLE`.
+- `[Inferred in Phase 4b — Mode A]` A virtual-only cart returns no shipment option; it does
+  not invoke MS-12.

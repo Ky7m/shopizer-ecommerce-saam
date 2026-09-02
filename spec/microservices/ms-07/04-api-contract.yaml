@@ -1536,3 +1536,9 @@ components:
 
     InternalError:
       description: Unexpected service failure
+
+# [Inferred in Phase 4b — Mode A]
+x-phase4b-inferred-assumptions:
+  - Exclusive promotions are evaluated before stackable promotions.
+  - Stackable promotions use descending priority and stable ID order.
+  - Coupon reservations are idempotent by checkout idempotency key.

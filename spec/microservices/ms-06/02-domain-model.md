@@ -398,3 +398,17 @@ Computed-field provenance: `refundable_balance = captured_amount - SUM(payment_r
 | `payment_callback` | No confirmed legacy equivalent; required by BR-PA-023 |
 | `payment_idempotency` | No legacy equivalent; required by BR-PA-022 |
 | `payment_outbox` | No legacy equivalent; required for authenticated cross-service events |
+
+## Phase 4b inferred data clarifications
+
+- `[Inferred in Phase 4b — Mode A]` Callback records retain provider event ID, received time,
+  signature-verification result, payment intent ID, provider amount/currency/status, and the
+  reconciliation outcome.
+- `[Inferred in Phase 4b — Mode A]` Refund balance enforcement is an application invariant
+  backed by a serialized payment-intent update or equivalent lock so concurrent refunds cannot
+  over-reserve the captured amount.
+
+CREATE INDEX IF NOT EXISTS payment_callback_provider_event_idx
+    ON payments.payment_callback (provider_code, provider_event_id);
+CREATE INDEX IF NOT EXISTS payment_refund_intent_status_idx
+    ON payments.payment_refund (payment_intent_id, status);

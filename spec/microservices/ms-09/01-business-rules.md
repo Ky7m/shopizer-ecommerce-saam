@@ -1485,3 +1485,17 @@ The following API-facing behavior is included in the 16-operation contract:
 - Carrier and Maps calls are represented as MS-12 adapter dependencies, not MS-09 endpoints.
 - `ShippingConfigurationFacadeImpl` is a stub and is excluded from active behavior:
   `initial-source/shopizer-3.2.7/sm-shop/src/main/java/com/salesmanager/shop/store/facade/shipping/ShippingConfigurationFacadeImpl.java:13-36`.
+
+## Phase 4b inferred clarifications
+
+The following assumptions were applied in Mode A and are not validated by a domain expert:
+
+- `[Inferred in Phase 4b — Mode A]` Before method selection, dimensions are normalized to
+  centimeters and weight to grams; the normalized package input is retained in quote audit
+  data.
+- `[Inferred in Phase 4b — Mode A]` Distance pricing uses
+  `distanceKm * applicableRate`, with both source distance and selected rate persisted for
+  reproducibility.
+- `[Inferred in Phase 4b — Mode A]` A virtual-only cart produces no shipment option; missing
+  origins, unsupported destinations, or non-fitting packages return the typed policy errors
+  already listed in the API design.

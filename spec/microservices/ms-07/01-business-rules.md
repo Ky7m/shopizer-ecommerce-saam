@@ -682,6 +682,17 @@ The following previously assigned rules are preserved as boundary references rat
 - `BR-ORD-009` — configured order-total processors calculate promotion/variation lines. MS-07 provides the active promotion processor and result; order-total orchestration remains with the consuming order/cart context.
 - `BR-UI-011` — storefront option selections can change price. MS-07 exposes the attribute-adjusted price calculation consumed by the storefront.
 - `BR-UI-013` — storefront coupon input is syntax-restricted and applied server-side. MS-07 evaluates the server-side promotion code; storefront validation and cart-state replacement remain outside this service.
+
+## Phase 4b inferred clarifications
+
+The following assumptions were applied in Mode A and are not validated by a domain expert:
+
+- `[Inferred in Phase 4b — Mode A]` Exclusive promotions are evaluated before stackable
+  promotions; stackable reductions are applied in deterministic priority order.
+- `[Inferred in Phase 4b — Mode A]` A coupon redemption reservation is unique per checkout
+  idempotency key and a repeated request returns the original reservation result.
+- `[Inferred in Phase 4b — Mode A]` Expired, disabled, exhausted, or store-mismatched coupons
+  return a typed validation response and do not change redemption state.
 ```
 
 [Turn 2]

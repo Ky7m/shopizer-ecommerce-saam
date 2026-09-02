@@ -87,3 +87,18 @@ CREATE INDEX ix_store_languages_language ON merchant_store.store_languages (lang
 - `country_code`, `zone_code`, `currency_code`, language codes, `dimension_unit`, and `weight_unit` map from legacy reference entities and are resolved through shared/reference APIs.
 - `template_code` and `logo_uri` preserve store branding metadata. CMS content and binary file storage remain MS-11/provider concerns.
 - `parent_store_id` is an internal MS-10 relationship; no cross-service foreign key is created.
+
+## Phase 4b inferred data clarifications
+
+- `[Inferred in Phase 4b — Mode A]` Store deletion is a guarded lifecycle transition, not a
+  physical delete when active children or protected-default status would be violated.
+- `[Inferred in Phase 4b — Mode A]` Store configuration fields owned by MS-10 are tenant/store
+  identity, lifecycle, language set, currency, and measurement units; versioned content and
+  module configuration remain MS-11-owned.
+- `[Inferred in Phase 4b — Mode A]` Signup-token persistence must include a hashed token,
+  store ID, expiry, consumed timestamp, and a uniqueness constraint over the active token.
+
+CREATE INDEX IF NOT EXISTS merchant_store_parent_status_idx
+    ON merchant_store.stores (tenant_id, parent_store_id, status);
+CREATE INDEX IF NOT EXISTS merchant_store_languages_store_idx
+    ON merchant_store.store_languages (store_id, language_code);

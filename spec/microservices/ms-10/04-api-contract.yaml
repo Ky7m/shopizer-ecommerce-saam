@@ -344,3 +344,9 @@ components:
       type: object
       required: [verified]
       properties: { verified: { type: boolean } }
+
+# [Inferred in Phase 4b — Mode A]
+x-phase4b-inferred-assumptions:
+  - Child-store creation requires an active parent.
+  - Protected-default or active-child deletion returns 409.
+  - Signup verification tokens are single-use, store-bound, and valid for 24 hours.

@@ -206,3 +206,16 @@ States: `Requested (initial)`, `Running`, `Succeeded (terminal)`, `Failed (termi
 ## Database Logic Objects
 
 No views, procedures, functions, or triggers are specified. Integrity is enforced by PostgreSQL constraints; business orchestration remains in the application tier.
+
+## Phase 4b inferred data clarifications
+
+- `[Inferred in Phase 4b — Mode A]` Valid no-match searches are represented by an empty
+  response page; no placeholder document is persisted.
+- `[Inferred in Phase 4b — Mode A]` Rebuild idempotency is scoped by
+  `(search_index_id, idempotency_key)`, and terminal failures retain the last error code and
+  source version for replay diagnostics.
+
+CREATE INDEX IF NOT EXISTS search_document_scope_updated_idx
+    ON search.search_document (tenant_id, store_id, updated_at);
+CREATE INDEX IF NOT EXISTS search_rebuild_job_scope_status_idx
+    ON search.search_rebuild_job (tenant_id, store_id, status, created_at);

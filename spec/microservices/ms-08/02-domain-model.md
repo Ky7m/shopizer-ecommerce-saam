@@ -347,3 +347,16 @@ COMMENT ON COLUMN tax_schema.tax_quote_items.priority
 
 CREATE INDEX IF NOT EXISTS tax_quote_items_quote_idx
     ON tax_schema.tax_quote_items (tax_quote_id, priority);
+
+## Phase 4b inferred data clarifications
+
+- `[Inferred in Phase 4b — Mode A]` A provider-backed quote records the provider reference,
+  request fingerprint, timeout/failure code, and fallback decision alongside the calculated
+  tax items.
+- `[Inferred in Phase 4b — Mode A]` Tax quote idempotency is scoped to tenant and store; a
+  repeated fingerprint returns the original result without a second provider call.
+
+CREATE INDEX IF NOT EXISTS tax_quote_scope_created_idx
+    ON tax_schema.tax_quotes (tenant_id, store_id, created_at);
+CREATE INDEX IF NOT EXISTS tax_rate_lookup_scope_idx
+    ON tax_schema.tax_rates (tenant_id, store_id, country_code, zone_code, priority);

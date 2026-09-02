@@ -246,9 +246,20 @@ The source selects the default price in application logic and does not define a 
 - Discount percentage, effective price, additional prices, and promotion reductions are calculated values and must not be treated as independently authoritative stored totals.
 - The source has no customer-specific pricing rule. `customer_id` is therefore not stored in price-entry selection data.
 - The source has no persisted promotion-redemption reservation implementation. Reservation tables and redemption state transitions remain out of scope pending an approved business rule.
+
+## Phase 4b inferred data clarifications
+
+- `[Inferred in Phase 4b — Mode A]` Promotion evaluation orders candidates by explicit
+  exclusivity and priority fields; equal-priority candidates use stable promotion ID order.
+- `[Inferred in Phase 4b — Mode A]` Coupon reservation identity is the pair
+  `(store_id, checkout_idempotency_key)` and is unique for the lifetime of a checkout.
+
+CREATE INDEX IF NOT EXISTS pricing_promotion_scope_priority_idx
+    ON pricing_promotions.promotion (store_id, enabled, priority DESC);
+CREATE INDEX IF NOT EXISTS pricing_coupon_scope_code_idx
+    ON pricing_promotions.coupon (store_id, code);
 ```
 
 [Turn 3]
 [Message]
 Return artifact 3 now: complete contents of spec/microservices/ms-07/03-api-design.md only. Use one fenced markdown block; if too large, split into numbered chunks and stop after first chunk.
-

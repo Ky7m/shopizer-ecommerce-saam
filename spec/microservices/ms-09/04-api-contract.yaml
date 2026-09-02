@@ -1043,3 +1043,9 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
+
+# [Inferred in Phase 4b — Mode A]
+x-phase4b-inferred-assumptions:
+  - Package dimensions and weight are normalized before provider selection.
+  - Distance pricing is distanceKm multiplied by applicableRate.
+  - Virtual-only carts return no shipment option and do not invoke MS-12.

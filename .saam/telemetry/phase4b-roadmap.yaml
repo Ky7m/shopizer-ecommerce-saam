@@ -1,0 +1,81 @@
+schema_version: "1.0"
+phase: "P4B"
+started_at: "2026-09-02T08:23:46Z"
+completed_at: "2026-09-02T08:35:05Z"
+duration_hours: 0.19
+timing_source: "machine_recorded"
+calibration_eligible: true
+actor: "agent"
+
+calibration:
+  version: 7
+  date: "2026-08-28"
+  basis: "empirical_preliminary"
+  weights:
+    statement_clarity: 0.30
+    algorithm_completeness: 0.25
+    integration_definition: 0.15
+    data_model_readiness: 0.15
+    edge_case_coverage: 0.15
+  thresholds:
+    type_a_minimum: 0.85
+    type_b_minimum: 0.70
+    minimum_for_implementation: 0.75
+    mandatory_improvement_below: 0.60
+
+metrics:
+  services_scored: 12
+  active_rules_scored: 303
+  iterations_needed: 1
+  mode_used: "agent_defaults"
+
+  automatibility_distribution:
+    high_gte_85: 10
+    medium_70_84: 2
+    low_lt_70: 0
+  avg_automatibility_before: 0.840
+  avg_automatibility: 0.866
+  lowest_automatibility: 0.837
+  highest_automatibility: 0.907
+
+  per_dimension_averages:
+    statement_clarity: 0.865
+    algorithm_completeness: 0.843
+    integration_definition: 0.862
+    data_model_readiness: 0.892
+    edge_case_coverage: 0.850
+
+  primary_blockers:
+    - "agent-inferred-provider-boundaries"
+    - "agent-inferred-lifecycle-edge-cases"
+    - "agent-inferred-shipping-normalization"
+
+  implementation_type_distribution:
+    type_a_full_auto: 10
+    type_b_assisted: 2
+    type_c_manual: 0
+
+  improvement_items:
+    working_sessions_planned: 4
+    working_sessions_completed: 4
+    info_requests_planned: 8
+    info_requests_completed: 8
+    score_improvement_avg_points: 2.6
+    items_resolved_by_mode_a: 12
+    items_remaining_as_risks: 12
+
+  placement_review:
+    candidates_reviewed: 0
+    decisions:
+      app_tier: 0
+      app_with_strategy: 0
+      db_view: 0
+      db_function: 0
+      db_proc: 0
+      db_trigger: 0
+
+  roadmap:
+    recommended_model: "B"
+    model_a_sequential_days: 61
+    model_b_sequential_days: 41
+    model_c_wiring_days: 8

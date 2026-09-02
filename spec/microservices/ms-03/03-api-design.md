@@ -72,3 +72,13 @@ Events require `eventId`, `eventVersion`, `tenantId`, `storeId`, correlation ID,
 - MS-03 consumes MS-02 projections/events and never writes MS-02 tables.
 - Inventory and price values in search documents are display projections, not authoritative state.
 - Provider-specific search infrastructure is external and accessed through a neutral adapter.
+
+## Phase 4b inferred API clarifications
+
+- `[Inferred in Phase 4b — Mode A]` `POST /search` and autocomplete return `200` with an
+  empty collection for a valid query with no matches.
+- `[Inferred in Phase 4b — Mode A]` Blank query, unsupported locale, and invalid `count` or
+  `start` values return `422` using the shared error envelope.
+- `[Inferred in Phase 4b — Mode A]` Projection and rebuild workers retry three times with
+  exponential backoff, then publish `SearchIndexingFailed.v1`; replay uses the original
+  source version and idempotency key.

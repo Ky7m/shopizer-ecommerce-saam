@@ -227,3 +227,9 @@ components:
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+# [Inferred in Phase 4b — Mode A]
+x-phase4b-inferred-assumptions:
+  - Valid no-match searches return 200 with an empty result page.
+  - Blank queries, unsupported locales, and invalid pagination return 422.
+  - Projection and rebuild failures retry three times before SearchIndexingFailed.v1.

@@ -190,3 +190,13 @@ The calculation endpoint accepts snapshots and identifiers rather than directly 
 ## Events
 
 No tax events are published or consumed in the legacy implementation. Tax calculation is synchronous. A future event contract requires explicit architecture approval.
+
+## Phase 4b inferred provider and failure clarifications
+
+- `[Inferred in Phase 4b — Mode A]` When configured, the external provider request contains
+  destination, tax class, taxable lines, and currency; the response must contain rate,
+  amount, jurisdiction, and provider reference.
+- `[Inferred in Phase 4b — Mode A]` Provider timeout or rejection returns a typed provider
+  error unless an explicitly configured fallback can calculate the quote locally.
+- `[Inferred in Phase 4b — Mode A]` A no-rate result is zero tax only when the jurisdiction
+  policy allows zero tax; otherwise the API returns a typed validation error.

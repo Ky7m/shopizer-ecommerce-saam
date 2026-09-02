@@ -382,3 +382,15 @@ return applied pagination metadata
 | Error paths | 2 | 4 | GAP |
 
 **Preservation:** FLAGGED — target closes the ignored count/start gap.
+
+## Phase 4b inferred clarifications
+
+The following assumptions were applied in Mode A and are not validated by a domain expert:
+
+- `[Inferred in Phase 4b — Mode A]` A valid search with no matching documents returns `200`
+  with an empty result page; it is not a not-found condition.
+- `[Inferred in Phase 4b — Mode A]` Blank queries, unsupported locales, and invalid pagination
+  values return `422` with a typed validation error.
+- `[Inferred in Phase 4b — Mode A]` Projection and rebuild failures use three bounded retries
+  with exponential backoff, then publish `SearchIndexingFailed.v1` with the aggregate ID,
+  source version, and correlation ID.

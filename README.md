@@ -9,7 +9,7 @@
 | Legacy Stack | Java 11, Maven, Spring Boot, Spring Security, Hibernate/JPA, Drools |
 | Codebase Size | Approximately 308,769 textual LOC; 2,345 source files; 8 application/build units |
 | Analysis Mode | Hybrid, CAST verified for all three in-scope applications |
-| Target Stack (assumed) | .NET 10; non-binding until Phase 4b |
+| Target Stack | C#/.NET 10+, ASP.NET Core, PostgreSQL, RabbitMQ, Redis, Docker, Azure Container Apps |
 | Started | 2026-08-31 |
 
 ## Current Status
@@ -22,7 +22,7 @@
 | Phase 3: Convergence | ✅ Complete | 2026-09-01 |
 | Phase 4: Specification | — | — |
 | Phase 4a: Rule Validation | ✅ Complete | 2026-09-02 |
-| Phase 4b: Roadmap | — | — |
+| Phase 4b: Roadmap | ✅ Complete | 2026-09-02 |
 | Phase 4c: Test Suites | — | — |
 | Phase 5: Implementation | — | — |
 
@@ -65,6 +65,18 @@ the operator will start it manually.
 ## Phase 4a Completion Summary
 
 Phase 4a used Mode A agent defaults, approved by the operator on 2026-09-02. The 306 specification rules were reconciled to 303 active rules and 3 obsolete rules were moved to service appendices (0.98% scope reduction). Retained rules are classified as Core or Active and carry Critical, High, Medium, or Low impact weights. 86 active rules have Critical weight. No rules were deferred, merged, or simplified. The 23 unresolved Stage 1.5 event bindings remain explicit review items for downstream planning.
+
+## Phase 4b Completion Summary
+
+Phase 4b scored all 12 services across statement clarity, algorithm completeness, integration
+definition, data-model readiness, and edge-case coverage using calibration version 7. Mode A
+recommendations raised the average provisional automatibility from 84.0% to 86.6%; 10 services
+are Type A, 2 are Type B, and none are Type C. All services exceed the 75% implementation
+threshold. Model B (Transform plus GitHub Copilot) is recommended at approximately 4–5 weeks
+using two parallel tracks; Model C is an alternative at approximately 2 weeks elapsed after
+dependency wiring. The phase also confirmed the .NET stack, documented team composition,
+recorded no qualifying Layer C placement candidates, and added shared infrastructure patterns.
+The 12 Mode A resolutions remain explicitly inferred risks for implementation review.
 
 ## Analysis Scope
 

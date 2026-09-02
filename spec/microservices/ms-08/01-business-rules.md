@@ -156,6 +156,19 @@ saveOrUpdate(configuration)
 
 **Preservation:** FLAGGED — target correction required
 
+## Phase 4b inferred clarifications
+
+The following assumptions were applied in Mode A and are not validated by a domain expert:
+
+- `[Inferred in Phase 4b — Mode A]` An optional external tax provider receives destination,
+  tax-class, taxable-line, and currency data and must return tax amount, rate, jurisdiction,
+  and provider reference.
+- `[Inferred in Phase 4b — Mode A]` Provider calls use a bounded timeout; when no approved
+  fallback is configured, timeout or provider rejection returns a typed provider error.
+- `[Inferred in Phase 4b — Mode A]` A quote with no matching rate returns a successful zero-tax
+  result only when the jurisdiction policy explicitly permits zero tax; otherwise it is a
+  typed validation failure.
+
 ---
 
 ### BR-TAX-CLS-001: Create a tax class unique within a tenant and store
