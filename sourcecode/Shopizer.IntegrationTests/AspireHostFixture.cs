@@ -39,7 +39,7 @@ public sealed class AspireHostFixture : IAsyncLifetime
         {
             ["customer-identity"] = (client => CustomerIdentityClient = client, "tenant-demo", "default", "00000000-0000-0000-0000-000000000001", false, null, null),
             ["catalog-product"] = (client => CatalogProductClient = client, "test-tenant-001", "test-store-001", "11111111-1111-4111-8111-111111111111", false, null, "phase4c-test"),
-            ["search"] = (client => SearchClient = client, "test-tenant-001", "test-store-001", "corr-ms03-0001", false, null, null),
+            ["search"] = (client => SearchClient = client, "tenant-demo", "default", "corr-ms03-0001", false, null, null),
             ["cart-checkout"] = (client => CartCheckoutClient = client, "tenant-001", "store-001", "00000000-0000-0000-0000-000000000001", false, null, null),
             ["order-management"] = (client => OrderManagementClient = client, "tenant-a", "store-12", "corr-ms05-001", true, null, null),
             ["payments"] = (client => PaymentsClient = client, "test-tenant-001", "test-store-001", "corr-ms06-001", true, null, null),
@@ -810,6 +810,15 @@ public sealed class AspireHostFixture : IAsyncLifetime
         {
             client.DefaultRequestHeaders.Add("Idempotency-Key", idempotencyKey);
         }
+    }
+
+    public async Task<NpgsqlConnection> OpenDatabaseAsync(string resourceName)
+    {
+        var connectionString = await _application!.GetConnectionStringAsync(resourceName)
+            ?? throw new InvalidOperationException($"No connection string for {resourceName}.");
+        var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync();
+        return connection;
     }
 }
 
