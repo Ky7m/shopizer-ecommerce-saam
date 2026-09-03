@@ -19,7 +19,7 @@
 | 6 | Shipping (MS-09) | `Shopizer.Shipping` | Pending | PENDING |
 | 7 | Content and Configuration (MS-11) | `Shopizer.ContentConfiguration` | Pending | PENDING |
 | 8 | Cart and Checkout (MS-04) | `Shopizer.CartCheckout` | Pending | PENDING |
-| 9 | Search (MS-03) | `Shopizer.Search` | Pending | PENDING |
+| 9 | Search (MS-03) | `Shopizer.Search` | Implemented | IN_REVIEW |
 | 10 | Order Management (MS-05) | `Shopizer.OrderManagement` | Pending | PENDING |
 | 11 | Payments (MS-06) | `Shopizer.Payments` | Pending | PENDING |
 | 12 | Platform Integrations (MS-12) | `Shopizer.PlatformIntegrations` | Pending | PENDING |
