@@ -168,11 +168,11 @@ For inputs requiring spec changes:
 
 For inputs requiring test changes:
 
-1. Read the current `validation/<service>/comprehensive-test-suite.sh`
+1. Read the current `sourcecode/Shopizer.IntegrationTests/<Service>ComprehensiveTests.cs`
 2. Read `04-api-contract.yaml` for field names (ALWAYS — even for small changes)
 3. Add new assertions (feature) or fix existing ones (spec correction)
-4. Follow all rules from `.github/skills/saam-test-suite-template/SKILL.md` (extract_field, global headers, etc.)
-5. Verify the test suite still runs (syntax check)
+4. Follow all rules from `.github/skills/saam-test-suite-template/SKILL.md` and `.github/skills/saam-dotnet-reference-implementation/SKILL.md` (xUnit facts, `AssertResponseAsync`, `JsonNode` extraction, fixture context, etc.)
+5. Verify the filtered `dotnet test` suite still runs against the Aspire host; a skipped or non-executed suite is a failed gate
 
 **For new features:** Add test section with header comment referencing the new BR-IDs.
 **For bug fixes:** Add a regression test assertion that specifically covers the bug scenario.

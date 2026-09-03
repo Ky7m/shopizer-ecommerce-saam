@@ -98,7 +98,7 @@ automatibility:
   mandatory_improvement_below: 0.60
 
   # ── Test Pass Rate vs Automatibility (from ENG-003 P5 — N=21 services, REAL test data) ──
-  # Measured against real PostgreSQL sidecar + comprehensive-test-suite.sh
+  # Measured against real PostgreSQL sidecar + xUnit/.NET Aspire integration suite
   #
   # KEY FINDING: automatibility barely correlates with actual test pass rate.
   #   Pearson r = 0.22 (weak). Automatibility predicts SPEC quality, NOT

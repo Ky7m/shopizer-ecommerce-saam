@@ -635,7 +635,7 @@ In extraction-evidence.md, "Not Found" entries MUST include:
 
 **If you find yourself writing spec content without having called `read_file` on a source code file in THIS session → you are shortcutting. STOP and read the source.**
 
-**TEST SUITE DEFERRAL**: Phase 4 produces specifications only. Test suite generation (`comprehensive-test-suite.sh`) is a SEPARATE step (Phase 4c). Do NOT create test files during Phase 4.
+**TEST SUITE DEFERRAL**: Phase 4 produces specifications only. xUnit integration-test generation (`sourcecode/Shopizer.IntegrationTests/<Service>ComprehensiveTests.cs`) is a SEPARATE step (Phase 4c). Do NOT create test files during Phase 4.
 
 ## Graph Population (Incremental — During Phase 4)
 
@@ -1645,7 +1645,7 @@ For each PoC use case:
 ❌ Do NOT write DDL without real column names from the source tables
 ❌ Do NOT fabricate source references — if you can't read a file, say "FILE NOT ACCESSIBLE"
 ❌ Do NOT inflate completion summary counts beyond what actually exists in the files
-❌ Do NOT create test suite files (04-test-assertions.md, comprehensive-test-suite.sh) during Phase 4
+❌ Do NOT create test suite files (04-test-assertions.md or `sourcecode/Shopizer.IntegrationTests/<Service>ComprehensiveTests.cs`) during Phase 4
 ❌ Do NOT summarize Phase 1 findings — Phase 4 goes DEEPER than Phase 1
 ❌ Do NOT confuse Logic with Statement — Statement is semantic/business, Logic is mechanical/code
 ❌ Do NOT self-assess at 100% — self-assessed scores are PROVISIONAL until independently validated

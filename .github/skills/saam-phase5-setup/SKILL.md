@@ -18,7 +18,8 @@ The agent MUST read the following steering files before executing Phase 5 Setup:
 1. **`.github/skills/saam-human-guidance-protocol/SKILL.md`** — Prompt categories, decision register format, agent rules
 2. **`.github/skills/saam-task-tracking/SKILL.md`** — Tracking file format and Jira dual-write protocol
 3. **`.github/skills/saam-api-contract/SKILL.md`** — API contract protocol (needed for TD materials that reference the contract as naming authority)
-4. **`.github/skills/saam-jira-integration/SKILL.md`** — (Only if Jira is configured) Jira ticket structure and ATX skill configuration
+4. **`.github/skills/saam-dotnet-reference-implementation/SKILL.md`** — **AUTHORITATIVE** implementation & integration-test standard. Every model's TD materials, coding-pattern references, and generated scaffolds MUST conform to it.
+5. **`.github/skills/saam-jira-integration/SKILL.md`** — (Only if Jira is configured) Jira ticket structure and ATX skill configuration
 
 ## Task Tracking Activation
 
@@ -33,7 +34,7 @@ Before proceeding with setup, verify:
 1. **Specs exist:** `spec/microservices/` contains at least one service directory with `01-business-rules.md`
 2. **API contracts exist:** Each service has `04-api-contract.yaml` (if missing, this is a Phase 4 gap — offer to run Phase 4's API contract generation step now per `.github/skills/saam-api-contract/SKILL.md`. The contract should NEVER have been deferred past Phase 4.)
 3. **DTOs exist:** Each service has `spec/microservices/<service>/08-dtos/` with target-language DTO files (if missing, offer to run Phase 4c Stage 0 per `.github/skills/saam-phase4c-test-suite-generation/SKILL.md`). **These DTOs are the concrete binding that prevents naming drift between tests and implementation.**
-4. **Test suites exist:** `validation/<service>/comprehensive-test-suite.sh` exists per service (if missing, offer to run Phase 4c first per `.github/skills/saam-phase4c-test-suite-generation/SKILL.md`)
+4. **Integration test classes exist:** `sourcecode/Shopizer.IntegrationTests/<Service>ComprehensiveTests.cs` exists per service (if missing, offer to run Phase 4c first per `.github/skills/saam-phase4c-test-suite-generation/SKILL.md`). Legacy `validation/<service>/comprehensive-test-suite.sh` files are deprecated and are not a prerequisite.
 5. **Modernization artifacts exist:** `modernization/implementation-roadmap.md` exists (if missing, warn that Phase 4b was skipped)
 
 If any critical precondition fails, inform the user and offer to resolve before continuing.
@@ -148,7 +149,7 @@ Single subagent implements entire service:
 
   Subagent 1 — Scaffold + DTOs + Domain + Repository:
     Input: 02-domain-model.md, 04-api-contract.yaml, 08-dtos/
-    Output: project scaffold, DTOs copied from spec VERBATIM into src/dto/, entities, Prisma/JPA schema, repository interfaces
+    Output: project scaffold, DTOs copied verbatim from spec into `sourcecode/Shopizer.<Service>/DTOs/`, entities, `Data/SchemaInitializer.cs`, repository interfaces
     (Creates scaffold + copies DTOs + data layer — no business logic yet)
 
   Subagent 2 — Service Layer (business logic):
@@ -159,7 +160,7 @@ Single subagent implements entire service:
   Subagent 3 — Controllers:
     Input: 03-api-design.md, 04-api-contract.yaml + copied DTOs + generated services from step 2
     Output: controllers using the COPIED DTOs for request/response types
-    (Wires API surface to service layer — uses pre-existing DTOs in src/dto/, NEVER regenerates them)
+    (Wires API surface to service layer — uses pre-existing DTOs in `DTOs/`, NEVER regenerates them)
 
   Subagent 4 — Events + Integration + Unit Tests:
     Input: 05-dependencies.md, 04-api-contract.yaml + all generated code

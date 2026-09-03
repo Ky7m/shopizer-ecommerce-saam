@@ -156,8 +156,7 @@ validation:
   script:
     - |
       for service in $(echo "$SERVICES" | tr ',' '\n'); do
-        SUITE="validation/$service/comprehensive-test-suite.sh"
-        [ -f "$SUITE" ] && bash "$SUITE" || exit 1
+        ./validation/run-and-reconcile.sh "$service" ci_pipeline || exit 1
       done
   rules:
     - if: $SERVICES != ""
@@ -227,8 +226,7 @@ stages:
         steps:
           - script: |
               for service in $(echo "$(SERVICES)" | tr ',' '\n'); do
-                SUITE="validation/$service/comprehensive-test-suite.sh"
-                [ -f "$SUITE" ] && bash "$SUITE" || exit 1
+                ./validation/run-and-reconcile.sh "$service" ci_pipeline || exit 1
               done
             displayName: Run test suites
 ```
@@ -268,8 +266,7 @@ pipelines:
               done
 
               for service in $SERVICES; do
-                SUITE="validation/$service/comprehensive-test-suite.sh"
-                [ -f "$SUITE" ] && bash "$SUITE"
+                ./validation/run-and-reconcile.sh "$service" ci_pipeline || exit 1
               done
           condition:
             changesets:

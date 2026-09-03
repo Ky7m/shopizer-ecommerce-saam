@@ -245,7 +245,7 @@ WHY GOOD: Statement declares the business constraint with enough detail to imple
 - [ ] API endpoints cover all CRUD + business operations
 - [ ] Events cross-referenced with consumer/producer specs
 - [ ] Workflows documented in `07-workflows.md` (Phase 4 Stage 1.6 — every state-changing BR-ID in at least one workflow)
-- [ ] Test assertions designed per rule (for comprehensive-test-suite.sh)
+- [ ] Test assertions designed per rule for the xUnit + .NET Aspire integration suite (`sourcecode/Shopizer.IntegrationTests/<Service>ComprehensiveTests.cs`)
 - [ ] DTOs generated in `08-dtos/` (Phase 4c Stage 0 — after tech stack confirmed)
   - `Requests.*` — all request DTOs for this service's endpoints
   - `Responses.*` — all response DTOs for this service's endpoints

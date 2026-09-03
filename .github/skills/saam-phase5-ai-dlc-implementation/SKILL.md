@@ -98,6 +98,7 @@ targeted-fix, which is what bounds the loop count (especially critical for Model
 
 The agent MUST read the following steering files before executing Phase 5 implementation:
 
+0. **`.github/skills/saam-dotnet-reference-implementation/SKILL.md`** — **AUTHORITATIVE, read FIRST and IN FULL.** The single authority for HOW every service and its xUnit integration test suite are structured: project layout, `Program.cs` composition, Npgsql persistence, error model, auth/tenancy, events, code style, and the BR-ID annotation contract. All other steering files link here rather than restate these conventions.
 1. **`.github/skills/saam-phase5-setup/SKILL.md`** — Setup wizard (MUST be run FIRST if not already completed for this engagement)
 2. **`.github/skills/saam-human-guidance-protocol/SKILL.md`** — Prompt categories, decision register format, agent rules
 3. **`.github/skills/saam-task-tracking/SKILL.md`** — Tracking file format and Jira dual-write protocol (especially the Phase 5 append-only log model)
@@ -122,14 +123,15 @@ The agent MUST read the following steering files before executing Phase 5 implem
 | Common schemas (`spec/shared/common-schemas.yaml`) | **Shared types** | PaginationMeta, ErrorResponse, ListResponse, AuditFields — defined ONCE, used everywhere. |
 | Env schema (`spec/shared/env-schema.md`) | **Configuration contract** | Required environment variables per service. Compose and production configs derive from this. |
 | Cross-service workflows (`spec/07-cross-service-workflows.md`) | **System choreography** | End-to-end multi-service operation sequences. Drives system integration tests and frontend user flows. |
-| `comprehensive-test-suite.sh` | **Quality gate only** | Validating the implementation AFTER code is written — never as input to code generation |
+| .NET reference implementation (`.github/skills/saam-dotnet-reference-implementation/SKILL.md`) | **Implementation pattern authority** | HOW services and tests are structured — project layout, `Program.cs` composition, Npgsql persistence, error model, auth/tenancy, events, code style, BR-ID annotation format. Structure conforms to this; naming conforms to the API contract. |
+| xUnit integration suite (`sourcecode/Shopizer.IntegrationTests/<Service>ComprehensiveTests.cs`) | **Quality gate only** | Validating the implementation AFTER code is written (run via `dotnet test`) — never as input to code generation |
 
 **Rules:**
 - The agent MUST derive all implementation from the service specification (BR-IDs, DDL, API design, event contracts)
 - The agent MUST use `04-api-contract.yaml` for ALL naming decisions (field names, paths, status codes, response shapes)
-- **The agent MUST copy `spec/<service>/08-dtos/` into `sourcecode/<service>/src/dto/` as the FIRST implementation step — before writing any controller, service, or entity code.** These DTOs are pre-generated in Phase 4c and are mechanically consistent with the API contract and test suites.
+- **The agent MUST copy `spec/microservices/<service>/08-dtos/*.cs` into `sourcecode/Shopizer.<Service>/DTOs/` VERBATIM as the FIRST implementation step — before writing any controller, service, or entity code.** These `.cs` DTOs are pre-generated in Phase 4c and are mechanically consistent with the API contract and test suites.
 - **The agent MUST NOT regenerate, rename, restructure, or "improve" the copied DTOs.** If a DTO field looks wrong, the agent checks the contract — if the contract matches the DTO, the DTO is correct.
-- **The agent MUST NOT create additional request/response DTOs that duplicate shapes already in `08-dtos/`.** Internal-only DTOs (not in the API contract) are allowed and MUST be prefixed `internal-` to distinguish them.
+- **The agent MUST NOT create additional request/response DTOs that duplicate shapes already in `08-dtos/`.** Internal-only types (never crossing the API boundary) are allowed, but per the reference they live in `Models/Domain.cs` — NOT as extra files in `DTOs/`.
 - The agent MUST NOT read, parse, or reverse-engineer the test suite to determine what to implement
 - The agent MUST NOT use test assertions as a substitute for reading the spec or contract
 - The agent MUST NOT modify the test suite to make tests pass — code must conform to tests, never the reverse
@@ -146,7 +148,7 @@ The contract (`04-api-contract.yaml`) eliminates the need to read test suites fo
     ↓ copied verbatim                      ↓ payload reference
 Code Generator (Phase 5/ATX)             Test Suite (Phase 4c)
     ↓ produces                               ↓ produces
-Running Service ←── validates ──── comprehensive-test-suite.sh
+Running Service ←── validates ──── sourcecode/Shopizer.IntegrationTests/<Service>ComprehensiveTests.cs (dotnet test)
 ```
 
 **Why DTOs eliminate drift:** Previously, both the test generator and the code generator independently interpreted the contract into their own DTO shapes — leading to ~60% of integration failures being naming/shape mismatches (not logic bugs). Now both sides consume the SAME pre-generated DTOs. The implementation copies them, the tests reference them. Zero interpretation room.
@@ -282,24 +284,32 @@ For engagements with multiple services, the agent implements services in depende
 
 ```
 For each service (in dependency order):
-  ┌──────────────────────────────────────────┐
-  │ Step 0: Test suite prerequisite check     │
-  │ Step 0.5: Copy DTOs from spec (08-dtos/) │
-  │ Step 1: Read full spec                    │
-  │ Step 2: Create GitHub Copilot spec      │
-  │ Step 3: Implement (spec-driven, no stubs) │
-  │     ├── Scaffolding                       │
-  │     ├── Domain model                      │
-  │     ├── Repository layer                  │
-  │     ├── Service layer (per BR-ID)         │
-  │     ├── Controller layer                  │
-  │     ├── Events (if applicable)            │
-  │     └── Unit tests                        │
-  │ Step 4: Validation gate                   │
-  │ Step 5: Fix failures (spec-first)         │
-  │ Step 6: CI/CD pipeline                    │
-  │ Step 7: Documentation                     │
-  └──────────────────────────────────────────┘
+  ┌──────────────────────────────────────────────────────────┐
+  │ Step 0: Test suite prerequisite check                     │
+  │ Step 0.5: Copy DTOs from spec (08-dtos/*.cs → DTOs/)      │
+  │ Step 1: Read full spec + the .NET reference implementation │
+  │ Step 2: Create GitHub Copilot spec                        │
+  │ Step 3: Implement (spec-driven, no stubs — reference order):│
+  │     ├── DTOs/ (copied VERBATIM from 08-dtos/*.cs — first) │
+  │     ├── Models/Domain.cs (entities + internal types)      │
+  │     ├── Data/SchemaInitializer.cs (idempotent DDL)        │
+  │     ├── Data/<Area>Repository.cs (Npgsql, no ORM)         │
+  │     ├── Services/<Area>Services.cs (per BR-ID)            │
+  │     ├── Middleware/ (Error, Token, HttpIdentity)          │
+  │     ├── Controllers/<Aggregate>Controller.cs (thin)       │
+  │     ├── Services/EventPublisher.cs (outbox → RabbitMQ)    │
+  │     ├── Register service+db in Shopizer.AppHost/AppHost.cs │
+  │     └── Integration test class (migrate-on-touch):        │
+  │         rewrite the service's existing ComprehensiveTestBase-│
+  │         derived class to the new self-contained standard   │
+  │         (sourcecode/Shopizer.IntegrationTests/<Service>Comprehensive-│
+  │         Tests.cs)                                          │
+  │ Step 4: Validation gate                                   │
+  │ Step 5: Fix failures (spec-first)                         │
+  │ Step 6: CI/CD pipeline                                    │
+  │ Step 7: Per-service deliverables (README.md,              │
+  │         implementation-audit.md, Dockerfile)              │
+  └──────────────────────────────────────────────────────────┘
   → Update tracking/phase5-implementation/<service-name>.md: COMPLETE
   → Move to next service
   → IF this was the LAST service: write `graph_add_node(nodeType="PhaseEvent", id="P5-completed", properties={phase: "P5", event: "completed", timestamp: <current ISO>})` + produce `.saam/telemetry/phase5-implementation/summary.yaml`
@@ -468,13 +478,15 @@ Code generation (Step 3) and validation (Step 4) are DISTINCT stages with NO ove
 **The boundary is absolute:** Step 3 ends when the agent has implemented ALL BR-IDs and written unit tests. Only then does Step 4 begin. There is no "implement a bit, test a bit" cycle during Step 3.
 
 **Build-and-Test checklist (Step 4 expanded):**
-1. Compile the project — fix any compilation errors from spec (NOT from test expectations)
-2. Run unit tests — fix failures by re-reading spec
-3. Build container image — fix Containerfile issues
+1. Build the solution — `dotnet build sourcecode/Shopizer.slnx` — fix any compilation errors from spec (NOT from test expectations)
+2. Run the service's integration tests — `dotnet test sourcecode/Shopizer.IntegrationTests --filter "FullyQualifiedName~<Service>ComprehensiveTests"` — fix failures by re-reading spec
+3. Build container image — fix Dockerfile issues
 4. Start service on local profile — verify health endpoint
-5. Run `comprehensive-test-suite.sh` via `validation/run-and-reconcile.sh <service>` — produces structured artifact + updates graph + generates remediation tasks
+5. Run the xUnit suite via `validation/run-and-reconcile.sh <service>` (the wrapper now invokes `dotnet test`) — produces structured artifact + updates graph + generates remediation tasks
 6. If < 100% pass → proceed to Step 5 (Fix Failures) using generated `tracking/phase5-implementation/<service>.md` (or `.github/specs/<service>/tasks.md`)
 7. If 100% pass → proceed to Step 6 (CI/CD)
+
+**A skipped or non-executed suite is a FAILED gate, never a pass** — these tests boot a real Aspire `DistributedApplication` requiring a container runtime with PostgreSQL and RabbitMQ.
 
 ## Subagent Delegation (Per-Service Implementation)
 
@@ -502,17 +514,18 @@ INPUT (read these from the workspace):
 
 PRODUCE: sourcecode/<service>/ (complete service implementation)
 
-FIRST STEP (MANDATORY): Copy spec/microservices/<service>/08-dtos/* into sourcecode/<service>/src/dto/ UNCHANGED. These are the implementation DTOs. Do not regenerate them.
+FIRST STEP (MANDATORY): Copy spec/microservices/<service>/08-dtos/*.cs into sourcecode/Shopizer.<Service>/DTOs/ UNCHANGED. These are the implementation DTOs. Do not regenerate them.
 
 Rules:
 - DTOs from 08-dtos/ are copied VERBATIM — do not rename fields, restructure, or "improve"
 - API contract is the NAMING AUTHORITY — all field names, paths, status codes from 04-api-contract.yaml
 - Controllers MUST use the copied DTOs for request/response types
-- NEVER read the test suite (validation/<service>/) to determine implementation logic
-- Every method implementing a BR-ID MUST have a comment: // BR-XX-YYY-NNN: <rule name>
-- Database via env vars (PRIMARY), H2 fallback only when no DB configured
+- NEVER read the test suite (sourcecode/Shopizer.IntegrationTests/<Service>ComprehensiveTests.cs) to determine implementation logic
+- Every method implementing a BR-ID MUST carry a `// @<BR-ID>: <intent sentence>` comment immediately above it (stacked one per line for multiple rules) — see saam-dotnet-reference-implementation §1.11
+- PostgreSQL via Aspire `builder.AddNpgsqlDataSource("<service>db")`; schema created idempotently by Data/SchemaInitializer.cs; NO ORM
 - No stubs, no shell implementations, no algorithm simplification
-- Implement per-layer: DTO copy → domain model → repository → service → controller → events → unit tests
+- Structure MUST match the .NET reference implementation (project layout, composition, persistence, error model, auth, events)
+- Implement per-layer: DTO copy → Models/Domain.cs → Data/SchemaInitializer.cs → Data/<Area>Repository.cs → Services/<Area>Services.cs → Middleware → Controllers → Services/EventPublisher.cs → AppHost registration → integration test class
 
 NEVER invent field names. NEVER regenerate DTOs. NEVER read test files. NEVER create empty methods.
 ```
@@ -520,8 +533,8 @@ NEVER invent field names. NEVER regenerate DTOs. NEVER read test files. NEVER cr
 **Parent verification after subagent returns:**
 - [ ] `sourcecode/<service>/` contains compilable project structure
 - [ ] **DTO integrity check (MECHANICAL — not spot-check):**
-  - List all `.ts`/`.java`/`.py` files in `spec/microservices/<service>/08-dtos/`
-  - List all files in `sourcecode/<service>/src/dto/`
+  - List all `.cs` files in `spec/microservices/<service>/08-dtos/`
+  - List all files in `sourcecode/Shopizer.<Service>/DTOs/`
   - **File count must match** (same number of DTO files)
   - **File names must match** (same names, same extensions)
   - **Field names must match** — for each DTO file, compare the property/field declarations:
@@ -591,7 +604,7 @@ Every time the comprehensive test suite runs (regardless of model), use the reco
 ```
 
 **What this does:**
-1. Runs `comprehensive-test-suite.sh` and captures results
+1. Runs the service's xUnit suite (`sourcecode/Shopizer.IntegrationTests/<Service>ComprehensiveTests.cs`) via `dotnet test` and captures results
 2. Writes a structured YAML artifact to `.saam/reconciliation/<service>/validation-run-<id>.yaml`
 3. Calls `graph-mcp/scripts/reconcile_validation.py` which:
    - Advances passing BR-IDs to `Passing` state + creates `VALIDATED_BY` edges
@@ -735,24 +748,17 @@ After ATX completes ALL services, run a smoke validation pass. The goal is NOT t
 **Protocol:**
 
 ```bash
-# For each service: build, start, run tests, catalog results
+# Build the solution once, then run each service's xUnit suite, catalog results.
+# The xUnit tests boot a real Aspire DistributedApplication (PostgreSQL + RabbitMQ via a
+# container runtime), so services are NOT built/started individually here.
+dotnet build sourcecode/Shopizer.slnx 2>&1 | tee build-solution.log
+
 for service in $(ls spec/microservices/); do
   echo "=== Smoke validating $service ==="
-  cd sourcecode/$service
-  
-  # Build (capture failures)
-  npm run build 2>&1 | tee /tmp/build-$service.log
-  
-  # Start service (background)
-  npm run start &
-  SERVICE_PID=$!
-  sleep 5
-  
-  # Run test suite (expect some failures — that's OK)
-  ../../validation/$service/comprehensive-test-suite.sh 2>&1 | tee /tmp/test-$service.log || true
-  
-  kill $SERVICE_PID 2>/dev/null
-  cd ../..
+  # Run the service's suite (expect some failures — that's OK). A skipped/non-executed
+  # suite is a FAILED gate, never a pass.
+  dotnet test sourcecode/Shopizer.IntegrationTests \
+    --filter "FullyQualifiedName~${service}ComprehensiveTests" 2>&1 | tee test-$service.log || true
 done
 ```
 
@@ -850,7 +856,7 @@ For each systemic pattern in `known-deviations.md`:
 - No stubs, no shell implementations
 - No algorithm simplification
 - API contract is the naming authority
-- Database must use production target (env-var driven, H2 fallback only)
+- Database must use PostgreSQL via Aspire (`AddNpgsqlDataSource("<service>db")`), schema from `SchemaInitializer.cs`, **no ORM** (see SAAM-04)
 
 To enforce SAAM rules within AI-DLC, add a SAAM extension file:
 
@@ -885,36 +891,50 @@ Implement EXACTLY the complexity described in the spec. Never collapse condition
 ALL field names, paths, and status codes MUST come from 04-api-contract.yaml. Never invent names.
 
 ## Rule SAAM-04: Database Configuration
-Production database via env vars is the PRIMARY persistence. In-memory fallback ONLY when env vars are absent.
+PostgreSQL is the primary store, provisioned via Aspire: `builder.AddNpgsqlDataSource("<service>db")`.
+The connection name MUST match the database registered in `Shopizer.AppHost/AppHost.cs`
+(e.g. `postgres.AddDatabase("customeridentitydb")`). Schema is created idempotently by
+`Data/SchemaInitializer.cs` using raw Npgsql (`CREATE SCHEMA/TYPE/TABLE IF NOT EXISTS`). **No ORM**
+(no EF Core, no Dapper). Never query another service's schema — cross-service data comes over its API
+or via events. See saam-dotnet-reference-implementation §1.5.
 
 ## Rule SAAM-05: Test Suites Are Quality Gates Only
-Never read test suites to determine implementation logic. Use the API contract for naming.
+Never read the xUnit integration suite (`sourcecode/Shopizer.IntegrationTests/<Service>ComprehensiveTests.cs`)
+to determine implementation logic. Use the API contract for naming. The suite is run via `dotnet test`
+AFTER code is written.
 
 ## Rule SAAM-06: Known Deviations
 Read .github/aws-aidlc-rule-details/extensions/saam/known-deviations.md BEFORE construction. Unit 0 fixes these systemic issues. Do NOT build on top of known-broken patterns.
 
 ## Rule SAAM-07: BR-ID Annotation (Traceability)
-Every method that implements a business rule MUST include a comment or annotation referencing the BR-ID.
-Format: `// BR-XX-YYY-NNN: <rule name>` above the method, or `@BusinessRule("BR-XX-YYY-NNN")` annotation.
-Multiple BR-IDs in one method: list all on separate comment lines.
-Verification: grep for BR-ID pattern in generated code; count must match assigned rules.
-This enables graph tracking — the orchestrator runs `detect_br_ids.py --all` after code lands (see "Knowledge Graph Population" above) to project these annotations into CLAIMS_IMPLEMENTATION edges.
+Every method that implements a business rule MUST carry the canonical reference annotation.
+**Source code:** a `// @<BR-ID>: <intent sentence>` line immediately above the implementing method,
+stacked one per line for multiple rules — e.g.
+`// @BR-CUS-001: Login and email uniqueness are checked inside the tenant/store boundary.`
+**Tests:** a `// @BR-ID: <BR-ID>` comment plus a matching `[Trait("BR", "<BR-ID>")]` — the comment and
+trait value MUST be identical. Both flat (`BR-CUS-001`) and grouped (`BR-CUS-NN-005`) BR-ID forms are
+valid and both match `br_id_pattern.regex` in `.github/saam-calibration.yaml`.
+Verification: grep for the BR-ID pattern in generated code; count must match assigned rules.
+This enables graph tracking — the orchestrator runs `detect_br_ids.py --all` after code lands (see "Knowledge Graph Population" above) to project these annotations into CLAIMS_IMPLEMENTATION edges. See saam-dotnet-reference-implementation §1.11.
 ```
 
 #### Stage 4: Final Validation Gate
 
-After AI-DLC completes ALL construction units (including Unit 0 fixes), run the full comprehensive test suites:
+After AI-DLC completes ALL construction units (including Unit 0 fixes), run the full xUnit integration suites:
 
 ```bash
-# Run test suite for each service
-for service in $(ls validation/); do
+# Build once, then run each service's xUnit suite via the reconciliation wrapper.
+dotnet build sourcecode/Shopizer.slnx
+for service_dir in validation/ms-*/; do
+  service="${service_dir%/}"
+  service="${service##*/}"
   echo "=== Final validation: $service ==="
-  cd sourcecode/$service
-  # Start service, run tests
-  ../../validation/$service/comprehensive-test-suite.sh
-  cd ../..
+  # run-and-reconcile.sh wraps `dotnet test` and produces the graph-reconciliation artifact.
+  ./validation/run-and-reconcile.sh "$service" stage4_final
 done
 ```
+
+**A skipped or non-executed suite is a FAILED gate, never a pass** — these tests boot a real Aspire `DistributedApplication` requiring a container runtime with PostgreSQL and RabbitMQ.
 
 **Expected result:** Significantly higher pass rate than Stage 2 smoke run (Unit 0 fixed systemic issues, Units 1-5 added missing wiring).
 
@@ -1193,7 +1213,7 @@ The TD is reusable across ALL services in the engagement — publish once, run m
 atx custom def exec \
   -n "<td-name>" \
   -p spec/microservices/<service-name>/ \
-  -c "../../validation/<service-name>/comprehensive-test-suite.sh" \
+  -c "dotnet test sourcecode/Shopizer.IntegrationTests --filter FullyQualifiedName~<Service>ComprehensiveTests" \
   -x -t
 ```
 
@@ -1265,7 +1285,7 @@ When using Transform + GitHub Copilot, the generated `tasks.md` looks different 
 - **Status:** PENDING
 - **BR-IDs:** ALL
 - **Deliverables:**
-  - [ ] Run comprehensive-test-suite.sh
+  - [ ] Run <Service>ComprehensiveTests (`dotnet test`)
   - [ ] Fix all failures (spec-first debugging)
   - [ ] 100% pass rate achieved
 
@@ -1425,7 +1445,7 @@ Per-service: Assess Transform output (Stage 2 smoke validation)
      ↓
 Per-service: AI-DLC fixes + integration (Stage 3)
      ↓
-Validation gate: comprehensive-test-suite.sh passes 100%
+Validation gate: <Service>ComprehensiveTests passes 100% (`dotnet test`)
 ```
 
 **Output mechanism:**
@@ -1460,14 +1480,14 @@ Validation gate: comprehensive-test-suite.sh passes 100%
 
 ### Step 0: Test Suite Prerequisite Check (MANDATORY)
 
-Before ANY implementation work begins (including decomposing SAAM specs into GitHub Copilot specs), verify that a `comprehensive-test-suite.sh` exists for the service being developed.
+Before ANY implementation work begins (including decomposing SAAM specs into GitHub Copilot specs), verify that the service's xUnit integration suite exists for the service being developed.
 
-**Check**: Does `validation/<service-name>/comprehensive-test-suite.sh` exist?
+**Check**: Does `sourcecode/Shopizer.IntegrationTests/<Service>ComprehensiveTests.cs` exist?
 
 - **If YES** → proceed to Step 1
 - **If NO** → this means Phase 4c was not executed for this service. The agent MUST:
   1. Inform the user: "No test suite found for <service-name>. Phase 4c (Test Suite Generation) should have produced this. Would you like me to generate it now?"
-  2. If user confirms: generate the test suite using `.github/skills/saam-test-suite-template/SKILL.md` and the service specification from `spec/microservices/`. Every BR-ID in the spec must map to at least one test assertion. Save to `validation/<service-name>/comprehensive-test-suite.sh`.
+  2. If user confirms: generate the xUnit integration suite following `.github/skills/saam-dotnet-reference-implementation/SKILL.md` (the reference `CustomerIdentityComprehensiveTests.cs`) and the service specification from `spec/microservices/`. Every BR-ID in the spec must map to at least one test with a matching `[Trait("BR", "<BR-ID>")]`. Save to `sourcecode/Shopizer.IntegrationTests/<Service>ComprehensiveTests.cs`.
   3. If user declines: Issue a strong warning and proceed at user's risk:
      > "WARNING: Proceeding without a test suite means there is NO automated acceptance gate for this service. Implementation quality cannot be verified programmatically. The comprehensive test suite is the ONLY mechanism that validates all business rules are correctly implemented. You will need to verify correctness manually."
      
@@ -1683,7 +1703,7 @@ Source: All SAAM spec files + implementation order from Phase 5 Step 3
   - [ ] Unit tests pass
   - [ ] Container image builds
   - [ ] Service starts on local profile
-  - [ ] comprehensive-test-suite.sh passes 100%
+  - [ ] <Service>ComprehensiveTests passes 100% (`dotnet test`)
 
 ## Task N+4: CI/CD & Documentation
 - **Status:** PENDING
@@ -2004,19 +2024,20 @@ Before starting the service or running tests, verify the implementation matches 
 If mismatches are found, fix them NOW — they will cause test failures later.
 
 ```bash
-# Unit tests must pass
-mvn test  # or npm test, pytest, etc.
+# Build the solution
+dotnet build sourcecode/Shopizer.slnx
 
-# Service must start
-podman build -t <service> . && podman run -d -p 80XX:80XX <service>
+# Container image must build
+docker build -t <service> sourcecode/Shopizer.<Service>/
 
-# Comprehensive test suite must achieve 100%
-# Note: test suite lives in validation/, NOT in sourcecode/
-../../validation/<service-name>/comprehensive-test-suite.sh
-# Required output: "ALL XX TESTS PASSED - 100% SUCCESS"
+# xUnit integration suite must achieve 100%
+# Note: the suite lives in sourcecode/Shopizer.IntegrationTests/, and boots a real Aspire
+# DistributedApplication (PostgreSQL + RabbitMQ via a container runtime).
+dotnet test sourcecode/Shopizer.IntegrationTests --filter "FullyQualifiedName~<Service>ComprehensiveTests"
+# Required: all tests pass — a skipped or non-executed suite is a FAILED gate, never a pass.
 ```
 
-**A service is NOT complete until comprehensive-test-suite.sh passes with 0 failures and 0 skips.**
+**A service is NOT complete until `<Service>ComprehensiveTests` passes via `dotnet test` with 0 failures and 0 skips.**
 
 ### Step 5: Fix Failures (Spec-First Debugging)
 
@@ -2147,29 +2168,37 @@ Generate:
 
 ## Test Suite Location (MANDATORY)
 
-Test suites MUST be stored in the `validation/` directory, grouped by service name:
+Integration test suites live in the shared `Shopizer.IntegrationTests` project — one class per service:
 
 ```
-validation/
-├── <service-name>/
-│   └── comprehensive-test-suite.sh
-├── <service-name-2>/
-│   └── comprehensive-test-suite.sh
+sourcecode/Shopizer.IntegrationTests/
+├── <Service>ComprehensiveTests.cs
+├── <Service2>ComprehensiveTests.cs
+├── AspireHostFixture.cs        # shared host bootstrap / seeded identities
 └── ...
 ```
 
 **Rules:**
-- Test suites MUST live in `validation/<service-name>/` — NEVER in `spec/` or `sourcecode/`
-- This separation ensures the implementation agent cannot accidentally read test suites alongside specs
+- Integration suites MUST live in `sourcecode/Shopizer.IntegrationTests/` — one `<Service>ComprehensiveTests.cs` per service, structured per `.github/skills/saam-dotnet-reference-implementation/SKILL.md`
+- The implementation agent MUST NOT read the test class to derive logic — it derives implementation from the spec and API contract (rule SAAM-05)
 - The `spec/` directory contains ONLY specifications (the source of truth for code generation)
-- The `sourcecode/` directory contains ONLY implementation artifacts
-- The `validation/` directory contains ONLY test suites and validation scripts
+- The `sourcecode/Shopizer.<Service>/` project contains ONLY that service's implementation artifacts
+- `validation/<service-name>/` contains ONLY the `run-and-reconcile.sh` wrapper and its graph-reconciliation artifacts — NOT the tests themselves
 
-**Why:** When test suites live next to specs, the implementation agent reads them as context and derives implementation from test assertions instead of from the spec. Physical separation enforces the "specs drive implementation, tests verify it" principle.
+**Why:** Specs drive implementation, tests verify it. The agent consumes specs + API contract as input and only runs the xUnit suite as a quality gate afterward.
+
+> **DEPRECATED:** Standalone bash suites at `validation/<service>/comprehensive-test-suite.sh` are
+> no longer used. They are replaced by the xUnit integration suite above, run via `dotnet test`.
 
 ## Comprehensive Test Suite Requirements
 
-The `comprehensive-test-suite.sh` file is the ACCEPTANCE GATE for every service:
+> **DEPRECATED — historical.** The bash `comprehensive-test-suite.sh` template below is superseded by
+> the xUnit integration suite (`sourcecode/Shopizer.IntegrationTests/<Service>ComprehensiveTests.cs`).
+> For the current standard — test class shape, fixture usage, BR traceability via
+> `[Trait("BR", …)]` — see `.github/skills/saam-dotnet-reference-implementation/SKILL.md` (Part 2).
+> The requirements below are retained only to document the legacy acceptance-gate semantics.
+
+The (legacy) `comprehensive-test-suite.sh` file was the ACCEPTANCE GATE for every service:
 
 ```bash
 #!/bin/bash
@@ -2319,11 +2348,10 @@ sourcecode/
 **NEVER create docker-compose.yml inside `sourcecode/<service-name>/`.** That's the solution level, not the service level.
 
 ## Deliverables Per Service
-- [ ] Source code compiles (`mvn compile`)
-- [ ] Unit tests pass (`mvn test`)
-- [ ] Container image builds (`podman build .`)
+- [ ] Solution builds (`dotnet build sourcecode/Shopizer.slnx`)
+- [ ] Container image builds (`docker build sourcecode/Shopizer.<Service>/`)
 - [ ] Service starts on local profile
-- [ ] `validation/<service-name>/comprehensive-test-suite.sh` — 100% pass, 0 skip
+- [ ] `sourcecode/Shopizer.IntegrationTests/<Service>ComprehensiveTests.cs` — 100% pass via `dotnet test`, 0 skip
 - [ ] CI/CD pipeline defined
 - [ ] K8s manifests for deployment
 

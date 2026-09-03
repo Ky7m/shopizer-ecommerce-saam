@@ -15,20 +15,33 @@ This repository uses **SAAM (SoftServe Agentic Application Modernization)**, a g
 2. **Specification Authority**:
    - Every microservice must have a formal specification and OpenAPI contract in `spec/microservices/<service>/`.
    - The OpenAPI contract (`04-api-contract.yaml`) is the absolute naming authority for endpoints, DTOs, entity names, and error structures.
-   - Every business rule must have a unique identifier formatted as `BR-{DOM}-{SVC}-{NN}`.
+   - Every business rule must have a unique identifier matching `br_id_pattern.regex` in `.github/saam-calibration.yaml`. Both the flat form (`BR-CUS-001`) and the grouped form (`BR-{DOM}-{GRP}-{NN}`, e.g. `BR-CUS-NN-005`) are valid.
 
 3. **Test-First Implementation (Phase 4c)**:
-   - Before writing any implementation code in Phase 5, a comprehensive, standalone bash test suite (`test-suite.sh`) must be generated.
-   - Every `@BR-ID` in the specification must be verified by at least one explicit test case.
+   - Before writing any implementation code in Phase 5, a comprehensive xUnit integration test class must be generated at `sourcecode/Shopizer.IntegrationTests/<Service>ComprehensiveTests.cs`, running against a live .NET Aspire host. Standalone bash suites (`validation/<service>/comprehensive-test-suite.sh`) are DEPRECATED.
+   - Every `@BR-ID` in the specification must be verified by at least one explicit `[Fact]` whose assertion could only pass if that specific rule were implemented.
 
 4. **Traceability & Code Annotations**:
-   - All generated source code in `sourcecode/` must annotate implemented business rules using `@BR-ID` comment tags:
-     ```typescript
-     // @BR-ID: BR-ORD-MGMT-01
+   - All generated source code in `sourcecode/` must annotate implemented business rules with an intent sentence immediately above the implementing method, one line per rule:
+     ```csharp
+     // @BR-CUS-001: Login and email uniqueness are checked inside the tenant/store boundary.
+     // @BR-CUS-005: Passwords are encoded before persistence.
      ```
+   - Integration tests use the paired form — the comment and the trait must be identical:
+     ```csharp
+     // @BR-ID: BR-CUS-019
+     [Fact]
+     [Trait("BR", "BR-CUS-019")]
+     ```
+   - Annotate only reachable code. A BR-ID on a method no endpoint reaches is a false coverage claim.
    - Lifecycle hook adapter (`.github/hooks/saam-copilot-adapter.ts`) verifies annotations on file save.
 
-5. **Knowledge Graph Context & Calibration**:
+5. **Implementation Standard (AUTHORITATIVE)**:
+   - `.github/skills/saam-dotnet-reference-implementation/SKILL.md` is the single authority for *how* a service and its test suite are built — project layout, `Program.cs` composition, persistence, error model, auth/tenancy, events, code style, and anti-patterns.
+   - It is derived from the MS-01 reference: `sourcecode/Shopizer.CustomerIdentity/` and `sourcecode/Shopizer.IntegrationTests/CustomerIdentityComprehensiveTests.cs`. Read both before implementing any service.
+   - Other steering files link to it; they must never restate it.
+
+6. **Knowledge Graph Context & Calibration**:
    - The modernization lifecycle is backed by a Neo4j knowledge graph tracking confidence dimensions (provenance, implementation, test quality).
    - MCP scripts in `graph-mcp/scripts/` provide dynamic graph context during session execution.
    - Tunable confidence weights, automatibility thresholds, and complexity ratios are defined in `.github/saam-calibration.yaml`.
@@ -47,4 +60,5 @@ When working on specific modernization phases, reference the corresponding custo
 - **Phase 4c (Test Suite Generation)**: `@test-engineer` (`.github/skills/saam-phase4c-test-suite-generation/SKILL.md`)
 - **Phase 5 (AI-DLC Implementation)**: `@implementation-engineer` (`.github/skills/saam-phase5-ai-dlc-implementation/SKILL.md`)
 - **Phase 6 (Continuous Evolution)**: `@implementation-engineer` (`.github/skills/saam-phase6-continuous-evolution/SKILL.md`)
+- **Implementation & Test Standard (Phases 4c–6)**: `.github/skills/saam-dotnet-reference-implementation/SKILL.md`
 - **Calibration Parameters**: `.github/saam-calibration.yaml`

@@ -123,7 +123,7 @@ The Purpose-First method is technology-agnostic — it works for any imperative 
 | 4 | Specification | Validated features | Microservice specs + API contract | Review each spec |
 | 4a | BA Rule Validation | Specs | Classified/weighted rules, scope reduction | Mandatory — approve agent defaults or provide BA workshop outputs |
 | 4b | Implementation Roadmap | Specs (BA-reviewed) | Automatibility scores, improvement plan, tech stack recommendation, architecture reconciliation, roadmap | Iterative — scores improve until ≥75%, then stack confirmed |
-| 4c | Test Suite Generation | Specs | comprehensive-test-suite.sh per service | Review test coverage |
+| 4c | Test Suite Generation | Specs | xUnit + .NET Aspire `<Service>ComprehensiveTests.cs` per service | Review test coverage |
 | 5 | AI-DLC | Specs + API contracts + test suites | Running code | Accept implementation |
 | 6 | Continuous Evolution | Deviation log, bugs, features, SPEC-DRIFT | Spec-compliant, evolving system | Ongoing — loop until engagement ends |
 
@@ -189,7 +189,7 @@ Every microservice produced by SAAM MUST have:
 1. ✅ **Specification document** with numbered business rules
 2. ✅ **Implementation source code** (via AI-DLC)
 3. ✅ **Unit test suite** (JUnit/pytest/etc.) — all rules tested
-4. ✅ **`comprehensive-test-suite.sh`** — bash curl-based API test exercising ALL business rules against running service, ZERO skips, PASS/FAIL per rule. Located in `validation/<service-name>/` — NEVER in `spec/` or `sourcecode/`
+4. ✅ **`<Service>ComprehensiveTests.cs`** — xUnit + .NET Aspire integration test exercising ALL business rules against a real host, ZERO skips, PASS/FAIL per rule. Located in `sourcecode/Shopizer.IntegrationTests/`. See `.github/skills/saam-dotnet-reference-implementation/SKILL.md`.
 5. ✅ **Containerfile** for containerized execution
 6. ✅ **CI/CD pipeline** (GitHub Actions or equivalent)
 
@@ -378,7 +378,7 @@ spec/microservices/<service>/       sourcecode/<service>/
 └── 04-event-contracts.md           └── pom.xml / package.json
 
 Validation:
-validation/<service>/comprehensive-test-suite.sh (passed as -c flag)
+sourcecode/Shopizer.IntegrationTests/<Service>ComprehensiveTests.cs (run via dotnet test)
 ```
 
 ### Execution
@@ -392,7 +392,7 @@ atx -t
 atx custom def exec \
   -n "<td-name>" \
   -p spec/microservices/<service>/ \
-  -c "../../validation/<service>/comprehensive-test-suite.sh" \
+  -c 'dotnet test sourcecode/Shopizer.IntegrationTests --filter "FullyQualifiedName~<Service>ComprehensiveTests"' \
   -x -t
 ```
 
@@ -409,7 +409,7 @@ atx custom def exec \
 ### Rules
 - AWS Transform does NOT perform analysis (Phases 0–4 remain in SAAM)
 - The test suite is the contract — code must conform to tests, never the reverse
-- Same acceptance gate applies: 100% pass required on comprehensive-test-suite.sh
+- Same acceptance gate applies: 100% pass required on the xUnit + .NET Aspire integration suite; skipped or non-executed tests are failures
 - Use continual learning (`list-ki`, `update-ki-config`) to improve across services
 - If Jira is configured: ATX can transition ticket statuses via `mcp-atlassian` in `~/.aws/atx/mcp.json`
 - Transform output lands in `sourcecode/<service>/` — GitHub Copilot tasks then fix/extend in the same directory
@@ -502,7 +502,7 @@ Vague references (e.g., "in the order module") are NOT acceptable. The reference
 
 ### Implementation Prerequisite: Test Suite Check
 
-Before ANY implementation work begins for a service — including decomposing SAAM specs into GitHub Copilot tasks — the system MUST verify that a `comprehensive-test-suite.sh` exists for that service. If the test suite has not been generated yet, the system MUST offer to create one from the SAAM specification before proceeding. Implementation without a pre-existing test suite is NOT allowed.
+Before ANY implementation work begins for a service — including decomposing SAAM specs into GitHub Copilot tasks — the system MUST verify that `sourcecode/Shopizer.IntegrationTests/<Service>ComprehensiveTests.cs` exists for that service. If the integration test class has not been generated yet, the system MUST offer to create it from the SAAM specification before proceeding. Implementation without a pre-existing test suite is NOT allowed.
 
 ### Phase 4 Independent Validation (MANDATORY)
 

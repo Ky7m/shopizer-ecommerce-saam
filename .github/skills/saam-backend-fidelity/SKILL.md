@@ -25,10 +25,13 @@ catch this class. Only a round-trip assertion against real state does.
 event/integration layers; Model B Task 3–4; Model C Units 1–3). It is the procedure those
 layer names imply but do not spell out.
 
-**Stack-neutral.** Examples use the framework's default stack (Java 17 / Spring Boot / JPA)
-for consistency. The *principle* in each checkpoint is language-agnostic — the same defect
-appears in any async-messaging, multi-service, ORM-backed system. Where a runtime detail
-matters, it is named as an example, not a requirement.
+**Stack.** The principle in each checkpoint is language-agnostic — the same defect appears in
+any async-messaging, multi-service, database-backed system. The examples below use this
+engagement's actual target stack (ASP.NET Core 10 / .NET Aspire / Npgsql / RabbitMQ) as
+established by `.github/skills/saam-dotnet-reference-implementation/SKILL.md` and demonstrated
+in `sourcecode/Shopizer.CustomerIdentity/`. Read that skill before the wiring layers — it
+defines the concrete `EventPublisher`, `RequestContext`/`HttpIdentity`, `TokenMiddleware`, and
+`SchemaInitializer` patterns these checkpoints assume.
 
 ---
 
@@ -51,22 +54,27 @@ proves the publish is ever reached.
   signature.
 - Every business rule whose spec Side-Effect names "Publishes: `<event>`" MUST have a
   reachable call to the publisher on the path that implements that rule.
+- Per the reference pattern, the outbox row is written **inside** the mutation, and
+  `EventPublisher` then attempts delivery and marks the row published. A publish failure is
+  logged, not thrown — but an *absent* publish call is the defect.
 
-```java
+```csharp
 // SYMPTOM — injected, never called
-@Service
-public class OrderService {
-    private final DomainEventPublisher publisher; // injected...
-    public Order place(PlaceOrderCommand cmd) {
-        Order order = repository.save(new Order(cmd));
-        return order;                              // ...never published
+public sealed class OrderService(OrderRepository repository, EventPublisher events)
+{
+    public async Task<Order> PlaceAsync(PlaceOrderRequestDto request, RequestContext context, CancellationToken ct)
+    {
+        var order = await repository.AddOrderAsync(new Order(request), context, ct);
+        return order;                            // events was injected... and never used
     }
 }
 
-// CORRECT — the side effect the spec names is performed
-public Order place(PlaceOrderCommand cmd) {
-    Order order = repository.save(new Order(cmd));
-    publisher.publish(new OrderPlacedEvent(order.getId(), order.getTenantId()));
+// CORRECT — the side effect the spec names is performed, after durable persistence
+// @BR-ORD-012: Placing an order emits the approved OrderPlaced domain event.
+public async Task<Order> PlaceAsync(PlaceOrderRequestDto request, RequestContext context, CancellationToken ct)
+{
+    var order = await repository.AddOrderAsync(new Order(request), context, ct); // writes event_outbox in the same transaction
+    await events.PublishOrderPlacedAsync(order, context, ct);
     return order;
 }
 ```
@@ -94,21 +102,30 @@ exists on the wire between them.
 
 **Verify:**
 - Every outbound client to another in-system service attaches the tenant/context propagation
-  (an interceptor/filter on the client, not per-call-site copy-paste).
+  (a `DelegatingHandler` registered on the typed client, not per-call-site copy-paste).
+- The context forwarded is the inbound `RequestContext` (`x-tenant-id`, `x-store-id`,
+  `x-correlation-id`) resolved by `HttpIdentity.Context(HttpContext)` — not a value
+  reconstructed from the path or a default.
 - The integration smoke gate (Phase 5 Stage 5) asserts the callee returns correctly scoped
   data for a real token.
 
-```java
-// CORRECT — a single interceptor forwards context on every outbound call
-@Bean
-public RestClient partnerClient(TenantContext ctx) {
-    return RestClient.builder()
-        .requestInterceptor((request, body, execution) -> {
-            request.getHeaders().add("X-Tenant-Id", ctx.currentTenantId());
-            return execution.execute(request, body);
-        })
-        .build();
+```csharp
+// CORRECT — a single handler forwards context on every outbound call
+public sealed class ContextPropagationHandler(IHttpContextAccessor accessor) : DelegatingHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+    {
+        var context = RequestContext.From(accessor.HttpContext!);
+        request.Headers.TryAddWithoutValidation("x-tenant-id", context.TenantId);
+        request.Headers.TryAddWithoutValidation("x-store-id", context.StoreId);
+        request.Headers.TryAddWithoutValidation("x-correlation-id", context.CorrelationId);
+        return base.SendAsync(request, ct);
+    }
 }
+
+// Program.cs
+builder.Services.AddTransient<ContextPropagationHandler>();
+builder.Services.AddHttpClient<CatalogClient>().AddHttpMessageHandler<ContextPropagationHandler>();
 ```
 
 ### 4. Cross-service client DTO matches the callee's ACTUAL shape
@@ -131,34 +148,46 @@ see the provider's real shape.
 
 ### 5. Schema evolution needs an explicit migration
 
-**Symptom:** an entity gains a field after the schema was first created. The ORM's
-create-if-missing behavior only creates tables that do not yet exist — it does NOT alter an
-existing table to add the new column. The entity maps to a column that is not there → read or
-write fails at runtime (often a `500` on a core read).
+**Symptom:** an entity gains a field after the schema was first created. `SchemaInitializer`'s
+`CREATE TABLE IF NOT EXISTS` only creates tables that do not yet exist — it does NOT alter an
+existing table to add the new column. The repository reads or writes a column that is not
+there → failure at runtime (often a `500` on a core read).
 
-**Why it slips through:** local/dev profiles frequently drop-and-recreate the schema
-(`create-drop`), so the column is always present in dev. The defect only appears where the
-schema persists across deployments (`validate` / production).
+**Why it slips through:** a freshly-provisioned dev database is always created from the latest
+`SchemaSql`, so the column is always present locally. The defect only appears where the schema
+persists across deployments — including the Aspire Postgres resource, which is declared
+`.WithLifetime(ContainerLifetime.Persistent)` in `Shopizer.AppHost/AppHost.cs`.
 
 **Verify:**
-- Any field added to an entity after initial generation has a corresponding migration
-  (Flyway/Liquibase change set), not just an entity annotation.
-- `ddl-auto: validate` (the production default) will fail fast on the mismatch — treat that
-  failure as the signal, not noise.
+- Any column added after initial generation has a corresponding **additive, forward-only**
+  statement in `SchemaInitializer.MigrationSql` (`ALTER TABLE ... ADD COLUMN IF NOT EXISTS`),
+  not just a new property on the domain type and a new `SchemaSql` column.
+- `MigrationSql` runs after `SchemaSql` on every startup and must be idempotent.
 - Assert a round-trip read of the new column (checkpoint 8), not just that the app starts.
 
-```java
-// SYMPTOM — new field on an existing entity, no migration
-@Entity
-public class Account {
-    @Id private Long id;
-    private String name;
-    private String region;   // added later — table never altered → 500 on read under validate
+```csharp
+// SYMPTOM — new field on an existing entity, only added to SchemaSql
+public sealed class CustomerAccount
+{
+    public Guid Id { get; set; }
+    public string LoginName { get; set; } = null!;
+    public DateTimeOffset? LastPasswordResetAt { get; set; }  // added later
 }
+
+private const string SchemaSql = """
+    CREATE TABLE IF NOT EXISTS customer_identity.customer_accounts (
+      ..., last_password_reset_at timestamptz);   -- IF NOT EXISTS → existing table untouched
+    """;
+
+// CORRECT — an additive migration reconciles the existing table
+private const string MigrationSql = """
+    ALTER TABLE customer_identity.customer_accounts
+      ADD COLUMN IF NOT EXISTS last_password_reset_at timestamptz;
+    """;
 ```
 
-The create-if-missing-only behavior is not Java-specific — the same trap exists in any ORM
-whose auto-DDL creates missing tables but does not reconcile columns on existing ones.
+The create-if-missing-only behavior is not stack-specific — the same trap exists in any ORM
+or DDL initializer that creates missing tables but does not reconcile columns on existing ones.
 
 ### 6. Build constraints under the batch/container runtime
 
@@ -203,18 +232,38 @@ the same blind spot.
   database (or an independent path) and assert the specific values the workflow recipe named.
 - Assert on the *effect*: the row exists, the computed value is non-zero and correct, the
   linkage/foreign key resolves, the column added in checkpoint 5 holds the written value.
+- In integration tests this means going around the service. `AspireHostFixture` already uses
+  `_application.GetConnectionStringAsync("<db>")` + `new NpgsqlConnection(...)` for seeding and
+  cleanup; expose a public accessor following that same pattern and assert through it.
 - This is the assertion class that catches checkpoints 2, 3, 5, and 7 that an API-only test
   cannot.
 
-```bash
-# API says created — that is necessary, not sufficient
-curl -s -X POST "$BASE_URL/api/v1/orders" -d '{...}' -o /tmp/resp.json
-test "$(jq -r '.status' /tmp/resp.json)" = "PLACED"
+```csharp
+// AspireHostFixture — expose the connection the seed/cleanup helpers already use
+public async Task<NpgsqlConnection> OpenDatabaseAsync(string resourceName)
+{
+    var connectionString = await _application!.GetConnectionStringAsync(resourceName)
+        ?? throw new InvalidOperationException($"No connection string for {resourceName}.");
+    var connection = new NpgsqlConnection(connectionString);
+    await connection.OpenAsync();
+    return connection;
+}
+```
 
-# Round-trip: assert the EFFECT in the database, not the response
-ROW=$(psql "$DATABASE_URL" -tAc \
-  "select tenant_id, total_amount from orders where id = '$ORDER_ID'")
-test "$ROW" = "$EXPECTED_TENANT|$EXPECTED_AMOUNT"   # right tenant AND real amount persisted
+```csharp
+// API says created — that is necessary, not sufficient
+using var response = await SendAsync(HttpMethod.Post, "/api/v1/orders", Payloads.Order);
+await AssertResponseAsync(response, 201, "id");
+
+// Round-trip: assert the EFFECT in the database, not the response
+await using var connection = await fixture.OpenDatabaseAsync("ordermanagementdb");
+await using var command = new NpgsqlCommand(
+    "select tenant_id, total_amount from order_management.orders where id = @id", connection);
+command.Parameters.AddWithValue("id", Guid.Parse(orderId));
+await using var reader = await command.ExecuteReaderAsync();
+Assert.True(await reader.ReadAsync(), "Order row was not persisted.");
+Assert.Equal(ExpectedTenant, reader.GetString(0));      // right tenant...
+Assert.Equal(ExpectedAmount, reader.GetDecimal(1));     // ...AND a real computed amount
 ```
 
 ---
@@ -222,24 +271,25 @@ test "$ROW" = "$EXPECTED_TENANT|$EXPECTED_AMOUNT"   # right tenant AND real amou
 ## Grep-able Self-Audit (Recurring Wiring Defects)
 
 Run this table as a mechanical self-check during the wiring/integration layers, before the
-service is containerized. Each row is a *pattern*; the Java form is one example of a
+service is containerized. Each row is a *pattern*; the .NET form is one example of a
 language-agnostic defect. These make the abstract Anti-Skeleton rules executable — they turn
 "don't leave a side effect unwired" into a grep.
 
 | # | Defect (pattern) | Detection | Fix |
 |---|------------------|-----------|-----|
-| W1 | Publisher injected, never called | Injected publisher/producer with zero call sites on the rule's path | Invoke the publish where the spec Side-Effect names it (checkpoint 1) |
-| W2 | Monotonic ID via read-max-then-insert | Read of `MAX(seq)` inside a loop / batch insert → collisions on multi-row writes | Use a DB sequence / identity, or compute the range once outside the loop |
-| W3 | ORM shadow relationship on a read path | An un-ignored/unmapped collection navigation triggers a phantom join/FK → error on a core read | Map the relationship explicitly or exclude it from the read model |
-| W4 | Async publish inherits the request's cancellation | Request-scoped cancellation token passed into a fire-and-forget publish → the publish is cancelled when the request completes | Use a non-request-scoped token for the in-flight publish |
-| W5 | Publish-only bus, no receive side declared | A broker configured for publishing only never deploys its send topology | Declare the topology (e.g. a no-op consumer) so the send side is materialized |
-| W6 | Wrong in-cluster port | Outbound call to an external-facing port for an in-cluster service | Call the in-cluster service port, not the ingress/external one |
+| W1 | Publisher injected, never called | `EventPublisher` in a primary constructor with zero call sites on the rule's path | Invoke the publish where the spec Side-Effect names it (checkpoint 1) |
+| W2 | Monotonic ID via read-max-then-insert | Read of `MAX(seq)` inside a loop / batch insert → collisions on multi-row writes | Use a DB sequence / `gen_random_uuid()`, or compute the range once outside the loop |
+| W3 | Phantom join on a read path | A repository read selects a column or joins a table that `SchemaSql` never created → error on a core read | Add the column/table to `SchemaSql` + `MigrationSql`, or drop it from the read |
+| W4 | Async publish inherits the request's cancellation | `context.RequestAborted` / the action's `CancellationToken ct` passed into a fire-and-forget publish → the publish is cancelled when the request completes | Use a non-request-scoped token for the in-flight publish |
+| W5 | Publish-only bus, no receive side declared | An exchange declared for publishing only never materializes its consumer topology | Declare the topology (e.g. a no-op consumer binding) so the send side is materialized |
+| W6 | Wrong in-cluster address | Outbound call to a hardcoded `localhost:81NN` instead of the Aspire service reference | Resolve the callee through its Aspire resource name / typed `HttpClient`, not the ingress port |
 | W7 | Consumer DTO drifts from provider | Consumer's client DTO differs from the provider's actual request/response shape | Align the consumer DTO to the provider's published contract (checkpoint 4) |
-| W8 | Added column, no migration | Entity field with no corresponding column on an existing table → runtime failure under `validate` | Add a migration change set; assert the round-trip (checkpoints 5, 8) |
+| W8 | Added column, no migration | Domain property with no corresponding column on an existing table — present in `SchemaSql` but absent from `MigrationSql` | Add an `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` change; assert the round-trip (checkpoints 5, 8) |
+| W9 | Tenant filter omitted on a query | A repository method taking `RequestContext` that never uses `TenantId`/`StoreId` in its `WHERE` clause | Scope every tenant-owned query; reject cross-tenant access rather than returning an empty success |
 
-**Scope note:** W2/W4/W5 describe patterns common in async-messaging and ORM stacks generally.
-The runtime specifics (which token, which broker, which sequence primitive) vary by stack — the
-detection heuristic and the fix intent do not.
+**Scope note:** W2/W4/W5 describe patterns common in async-messaging and database-backed stacks
+generally. The runtime specifics (which token, which broker, which sequence primitive) vary by
+stack — the detection heuristic and the fix intent do not.
 
 ---
 
@@ -250,7 +300,8 @@ This guide does not replace any existing gate — it makes them land earlier and
 | Existing control | What this guide adds |
 |------------------|----------------------|
 | Anti-Skeleton rules (SAAM-01/08/09) | Named symptoms + greps for the cross-service/persistence forms of "unwired side effect" |
-| Generation-time self-audit (Steps 1–4) | The W1–W8 table as the checklist that self-audit runs |
+| `.github/skills/saam-dotnet-reference-implementation/SKILL.md` | The concrete stack patterns (`EventPublisher`/outbox, `HttpIdentity.Context`, `TokenMiddleware`, `SchemaInitializer`) these checkpoints verify are actually wired |
+| Generation-time self-audit (Steps 1–4) | The W1–W9 table as the checklist that self-audit runs |
 | Integration Runtime Smoke Gate (Stage 5) | Checkpoint 8's DB round-trip as an explicit assertion; W3/W6/W8 caught before deploy instead of only at the gate |
 | Stage 1.5 cross-service contract reconciliation | Checkpoint 4 as the code-level confirmation the reconciled shapes are honored |
 

@@ -129,7 +129,7 @@ jira_create_issue:
   description: |
     SAAM microservice implementation for <Service Name>.
     Spec: spec/microservices/<service-name>.md
-    Test suite: validation/<service-name>/comprehensive-test-suite.sh
+    Integration tests: sourcecode/Shopizer.IntegrationTests/<Service>ComprehensiveTests.cs
     Business rules: BR-<DOM>-001 through BR-<DOM>-NNN
   priority: <mapped from service priority>
   labels: ["saam", "ai-dlc", "<service-id>"]
@@ -187,7 +187,7 @@ The AI-DLC agent follows this protocol during execution:
 
 ### When all tasks complete:
 1. Verify epic has no remaining tickets in "To Do" or "In Progress"
-2. Run full `comprehensive-test-suite.sh`
+2. Run the filtered xUnit suite via `dotnet test` (or `validation/run-and-reconcile.sh <service>` for graph reconciliation)
 3. If 100% pass: transition Epic to "In Review" — human approves the final state
 4. Only a human can transition the Epic to "Done" after validating all PRs
 
@@ -223,7 +223,7 @@ During any SAAM microservice implementation transformation.
    f. If tests fail: add comment with failure output, retry
 
 3. After all tickets are in "In Review" or "Done":
-   - Run the full comprehensive-test-suite.sh
+   - Run the full filtered xUnit + .NET Aspire integration suite via `dotnet test`
    - If 100% pass: transition Epic to "In Review" — only a human moves to "Done"
    - If failures remain: leave Epic in progress, add comment listing failures
 
@@ -390,7 +390,7 @@ Move to the next unblocked ticket.
 
 ## After All Tickets Complete
 
-1. Run the full `comprehensive-test-suite.sh`
+1. Run the full filtered xUnit + .NET Aspire integration suite via `dotnet test` (or `validation/run-and-reconcile.sh <service>`)
 2. If 100% pass:
    - Transition Epic to "In Review" — only a human moves to "Done"
    - Add comment: "All tasks complete. Comprehensive test suite: X/X passed (100%). Ready for human review."
@@ -422,11 +422,11 @@ Tell the agent:
 
 ```
 Create a custom transformation called "saam-microservice-with-jira".
-The goal is to implement a Java 17 Spring Boot microservice from a SAAM specification.
+The goal is to implement an ASP.NET Core 10 / .NET Aspire microservice from a SAAM specification, following saam-dotnet-reference-implementation.
 The agent should:
 1. Query Jira for the service epic and its tickets
 2. Implement tickets in dependency order, transitioning statuses as work progresses
-3. Use the comprehensive-test-suite.sh as the validation command
+3. Use `dotnet test sourcecode/Shopizer.IntegrationTests --filter "FullyQualifiedName~<Service>ComprehensiveTests"` as the validation command
 4. Transition tickets to "In Review" (NOT "Done") when validation passes — only humans can mark Done after PR review
 ```
 
@@ -459,15 +459,12 @@ additionalPlanContext: |
   
   Implementation order MUST follow Jira dependency links (Blocks relationships).
   
-  The comprehensive-test-suite.sh is the acceptance gate.
+  The xUnit + .NET Aspire integration suite is the acceptance gate; skipped or non-executed tests are failures.
   Every business rule must pass before a ticket can be moved to "In Review".
 validationCommands: |
-  mvn clean install
-  podman build -t <service-name> .
-  podman run -d --name <service-name>-test -p <port>:<port> <service-name>
-  sleep 10
-  ./comprehensive-test-suite.sh
-  podman stop <service-name>-test && podman rm <service-name>-test
+  dotnet build sourcecode/Shopizer.slnx
+  dotnet test sourcecode/Shopizer.IntegrationTests --filter "FullyQualifiedName~<Service>ComprehensiveTests"
+  # Or use validation/run-and-reconcile.sh <service> for graph reconciliation
 ```
 
 ### Step 6: Execute the Transformation
@@ -477,7 +474,7 @@ Interactive mode (recommended for first run):
 ```bash
 atx custom def exec -n saam-microservice-with-jira \
   -p ./sourcecode/<service-name> \
-  -c "./comprehensive-test-suite.sh" \
+  -c 'dotnet test sourcecode/Shopizer.IntegrationTests --filter "FullyQualifiedName~<Service>ComprehensiveTests"' \
   --configuration file://saam-atx-jira-config.yaml
 ```
 
@@ -486,7 +483,7 @@ Autonomous mode (for subsequent services after refinement):
 ```bash
 atx custom def exec -n saam-microservice-with-jira \
   -p ./sourcecode/<service-name> \
-  -c "./comprehensive-test-suite.sh" \
+  -c 'dotnet test sourcecode/Shopizer.IntegrationTests --filter "FullyQualifiedName~<Service>ComprehensiveTests"' \
   --configuration file://saam-atx-jira-config.yaml \
   -x -t
 ```
@@ -536,4 +533,3 @@ Subsequent services benefit from patterns learned in earlier implementations —
 | Tickets not found | Check JQL filters match your project key and labels. Ensure epic was created with `saam` label. |
 | ATX skips Jira transitions | Ensure the `jira-task-tracker` skill is in `~/.aws/atx/skills/` and not disabled. |
 | Rate limiting | ATX's execution is naturally paced. If hitting Jira limits, add `--limit 30` for budget control. |
-

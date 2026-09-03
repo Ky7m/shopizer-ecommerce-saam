@@ -9,17 +9,20 @@ authors: "Max Kozinenko, Roman Kalita (SoftServe)"
 
 ## Objective
 
-Generate a `comprehensive-test-suite.sh` for every in-scope service. This test suite is the ACCEPTANCE GATE for Phase 5 implementation — no service can be considered complete until the suite passes at 100%.
+Generate an xUnit + .NET Aspire integration test class (`sourcecode/Shopizer.IntegrationTests/<Service>ComprehensiveTests.cs`) for every in-scope service. This test suite is the ACCEPTANCE GATE for Phase 5 implementation — no service can be considered complete until the suite passes at 100%.
+
+> **Deprecated:** the former standalone bash suites (`validation/<service>/comprehensive-test-suite.sh`) are no longer generated and are no longer a gate. Existing files are retained only as historical artifacts. See `.github/skills/saam-dotnet-reference-implementation/SKILL.md` §2.1.
 
 ## Required Steering Files (Read Before Proceeding)
 
 The agent MUST read the following steering files before executing Phase 4c:
 
-1. **`.github/skills/saam-test-suite-template/SKILL.md`** — Template structure, helper functions, rules for test creation, common pitfalls
-2. **`.github/skills/saam-api-contract/SKILL.md`** — Protocol for how the API contract drives naming in test assertions
-3. **`.github/skills/saam-human-guidance-protocol/SKILL.md`** — Prompt categories and decision logging
-4. **`.github/skills/saam-task-tracking/SKILL.md`** — Tracking file format (for `tracking/phase4c-test-suites.md`)
-5. **`.github/skills/saam-frontend-spec-template/SKILL.md`** — (Only if frontend spec exists) Section `07-frontend-test-plan.md` defines frontend test structure
+1. **`.github/skills/saam-dotnet-reference-implementation/SKILL.md`** (MANDATORY — READ FIRST, IN FULL) — the single authority for the xUnit integration-test class shape (Part 2) and the anti-patterns to avoid (Part 3). This file LINKS to it; it does not restate it.
+2. **`.github/skills/saam-test-suite-template/SKILL.md`** — xUnit template structure, mandatory case classes, rules for test creation, common pitfalls
+3. **`.github/skills/saam-api-contract/SKILL.md`** — Protocol for how the API contract drives naming in test assertions
+4. **`.github/skills/saam-human-guidance-protocol/SKILL.md`** — Prompt categories and decision logging
+5. **`.github/skills/saam-task-tracking/SKILL.md`** — Tracking file format (for `tracking/phase4c-test-suites.md`)
+6. **`.github/skills/saam-frontend-spec-template/SKILL.md`** — (Only if frontend spec exists) Section `07-frontend-test-plan.md` defines frontend test structure
 
 ## Task Tracking Activation
 
@@ -35,51 +38,57 @@ When delegating test suite generation to a subagent for context optimization:
 
 **contextFiles to include:**
 - `.github/skills/saam-phase4c-test-suite-generation/SKILL.md`
+- `.github/skills/saam-dotnet-reference-implementation/SKILL.md`
 - `.github/skills/saam-test-suite-template/SKILL.md`
 - `.github/skills/saam-api-contract/SKILL.md`
 
 **Delegation prompt template:**
 ```
-Generate the comprehensive test suite for service <service-name>.
+Generate the comprehensive integration test class for service <service-name>.
 
 READ THESE FILES FIRST (included in your context):
 - .github/skills/saam-phase4c-test-suite-generation/SKILL.md (orchestration protocol)
-- .github/skills/saam-test-suite-template/SKILL.md (EXACT test format — extract_field function, curl patterns, BR-ID comments)
+- .github/skills/saam-dotnet-reference-implementation/SKILL.md (AUTHORITATIVE — Part 2 test class shape, Part 3 anti-patterns)
+- .github/skills/saam-test-suite-template/SKILL.md (EXACT xUnit test format — helpers, mandatory case classes, BR-ID comment + Trait)
 - .github/skills/saam-api-contract/SKILL.md (contract is naming authority)
+
+REFERENCE (reproduce this shape):
+- sourcecode/Shopizer.IntegrationTests/CustomerIdentityComprehensiveTests.cs (canonical test class)
+- sourcecode/Shopizer.IntegrationTests/AspireHostFixture.cs (shared fixture)
 
 INPUT:
 - spec/microservices/<service>/04-api-contract.yaml (field names, paths, status codes)
 - spec/microservices/<service>/08-dtos/ (EXACT request/response shapes — payload field names from here)
 - spec/microservices/<service>/01-business-rules.md (BR-IDs to test)
 
-PRODUCE EXACTLY: validation/<service>/comprehensive-test-suite.sh
+PRODUCE EXACTLY: sourcecode/Shopizer.IntegrationTests/<Service>ComprehensiveTests.cs
 
 Requirements:
-- Every Active/Core BR-ID must have at least one test assertion
-- Use extract_field() function for JSON parsing (defined in template)
-- Use global HEADERS variable for auth/tenant headers
-- Every test has: test number, BR-ID reference, curl command, assertion
-- Tests build on each other (create → read → update → delete chains)
-- Exit code 0 = all pass, 1 = failures
-- Field names come ONLY from 04-api-contract.yaml — NEVER invent names
-- NEVER skip tests or use placeholder assertions
+- Every Active/Core BR-ID must have at least one test assertion that could ONLY pass if that rule were implemented
+- Class is `sealed`, uses a primary constructor taking AspireHostFixture, and MUST NOT inherit ComprehensiveTestBase
+- Use the private helpers from the reference (SendAsync, AssertResponseAsync, TryExtractResourceId, Arrange*IdAsync)
+- Every test carries `// @BR-ID: <id>`, `[Fact]`, and `[Trait("BR", "<id>")]` — the comment and trait MUST be identical
+- Group tests with #region blocks matching BR groups
+- Tests build on each other (create → read → update → delete chains); IDs come from POST responses
+- Field names come ONLY from 04-api-contract.yaml / 08-dtos — NEVER invent names
+- NEVER skip tests, use placeholder assertions, or emit near-duplicate tests under different Trait BR-IDs
 
-NEVER create a test file that doesn't follow the template format.
+NEVER create a test file that doesn't follow the reference class shape.
 ```
 
 **Parent verification after subagent returns:**
-- [ ] `validation/<service>/comprehensive-test-suite.sh` exists and is executable
-- [ ] File starts with the standard header (PASSED/FAILED/TOTAL counters)
-- [ ] Contains `extract_field()` function definition
-- [ ] Every Active/Core BR-ID has at least one test (grep for BR-ID pattern)
+- [ ] `sourcecode/Shopizer.IntegrationTests/<Service>ComprehensiveTests.cs` exists
+- [ ] Class is `sealed`, takes `AspireHostFixture`, and does NOT inherit `ComprehensiveTestBase`
+- [ ] Every Active/Core BR-ID has at least one test (grep for `[Trait("BR",` pattern)
+- [ ] Every `// @BR-ID:` comment matches the adjacent `[Trait("BR", …)]` value
 - [ ] Field names match `04-api-contract.yaml` (spot-check 3-5 fields)
-- [ ] No placeholder assertions (grep for "TODO", "SKIP", "placeholder")
+- [ ] No placeholder assertions and no duplicate tests asserting the same thing under different BR-IDs
 
 ## Graph Population (Incremental — During Phase 4c)
 
 The agent MUST update the knowledge graph after generating each service's test suite — NOT wait until the exit gate.
 
-**After generating `comprehensive-test-suite.sh` for each service:**
+**After generating `<Service>ComprehensiveTests.cs` for each service:**
 1. For each test assertion: `graph_add_node(nodeType="TestAssertion", id=<testNum>, properties={testName, brId, endpoint, method, expectedStatus, service, assertionType, status: "NOT_RUN"})`
 2. Link to BR-ID: `graph_add_edge(edgeType="TESTED_BY", sourceId=<brId>, sourceType="BusinessRule", targetId=<testNum>, targetType="TestAssertion")`
 3. Run lifecycle advancement: `graph_run_inferences(rules=["lifecycle_states"])` — this advances BR-IDs from Declared to Tested (test now exists)
@@ -130,24 +139,25 @@ Business Rules + Domain Model → API Contract (stack-agnostic shapes)
 
 ### Generation Rules
 
-1. **One DTO file per operation that has a request body OR a distinct response shape.** Common patterns:
-   - `create-<resource>.dto.ts` — POST request body
-   - `update-<resource>.dto.ts` — PUT/PATCH request body
-   - `<resource>-response.dto.ts` — response shape (if different from entity)
-   - `<resource>-query.dto.ts` — query parameters for list/filter endpoints
-   - `index.ts` — barrel export of all DTOs
+1. **One DTO file per operation that has a request body OR a distinct response shape.** DTOs are PascalCase C# files, one type per file. Common patterns (for this engagement):
+   - `Create<Resource>RequestDto.cs` — POST request body
+   - `Update<Resource>RequestDto.cs` — PUT/PATCH request body
+   - `<Resource>Dto.cs` — response/entity shape
+   - `<Resource>ListResponseDto.cs` — list/envelope response
+   - `ErrorResponseDto.cs`, `PaginationInfoDto.cs` — shared error and pagination shapes
+   - There is **NO barrel/index file** — C# has no `index.ts` equivalent.
 
 2. **Field names MUST match `04-api-contract.yaml` `components/schemas` property names exactly.** No renaming, no casing transformation. If the contract says `serviceLevelTarget`, the DTO field is `serviceLevelTarget`.
 
-3. **Validation decorators derived from contract + domain model:**
-   - `required` in contract schema → `@IsNotEmpty()` / `@IsString()` etc.
-   - `format: email` → `@IsEmail()`
-   - `minLength` / `maxLength` → `@MinLength()` / `@MaxLength()`
-   - `pattern` → `@Matches(/<regex>/)`
-   - `enum` → `@IsEnum(<EnumName>)`
-   - Domain model constraints (e.g., "must be positive integer") → `@IsPositive()` / `@Min(1)`
+3. **Validation attributes derived from contract + domain model** (C# `System.ComponentModel.DataAnnotations`):
+   - `required` in contract schema → `[Required]`
+   - `format: email` → `[EmailAddress]`
+   - `minLength` / `maxLength` → `[MinLength(n)]` / `[MaxLength(n)]`
+   - `pattern` → `[RegularExpression("<regex>")]`
+   - numeric bounds (`minimum` / `maximum`, or domain constraints like "must be positive") → `[Range(min, max)]`
+   - JSON wire name always fixed with `[JsonPropertyName("<contractField>")]` (`System.Text.Json.Serialization`)
 
-4. **Default values from domain model.** If `02-domain-model.md` specifies a default (e.g., `status DEFAULT 'pending'`), encode it in the DTO: `@IsOptional() status?: string = 'pending'`
+4. **Optionality from the contract + domain model.** Required fields are non-nullable (`public string Foo { get; set; }`); optional fields use nullable reference types (`public string? Foo { get; set; }`). Collection defaults may be initialized inline (e.g. `= new();`) when the domain model implies an empty default.
 
 5. **Nested objects:** If a contract schema references another schema (`$ref`), create a separate DTO for it and use class composition.
 
@@ -156,18 +166,57 @@ Business Rules + Domain Model → API Contract (stack-agnostic shapes)
 ### Output Location
 
 ```
-spec/microservices/<service>/08-dtos/
-├── create-<resource>.dto.ts
-├── update-<resource>.dto.ts
-├── <resource>-response.dto.ts
-├── <resource>-query.dto.ts
-├── ... (one per distinct request/response shape)
-└── index.ts
+spec/microservices/ms-NN/08-dtos/
+├── CreateCustomerRequestDto.cs
+├── UpdateCustomerRequestDto.cs
+├── CustomerDto.cs
+├── CustomerListResponseDto.cs
+├── ErrorResponseDto.cs
+├── PaginationInfoDto.cs
+└── ... (one PascalCase .cs file per distinct request/response shape)
 ```
 
-**File extension matches target stack:** `.ts` for TypeScript/NestJS, `.java` for Spring, `.py` for FastAPI, `.cs` for .NET.
+**File extension matches target stack. For this engagement the stack is fixed to ASP.NET Core / .NET 10, so DTOs are `.cs`.** There is no barrel/index file.
 
 ### Target Stack Patterns
+
+**C#/.NET (this engagement — primary):**
+
+Model every DTO on the real generated files in `spec/microservices/ms-01/08-dtos/` (copied verbatim into `sourcecode/Shopizer.CustomerIdentity/DTOs/`). The conventions are: `sealed class`, nullable reference types for optional fields, a `[JsonPropertyName]` fixing the camelCase wire name on every property, and `System.ComponentModel.DataAnnotations` attributes for validation. `System.Text.Json` serializes by property convention; the explicit `[JsonPropertyName]` is authoritative for the wire contract.
+
+```csharp
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
+
+namespace Shopizer.Services.Ms01.Contracts;
+
+public sealed class CreateCustomerRequestDto
+{
+    [JsonPropertyName("emailAddress")]
+    [Required]
+    [EmailAddress]
+    public string EmailAddress { get; set; }
+
+    [JsonPropertyName("password")]
+    [Required]
+    [MinLength(8)]
+    public string Password { get; set; }
+
+    [JsonPropertyName("firstName")]
+    public string? FirstName { get; set; }
+
+    [JsonPropertyName("billing")]
+    public AddressDto Billing { get; set; }
+
+    [JsonPropertyName("attributes")]
+    public List<CustomerAttributeDto>? Attributes { get; set; } = new();
+}
+```
+
+#### Other target stacks (not used in this engagement)
+
+Retained for reference only. Do NOT emit these for the current engagement — the stack is fixed to `.cs`.
 
 **TypeScript/NestJS:**
 ```typescript
@@ -217,10 +266,9 @@ For each service in the service catalog:
 1. **Read** `04-api-contract.yaml` — extract all schemas under `components/schemas`
 2. **Read** `02-domain-model.md` — extract validation rules, defaults, constraints
 3. **Identify** which schemas are request bodies (referenced by `requestBody`) and which are responses
-4. **Generate** one DTO file per distinct schema, applying target-stack decorators
-5. **Generate** `index.ts` (barrel export)
-6. **Verify** every field name in the DTO matches the corresponding contract schema property name exactly (case-sensitive)
-7. **Save** to `spec/microservices/<service>/08-dtos/`
+4. **Generate** one PascalCase `.cs` DTO file per distinct schema, applying C# data-annotation attributes
+5. **Verify** every field name in the DTO's `[JsonPropertyName]` matches the corresponding contract schema property name exactly (case-sensitive)
+6. **Save** to `spec/microservices/<service>/08-dtos/`
 
 ### Subagent Delegation (DTO Generation)
 
@@ -230,20 +278,24 @@ When delegating to a subagent:
 ```
 Generate DTOs for service <service-name>.
 
-TARGET STACK: <TypeScript/NestJS | Java/Spring | Python/FastAPI>
+TARGET STACK: C#/.NET (ASP.NET Core 10) — DTOs are PascalCase .cs files
+
+REFERENCE (match this style exactly):
+- spec/microservices/ms-01/08-dtos/*.cs (real generated DTOs — sealed class, [JsonPropertyName], data annotations)
 
 INPUT:
 - spec/microservices/<service>/04-api-contract.yaml (schema field names — NAMING AUTHORITY)
 - spec/microservices/<service>/02-domain-model.md (validation constraints, defaults)
 
-OUTPUT: spec/microservices/<service>/08-dtos/ (one file per request/response schema + index barrel)
+OUTPUT: spec/microservices/<service>/08-dtos/ (one PascalCase .cs file per request/response schema — NO barrel/index file)
 
 RULES:
-- Field names MUST match 04-api-contract.yaml property names EXACTLY (case-sensitive)
-- Validation decorators from domain model constraints
-- Default values from domain model DDL defaults
+- Each file is one `sealed class` in namespace Shopizer.Services.MsNN.Contracts
+- Every property fixes its wire name with [JsonPropertyName("<contractField>")] matching 04-api-contract.yaml EXACTLY (case-sensitive)
+- Required fields non-nullable + [Required]; optional fields nullable reference types
+- Validation via System.ComponentModel.DataAnnotations ([Required], [EmailAddress], [MinLength], [MaxLength], [Range], [RegularExpression])
 - One DTO per distinct request body or response shape
-- Include barrel export (index.ts / index.java / __init__.py)
+- NO barrel export — C# has no index file
 ```
 
 ### Verification Gate (Before Proceeding to Test Suite Generation)
@@ -252,25 +304,25 @@ After generating DTOs for ALL services, verify:
 
 - [ ] Every service has `spec/microservices/<service>/08-dtos/` directory
 - [ ] Every request body schema in the contract has a corresponding DTO
-- [ ] Field names in DTOs match contract schemas exactly (spot-check 3 services)
-- [ ] Validation decorators reflect domain model constraints
-- [ ] Barrel export exists
+- [ ] `[JsonPropertyName]` values in DTOs match contract schemas exactly (spot-check 3 services)
+- [ ] Validation attributes reflect domain model constraints
+- [ ] Files are PascalCase `.cs`, one `sealed class` per file, no barrel/index file
 
 **ONLY after Stage 0 is complete for ALL services does Stage 1 (test suite generation) begin.**
 
 ### Relationship to Test Scripts (Stage 1)
 
 Stage 1 (test suite generation) uses DTOs as the payload reference:
-- Test payloads are constructed using the EXACT field names from DTOs
-- Required fields (those with `@IsNotEmpty()` / `@NotBlank`) MUST be present in test payloads
+- Test payloads are constructed using the EXACT field names (`[JsonPropertyName]` values) from DTOs
+- Required fields (those with `[Required]`) MUST be present in test payloads
 - Optional fields are tested both with and without values
-- Enum fields use values defined in the DTO's enum type
+- Enum/constrained fields use values permitted by the DTO's validation attributes
 
 This ensures test payloads are mechanically consistent with what the implementation will accept (since Phase 5 copies these same DTOs).
 
 ### Relationship to Phase 5 (Implementation)
 
-Phase 5 copies `spec/<service>/08-dtos/` into `sourcecode/<service>/src/dto/` **verbatim**. The implementation MUST NOT regenerate or rename DTO fields. See `.github/skills/saam-phase5-ai-dlc-implementation/SKILL.md` for the hard rule.
+Phase 5 copies `spec/microservices/ms-NN/08-dtos/` into `sourcecode/Shopizer.<Service>/DTOs/` **verbatim**. The implementation MUST NOT regenerate or rename DTO fields. See `.github/skills/saam-dotnet-reference-implementation/SKILL.md` §1.9 and `.github/skills/saam-phase5-ai-dlc-implementation/SKILL.md` for the hard rule.
 
 ### Frontend API Client Generation (Stage 0b — If Frontend Spec Exists)
 
@@ -415,16 +467,16 @@ Before writing the script, produce a coverage plan:
 
 ### Step 3: Generate Test Suite
 
-Generate the test script following the structure from `.github/skills/saam-test-suite-template/SKILL.md`:
+Generate the xUnit integration test class following the class shape in `.github/skills/saam-dotnet-reference-implementation/SKILL.md` (Part 2) and the mandatory case classes in `.github/skills/saam-test-suite-template/SKILL.md`:
 
-1. Use the template's helper functions (`assert_status`, `assert_json_field`, `assert_json_regex`)
-2. Organize tests into sections by BR-ID group (matching the business rules document structure)
+1. Use the reference's private helpers (`AssertResponseAsync(response, expectedStatus, requiredField)` for status + non-empty-field assertions, `SendAsync` for requests) — NOT bash helpers.
+2. Organize tests into `#region` blocks by BR-ID group (matching the business rules document structure).
 3. **For EVERY test assertion, look up the field name in `04-api-contract.yaml` — NOT from `01-business-rules.md` Concrete Examples.** BR-ID examples may use inconsistent naming. The contract is authoritative.
 4. Use EXACT endpoint paths from the contract (including base path prefix like `/api/v1/<service>`)
 5. Assert EXACT status codes defined in the contract for each operation (201 for creation, 200 for retrieval, 422 for validation error — check each one)
-6. **Use `extract_field "$LAST_BODY" "fieldName"` for all ID/value extraction from responses** — NEVER use `grep -o '"id":[0-9]*'` which breaks on nested objects serialized before root fields
+6. **Extract IDs/values from responses via `TryExtractResourceId` / `JsonNode`** — NEVER regex or string-slice the response body (e.g. `grep -o '"id":[0-9]*'`), which breaks on nested objects serialized before root fields.
 7. Capture IDs from POST responses (never from subsequent GET lists)
-8. Build tests in dependency order (create entities before testing operations on them)
+8. Build tests in dependency order (create entities before testing operations on them; use `Arrange*IdAsync` helpers)
 9. **Generate ALL applicable mandatory case-classes from `.github/skills/saam-test-suite-template/SKILL.md`** — not just happy
    path. In addition to Contract-Conformance and Behavioral Assertion cases (always mandatory), generate
    the implicit-system case-classes WHEN the service's spec has the corresponding section:
@@ -439,6 +491,14 @@ Generate the test script following the structure from `.github/skills/saam-test-
    Record each case-class's results separately in TEST_RESULTS so the fidelity audit can distinguish
    shape-pass from lifecycle/integrity/config/db-tier coverage. Omit a case-class ONLY when its spec
    section is absent (most services will have some but not all).
+10. **Every test carries `// @BR-ID: <id>`, `[Fact]`, and `[Trait("BR", "<id>")]`.** The `// @BR-ID:` comment
+    and the `[Trait("BR", …)]` value MUST be identical (see reference §1.11).
+11. **Do NOT emit near-duplicate tests** that issue the same request and assert the same thing under
+    different `[Trait]` BR-IDs — this inflates coverage without verifying anything. **Every BR-ID needs at
+    least one assertion that could only pass if that specific rule were implemented.** This exact defect is
+    present in `Test001`–`Test011` of the reference `CustomerIdentityComprehensiveTests.cs`; it is the
+    cautionary example, NOT a pattern to copy. See `.github/skills/saam-dotnet-reference-implementation/SKILL.md`
+    Part 3 (Anti-Patterns).
 
 **CRITICAL — Field Name Resolution Order:**
 ```
@@ -453,13 +513,11 @@ When writing a test assertion that references a response field:
 
 ### Step 4: Save Test Suite
 
-Save to: `validation/<service-name>/comprehensive-test-suite.sh`
+Save to: `sourcecode/Shopizer.IntegrationTests/<Service>ComprehensiveTests.cs`
 
-```bash
-chmod +x validation/<service-name>/comprehensive-test-suite.sh
-```
+Test classes live in `sourcecode/Shopizer.IntegrationTests/`. The `validation/` directory holds only run artifacts and the deprecated legacy bash suites; **never** save test code to `spec/`.
 
-**NEVER save to `spec/` or `sourcecode/` directories.** The `validation/` directory is the sole home for test suites.
+**Migrate on touch:** eleven existing test classes still inherit `ComprehensiveTestBase`. When a service's suite is (re)generated, it MUST be rewritten to the self-contained standard in `.github/skills/saam-dotnet-reference-implementation/SKILL.md` §2.2 and **MUST NOT inherit `ComprehensiveTestBase`**.
 
 ### Step 5: Validate Assertions Against Contract and Spec
 
@@ -478,15 +536,16 @@ After generating, cross-check EVERY assertion against the API contract:
 - [ ] Test ordering respects entity dependencies (can't test "update order" before "create order")
 
 **Technical correctness:**
-- [ ] Pre-flight health check uses absolute URL (not relative to BASE_URL)
-- [ ] No `assert_json_regex` used for decimal/numeric values (use `assert_json_field` instead)
-- [ ] IDs captured from POST creation responses (not from GET list responses)
+- [ ] `dotnet build sourcecode/Shopizer.slnx` succeeds (the test class compiles)
+- [ ] Every `// @BR-ID:` comment matches the adjacent `[Trait("BR", …)]` value
+- [ ] No duplicate-placeholder tests (distinct BR-IDs asserting the identical request/response)
+- [ ] IDs captured from POST creation responses via `TryExtractResourceId` (not from GET list responses, never by regex)
 
 **If ANY contract mismatch is found:** Fix the test assertion to match the contract. The contract is authoritative — if a field is named `serviceLevelTarget` in the contract, the test MUST assert `"serviceLevelTarget"`, even if the BR-ID example says `"service_level_target"`.
 
 ### Step 6: Human Review
 
-**🔴 PROMPT HUMAN**: "Test suite generated for [Service] with [N] tests covering [M] business rules. Key coverage: [summary of what's tested]. Please review `validation/<service>/comprehensive-test-suite.sh` for completeness."
+**🔴 PROMPT HUMAN**: "Test suite generated for [Service] with [N] tests covering [M] business rules. Key coverage: [summary of what's tested]. Please review `sourcecode/Shopizer.IntegrationTests/<Service>ComprehensiveTests.cs` for completeness."
 
 ## Quality Gates
 
@@ -494,12 +553,13 @@ A test suite is NOT ready for Phase 5 unless:
 
 - [ ] Zero BR-IDs are untested
 - [ ] All field names come from the API contract (no invented names)
-- [ ] No "skip" mechanism exists in the helper functions
+- [ ] No `[Fact(Skip = …)]` or otherwise-skipped tests — a skipped or non-executed suite is a FAILED gate, never a pass (these tests boot a real Aspire `DistributedApplication` requiring a container runtime with PostgreSQL + RabbitMQ)
+- [ ] `dotnet build sourcecode/Shopizer.slnx` succeeds
+- [ ] Every `// @BR-ID:` comment matches its `[Trait("BR", …)]` on every fact
+- [ ] No duplicate-placeholder tests (every BR-ID has an assertion that could only pass if that rule were implemented)
 - [ ] Tests include both happy path AND error cases for every endpoint
 - [ ] State is verified via GET after mutations (POST/PUT/DELETE)
-- [ ] Test uses proper ID capture from creation responses
-- [ ] Exit code is 0 on all pass, 1 on any failure
-- [ ] Summary output format matches: "ALL N TESTS PASSED - 100% SUCCESS"
+- [ ] Test class is `sealed`, takes `AspireHostFixture`, and does NOT inherit `ComprehensiveTestBase`
 
 ## Common Pitfalls (from lessons learned)
 
@@ -507,16 +567,15 @@ These are real failure modes encountered across engagements:
 
 | Pitfall | Prevention |
 |---------|-----------|
-| Missing global headers (tenant/store/auth) | Extract `x-global-headers` from contract in Step 1. Set `TENANT_HEADER` / `STORE_HEADER` at top of test script. All helper functions include them automatically. |
-| Field name mismatch between test and code | BOTH must use `04-api-contract.yaml` — read it FIRST |
+| Duplicate placeholder tests | Never emit near-identical tests asserting the same request/response under different `[Trait]` BR-IDs — each BR-ID needs an assertion that could only pass if that rule were implemented (reference Part 3, `Test001`–`Test011`) |
+| `[Trait]` / `// @BR-ID` mismatch | The comment and the trait MUST be identical; a `[Trait]` naming a rule the body does not exercise is a false coverage claim |
+| Skipped / non-executed suite | A `[Fact(Skip=…)]` or an un-run suite is a FAILED gate — ensure a container runtime with PostgreSQL + RabbitMQ is available and tests actually ran |
+| Field name mismatch between test and code | BOTH must use `04-api-contract.yaml` / `08-dtos` — read them FIRST |
 | Guessing endpoint path format | Read contract paths exactly (`/api/v1/orders` not `/api/v1/order`) |
 | Wrong status code assertions | Contract defines 201 for creation, 200 for retrieval — don't assume |
-| Capturing IDs from GET lists | Always capture from POST creation response |
-| Using regex for decimals | `assert_json_field` with plain string pattern — no regex escaping issues |
-| Relative health check URL | Use absolute `http://localhost:PORT/health` — never `$BASE_URL/../health` |
-| Testing against stale state | Reset database before running full suite (fresh state per run) |
-| Floating point comparison | Use string contains for decimal values, not exact match |
-| Double-POST for status + body | Use `assert_status_and_capture` — single request gives both |
+| Capturing IDs from GET lists | Always capture from POST creation response via `TryExtractResourceId` |
+| Extracting IDs by regex/string-slicing | Use `TryExtractResourceId` / `JsonNode`, never `grep`/regex on the body |
+| Inheriting `ComprehensiveTestBase` | New/regenerated suites are self-contained (reference §2.2, §2.9) |
 
 ## Multi-Service Execution
 
@@ -546,7 +605,8 @@ from specs + contract          without modifying the tests
 ## Deliverables
 
 ### Backend Test Suites
-- [ ] `validation/<service-name>/comprehensive-test-suite.sh` per backend service (executable)
+- [ ] `sourcecode/Shopizer.IntegrationTests/<Service>ComprehensiveTests.cs` per backend service
+- [ ] `dotnet build sourcecode/Shopizer.slnx` succeeds
 - [ ] Coverage plan documented (every BR-ID mapped to test assertions)
 - [ ] All assertions validated against API contract
 - [ ] Human review completed per service
@@ -581,7 +641,7 @@ Generate `validation/<app-name>/frontend-test-suite.sh`:
 
 **Frontend test format:**
 - If the frontend is a SPA/web app: generate Playwright test scripts (`*.spec.ts`) in addition to the bash suite
-- If the frontend is API-driven (no server-side rendering): the backend `comprehensive-test-suite.sh` already covers the API layer; generate only a lightweight navigation/integration check
+- If the frontend is API-driven (no server-side rendering): the backend xUnit + .NET Aspire integration suite already covers the API layer; generate only a lightweight navigation/integration check
 - Always generate a `frontend-test-suite.sh` bash wrapper that runs whatever test framework was chosen
 
 ### Frontend Integration Test Orchestration

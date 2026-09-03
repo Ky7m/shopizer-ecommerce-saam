@@ -53,6 +53,7 @@ SAAM is a graph-driven modernization platform that transforms legacy application
 - `.github/skills/saam-phase4c-test-suite-generation/SKILL.md` — Phase 4c orchestration: test suite generation per service
 - `.github/skills/saam-task-tracking/SKILL.md` — File-based task tracking per phase + Jira dual-write protocol
 - `.github/skills/saam-phase5-setup/SKILL.md` — Phase 5 setup wizard: model selection, parameter gathering, artifact creation
+- `.github/skills/saam-dotnet-reference-implementation/SKILL.md` — **AUTHORITATIVE** implementation & integration-test standard (ASP.NET Core 10 / .NET Aspire), derived from the MS-01 reference service. Read before Phase 4c test generation and every Phase 5 service.
 - `.github/skills/saam-phase5-ai-dlc-implementation/SKILL.md` — AI-DLC code generation, test suites, CI/CD
 - `.github/skills/saam-backend-fidelity/SKILL.md` — Cross-service wiring & round-trip fidelity: 8 checkpoints (event emission, tenant propagation, callee-DTO alignment, schema migration, DB round-trip) + grep-able wiring-defect self-audit. Read before the Events / Integration Wiring layers in Phase 5.
 - `.github/skills/saam-phase6-continuous-evolution/SKILL.md` — Continuous loop: deviations, bugs, features, SPEC-DRIFT feed back through spec → test → implement → validate
@@ -66,7 +67,7 @@ SAAM is a graph-driven modernization platform that transforms legacy application
 ### Templates
 - `.github/skills/saam-spec-template/SKILL.md` — Microservice specification template (backend)
 - `.github/skills/saam-frontend-spec-template/SKILL.md` — Frontend application specification template
-- `.github/skills/saam-test-suite-template/SKILL.md` — Comprehensive test suite template (MANDATORY)
+- `.github/skills/saam-test-suite-template/SKILL.md` — Comprehensive xUnit + .NET Aspire integration test template (MANDATORY)
 
 ### Integration & Knowledge Graph
 - `.github/skills/saam-graph-context/SKILL.md` — Knowledge Graph agent usage: lifecycle states, confidence model, context construction (always active)
@@ -94,8 +95,8 @@ SAAM is a graph-driven modernization platform that transforms legacy application
 6. Specs: activate `.github/skills/saam-phase4-spec-generation/SKILL.md` + `.github/skills/saam-spec-template/SKILL.md`
 7. BA Review: activate `.github/skills/saam-phase4a-business-rule-validation/SKILL.md` + `.github/skills/saam-ba-review-template/SKILL.md`
 8. Roadmap: activate `.github/skills/saam-phase4b-implementation-roadmap/SKILL.md`
-9. Test Suites: activate `.github/skills/saam-phase4c-test-suite-generation/SKILL.md` + `.github/skills/saam-test-suite-template/SKILL.md`
-10. Implementation: activate `.github/skills/saam-phase5-setup/SKILL.md` then `.github/skills/saam-phase5-ai-dlc-implementation/SKILL.md` (+ `.github/skills/saam-backend-fidelity/SKILL.md` before the wiring layers)
+9. Test Suites: activate `.github/skills/saam-phase4c-test-suite-generation/SKILL.md` + `.github/skills/saam-test-suite-template/SKILL.md` + `.github/skills/saam-dotnet-reference-implementation/SKILL.md`
+10. Implementation: activate `.github/skills/saam-phase5-setup/SKILL.md` then `.github/skills/saam-dotnet-reference-implementation/SKILL.md` + `.github/skills/saam-phase5-ai-dlc-implementation/SKILL.md` (+ `.github/skills/saam-backend-fidelity/SKILL.md` before the wiring layers)
 11. Continuous Evolution: activate `.github/skills/saam-phase6-continuous-evolution/SKILL.md` (ongoing after Phase 5)
 
 Always keep `.github/skills/saam-human-guidance-protocol/SKILL.md` active during analysis work.

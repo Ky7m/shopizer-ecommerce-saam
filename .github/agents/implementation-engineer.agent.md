@@ -18,15 +18,16 @@ The **Implementation Engineer** leads Phase 5 and Phase 6 of SAAM. The role exec
 - **Phase 6**: Continuous Evolution & Feedback Loop
 
 ## Key Responsibilities
-1. Set up target service scaffolds, build files, and container configs.
+1. Set up target service scaffolds, build files, and container configs following `.github/skills/saam-dotnet-reference-implementation/SKILL.md`.
 2. Generate domain entities, repositories, controllers, and business logic.
-3. Annotate every business rule implementation in source code with `@BR-ID` comments.
+3. Annotate every business rule implementation in source code with `// @<BR-ID>: <intent sentence>` comments above the implementing method.
 4. Execute validation runner (`validation/run-and-reconcile.sh`) to achieve 100% test pass.
 5. Ingest implementation states and validation results into Neo4j (`IMPLEMENTS` relationships).
 6. Process Phase 6 bug reports and feature extensions through spec drift analysis.
 7. Record phase telemetry and update task tracking.
 
 ## Relevant Steering Documents
+- `.github/skills/saam-dotnet-reference-implementation/SKILL.md` (AUTHORITATIVE — project layout, composition, persistence, error model, auth, events, BR annotation contract, anti-patterns)
 - `.github/skills/saam-phase5-setup/SKILL.md`
 - `.github/skills/saam-phase5-ai-dlc-implementation/SKILL.md`
 - `.github/skills/saam-backend-fidelity/SKILL.md`
@@ -39,6 +40,7 @@ The **Implementation Engineer** leads Phase 5 and Phase 6 of SAAM. The role exec
 - `.github/skills/saam-telemetry/SKILL.md`
 
 ## Tools & Integrations
+- .NET SDK 10 / .NET Aspire (`dotnet build sourcecode/Shopizer.slnx`, `dotnet test sourcecode/Shopizer.IntegrationTests`)
 - Graph MCP (`detect_br_ids.py`, `file_context.py`, `reconcile_validation.py`)
 - Validation runner (`validation/run-and-reconcile.sh`)
 - Neo4j Knowledge Graph

@@ -382,13 +382,13 @@ DTOs are generated from the contract AFTER the tech stack is confirmed (Phase 4b
 ### For Code Generation (Phase 5 / ATX)
 
 The code generator MUST:
-- **Copy DTOs from `spec/<service>/08-dtos/` into `sourcecode/<service>/src/dto/` VERBATIM as the first implementation step** — these are pre-generated and mechanically consistent with the contract
+- **Copy DTOs from `spec/microservices/<service>/08-dtos/*.cs` into `sourcecode/Shopizer.<Service>/DTOs/` VERBATIM as the first implementation step** — these are pre-generated and mechanically consistent with the contract. See `.github/skills/saam-dotnet-reference-implementation/SKILL.md`.
 - **NEVER regenerate, rename, or restructure the copied DTOs** — they are the concrete binding that ensures test/code alignment
 - Expose endpoints at exact paths defined in the contract
 - Use the copied DTOs as request/response types in controllers
 - Return exact status codes defined in the contract
 - Structure responses per the contract's schema shapes
-- If additional internal DTOs are needed (not in the API contract), prefix them `internal-` to distinguish
+- If additional internal types are needed (not in the API contract), keep them in `Models/Domain.cs` rather than creating duplicate DTO files
 
 ### What the Contract Does NOT Define
 
@@ -406,10 +406,10 @@ The contract and DTOs MUST remain in sync at all times. They are related as:
 ```
 Contract (04-api-contract.yaml)          DTOs (08-dtos/)
 ─────────────────────────────            ────────────────
-components/schemas/<Name>    ←→    <name>.dto.ts (same fields)
-  properties:                        class <Name>Dto {
-    fieldA: string                     @IsString() fieldA: string
-    fieldB: integer                    @IsInt() fieldB: number
+components/schemas/<Name>    ←→    <Name>Dto.cs (same fields)
+  properties:                        public sealed class <Name>Dto {
+    fieldA: string                     public string FieldA { get; set; }
+    fieldB: integer                    public int FieldB { get; set; }
 ```
 
 **Invariant:** For every schema property used in a request body, there MUST be a corresponding DTO field with the SAME name (case-sensitive). Any mismatch is a bug.
@@ -419,7 +419,7 @@ components/schemas/<Name>    ←→    <name>.dto.ts (same fields)
 - After any contract schema modification in Phase 6
 - After contract versioning (new fields added)
 
-**Regeneration does NOT mean reimplementation:** If DTOs change, the implementation's `src/dto/` files must also be updated to match. The regenerated DTOs from `08-dtos/` are always copied over the implementation DTOs.
+**Regeneration does NOT mean reimplementation:** If DTOs change, the implementation's `DTOs/` files must also be updated to match. The regenerated DTOs from `08-dtos/` are always copied over the implementation DTOs.
 
 ## Cross-Service Contract Consistency
 
@@ -436,7 +436,7 @@ The contract is versioned with the spec. When business rules change:
 2. Update `04-api-contract.yaml` to reflect new/changed fields
 3. **Regenerate DTOs** (`08-dtos/`) from updated contract schemas — this keeps the concrete binding current
 4. Regenerate test suite (Phase 4c) from updated contract + DTOs
-5. **Update implementation DTOs** — copy regenerated `08-dtos/` into `sourcecode/<service>/src/dto/`
+5. **Update implementation DTOs** — copy regenerated `08-dtos/*.cs` into `sourcecode/Shopizer.<Service>/DTOs/`
 6. **Update frontend api-client** — regenerate `09-api-client/` from updated contracts, copy to `sourcecode/<app>/src/api/`
 7. Regenerate/fix code to match updated contract
 

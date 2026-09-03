@@ -2,22 +2,30 @@
 # =============================================================================
 # SAAM Validation Runner + Reconciliation Trigger
 #
-# Runs the comprehensive test suite for a service, parses results into a
-# structured YAML artifact, then calls the reconciliation script to update
-# the graph and generate remediation tasks.
+# Runs the xUnit + .NET Aspire integration test suite for a service, parses the
+# results into a structured YAML artifact, then calls the reconciliation script
+# to update the graph and generate remediation tasks.
+#
+# The standalone bash suites (validation/<service>/comprehensive-test-suite.sh)
+# are DEPRECATED. See .github/skills/saam-dotnet-reference-implementation/SKILL.md
+# for the current test standard. Legacy .sh files are retained for reference and
+# are no longer executed by this runner.
 #
 # USAGE:
-#   ./validation/run-and-reconcile.sh <service-name> [trigger]
+#   ./validation/run-and-reconcile.sh <service> [trigger]
 #
 # ARGUMENTS:
-#   service-name    Name of the service (must match validation/<service>/ dir)
+#   service         ms-NN (e.g. ms-01), the PascalCase service name
+#                   (e.g. CustomerIdentity), or the Aspire resource name
+#                   (e.g. customer-identity)
 #   trigger         Optional: stage2_smoke | stage4_final | model_b_post_atx |
 #                   model_a_inline | ci_pipeline (default: manual)
 #
 # PREREQUISITES:
-#   - Service must be running (or use --start to auto-start)
-#   - validation/<service>/comprehensive-test-suite.sh must exist
-#   - python3 with pyyaml available (for reconciliation script)
+#   - .NET SDK 10 on PATH
+#   - A running container runtime (the Aspire host provisions PostgreSQL and
+#     RabbitMQ). A skipped or non-executed suite is a FAILED gate, never a pass.
+#   - python3 with pyyaml available (for the reconciliation script)
 #
 # OUTPUT:
 #   .saam/reconciliation/<service>/validation-run-<timestamp>.yaml
@@ -26,29 +34,67 @@
 
 set -uo pipefail
 
-SERVICE="${1:-}"
+SERVICE_ARG="${1:-}"
 TRIGGER="${2:-manual}"
-START_SERVICE="${START_SERVICE:-false}"
 
-if [ -z "$SERVICE" ]; then
-    echo "Usage: $0 <service-name> [trigger]"
-    echo "Example: $0 order-service stage2_smoke"
+if [ -z "$SERVICE_ARG" ]; then
+    echo "Usage: $0 <service> [trigger]"
+    echo "Example: $0 ms-01 stage4_final"
     exit 1
 fi
 
-# Paths
 WORKSPACE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SUITE_DIR="$WORKSPACE_ROOT/validation/$SERVICE"
-SUITE_SCRIPT="$SUITE_DIR/comprehensive-test-suite.sh"
-SERVICE_DIR="$WORKSPACE_ROOT/sourcecode/$SERVICE"
+TEST_PROJECT="$WORKSPACE_ROOT/sourcecode/Shopizer.IntegrationTests"
+SOLUTION="$WORKSPACE_ROOT/sourcecode/Shopizer.slnx"
+
+# --- Resolve the service identifier to a .NET project / test class name ---
+# ms-NN and Aspire resource names both map onto the PascalCase project suffix.
+resolve_service() {
+    case "$1" in
+        ms-01|customer-identity|CustomerIdentity)             echo "CustomerIdentity" ;;
+        ms-02|catalog-product|CatalogProduct)                 echo "CatalogProduct" ;;
+        ms-03|search|Search)                                  echo "Search" ;;
+        ms-04|cart-checkout|CartCheckout)                     echo "CartCheckout" ;;
+        ms-05|order-management|OrderManagement)               echo "OrderManagement" ;;
+        ms-06|payments|Payments)                              echo "Payments" ;;
+        ms-07|pricing-promotions|PricingPromotions)           echo "PricingPromotions" ;;
+        ms-08|tax|Tax)                                        echo "Tax" ;;
+        ms-09|shipping|Shipping)                              echo "Shipping" ;;
+        ms-10|merchant-administration|MerchantAdministration) echo "MerchantAdministration" ;;
+        ms-11|content-configuration|ContentConfiguration)     echo "ContentConfiguration" ;;
+        ms-12|platform-integrations|PlatformIntegrations)     echo "PlatformIntegrations" ;;
+        *)                                                    echo "" ;;
+    esac
+}
+
+SERVICE_NAME=$(resolve_service "$SERVICE_ARG")
+if [ -z "$SERVICE_NAME" ]; then
+    echo "ERROR: Unknown service '$SERVICE_ARG'."
+    echo "Expected ms-01..ms-12, a PascalCase service name, or an Aspire resource name."
+    exit 1
+fi
+
+# The graph and the validation/ tree are keyed on ms-NN; keep that as the artifact key.
+SERVICE="$SERVICE_ARG"
+TEST_CLASS="${SERVICE_NAME}ComprehensiveTests"
+TEST_FILE="$TEST_PROJECT/${TEST_CLASS}.cs"
+SERVICE_DIR="$WORKSPACE_ROOT/sourcecode/Shopizer.${SERVICE_NAME}"
 OUTPUT_DIR="$WORKSPACE_ROOT/.saam/reconciliation/$SERVICE"
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 RUN_ID="val-$(date +%Y%m%d-%H%M%S)"
 ARTIFACT="$OUTPUT_DIR/validation-run-${RUN_ID}.yaml"
+TRX_DIR="$OUTPUT_DIR/trx"
+TRX_FILE="$TRX_DIR/${RUN_ID}.trx"
 
-# Validate
-if [ ! -f "$SUITE_SCRIPT" ]; then
-    echo "ERROR: Test suite not found: $SUITE_SCRIPT"
+# --- Validate inputs ---
+if [ ! -d "$TEST_PROJECT" ]; then
+    echo "ERROR: Integration test project not found: $TEST_PROJECT"
+    exit 1
+fi
+
+if [ ! -f "$TEST_FILE" ]; then
+    echo "ERROR: Test class not found: $TEST_FILE"
+    echo "Phase 4c must generate ${TEST_CLASS}.cs before this service can be validated."
     exit 1
 fi
 
@@ -57,148 +103,28 @@ if [ ! -d "$SERVICE_DIR" ]; then
     exit 1
 fi
 
-# Create output directory
-mkdir -p "$OUTPUT_DIR"
+mkdir -p "$OUTPUT_DIR" "$TRX_DIR"
 
-echo "=== SAAM Validation: $SERVICE ==="
+echo "=== SAAM Validation: $SERVICE ($SERVICE_NAME) ==="
 echo "  Trigger: $TRIGGER"
-echo "  Suite: $SUITE_SCRIPT"
+echo "  Suite: $TEST_FILE"
+echo "  Filter: FullyQualifiedName~$TEST_CLASS"
 echo "  Artifact: $ARTIFACT"
 echo ""
 
-# --- Optional: start service ---
-SERVICE_PID=""
-if [ "$START_SERVICE" = "true" ]; then
-    echo "[run-and-reconcile] Starting service..."
-    cd "$SERVICE_DIR"
-
-    # Detect stack and start accordingly
-    if [ -f "package.json" ]; then
-        # Node.js / NestJS / Express
-        npm run build 2>/dev/null
-        PORT="${PORT:-3000}"
-        npm run start:test &
-        SERVICE_PID=$!
-        HEALTH_PATH="/health"
-    elif [ -f "pom.xml" ]; then
-        # Java / Spring Boot
-        PORT="${PORT:-8080}"
-        mvn -q spring-boot:run -Dspring-boot.run.profiles=local &
-        SERVICE_PID=$!
-        HEALTH_PATH="/actuator/health"
-    elif [ -f "pyproject.toml" ] || [ -f "requirements.txt" ]; then
-        # Python / FastAPI
-        PORT="${PORT:-8000}"
-        uvicorn main:app --port "$PORT" &
-        SERVICE_PID=$!
-        HEALTH_PATH="/health"
-    elif [ -f "go.mod" ]; then
-        # Go
-        PORT="${PORT:-8080}"
-        go run . &
-        SERVICE_PID=$!
-        HEALTH_PATH="/health"
-    else
-        echo "WARNING: Cannot detect stack in $SERVICE_DIR — no package.json, pom.xml, pyproject.toml, or go.mod"
-        echo "Set START_SERVICE=false and start the service manually before running."
-        cd "$WORKSPACE_ROOT"
-        exit 1
-    fi
-
-    cd "$WORKSPACE_ROOT"
-
-    # Wait for readiness (stack-agnostic health check)
-    for i in $(seq 1 60); do
-        curl -sf "http://localhost:$PORT$HEALTH_PATH" > /dev/null 2>&1 && break
-        sleep 1
-    done
-fi
-
-cleanup() {
-    if [ -n "$SERVICE_PID" ]; then
-        kill $SERVICE_PID 2>/dev/null || true
-        wait $SERVICE_PID 2>/dev/null || true
-    fi
-}
-trap cleanup EXIT
-
-# --- Run test suite and capture output ---
-echo "[run-and-reconcile] Running comprehensive test suite..."
+# --- Build ---
+echo "[run-and-reconcile] Building solution..."
 BUILD_START=$(date +%s)
-
-TEST_OUTPUT=$(bash "$SUITE_SCRIPT" 2>&1) || true
-TEST_EXIT_CODE=$?
-
+BUILD_OUTPUT=$(dotnet build "$SOLUTION" --nologo -v quiet 2>&1)
+BUILD_EXIT_CODE=$?
 BUILD_END=$(date +%s)
-DURATION=$((BUILD_END - BUILD_START))
+BUILD_DURATION=$((BUILD_END - BUILD_START))
 
-# --- Parse test output ---
-# The comprehensive test suite outputs a summary line like:
-#   TOTAL: 47 | PASSED: 45 | FAILED: 2 | SKIPPED: 0
-# And per-test results like:
-#   [PASS] Test 1: Create order with valid data (BR-OR-CRD-001)
-#   [FAIL] Test 23: Late fee Gold tier (BR-PA-CAL-007) - Expected: 15.00, Got: 12.50
-
-TOTAL=$(echo "$TEST_OUTPUT" | sed -n 's/.*TOTAL:[[:space:]]*\([0-9]*\).*/\1/p' | tail -1)
-TOTAL="${TOTAL:-0}"
-PASSED=$(echo "$TEST_OUTPUT" | sed -n 's/.*PASSED:[[:space:]]*\([0-9]*\).*/\1/p' | tail -1)
-PASSED="${PASSED:-0}"
-FAILED=$(echo "$TEST_OUTPUT" | sed -n 's/.*FAILED:[[:space:]]*\([0-9]*\).*/\1/p' | tail -1)
-FAILED="${FAILED:-0}"
-SKIPPED=$(echo "$TEST_OUTPUT" | sed -n 's/.*SKIPPED:[[:space:]]*\([0-9]*\).*/\1/p' | tail -1)
-SKIPPED="${SKIPPED:-0}"
-
-# Fallback: count from individual test lines if summary not found
-if [ "$TOTAL" = "0" ]; then
-    PASSED=$(echo "$TEST_OUTPUT" | grep -c '^\[PASS\]' || echo "0")
-    FAILED=$(echo "$TEST_OUTPUT" | grep -c '^\[FAIL\]' || echo "0")
-    TOTAL=$((PASSED + FAILED))
-fi
-
-# Calculate pass rate
-if [ "$TOTAL" -gt 0 ]; then
-    PASS_RATE=$(echo "scale=3; $PASSED / $TOTAL" | bc -l 2>/dev/null || echo "0")
-else
-    PASS_RATE="0"
-fi
-
-# Extract failures with BR-IDs
-FAILURES=""
-while IFS= read -r line; do
-    if [ -n "$line" ]; then
-        # Extract test number, name, BR-ID, and failure reason
-        TEST_NUM=$(echo "$line" | sed -n 's/.*Test[[:space:]]*\([0-9]*\).*/\1/p')
-        TEST_NUM="${TEST_NUM:-?}"
-        BR_ID=$(echo "$line" | grep -oE 'BR-[A-Z]{2}-[A-Z]{2,4}-[0-9]{2,3}' | head -1)
-        BR_ID="${BR_ID:-UNKNOWN}"
-        TEST_NAME=$(echo "$line" | sed 's/^\[FAIL\][[:space:]]*Test[[:space:]]*[0-9]*:[[:space:]]*//' | sed 's/[[:space:]]*(BR-.*$//')
-        REASON=$(echo "$line" | sed -n 's/.*-[[:space:]]*\(.*\)$/\1/p')
-        REASON="${REASON:-assertion failed}"
-
-        FAILURES="${FAILURES}    - test_num: ${TEST_NUM}
-      name: \"${TEST_NAME}\"
-      br_id: \"${BR_ID}\"
-      reason: \"${REASON}\"
-"
-    fi
-done <<< "$(echo "$TEST_OUTPUT" | grep '^\[FAIL\]')"
-
-# Extract BR-IDs from passing tests
-PASSING_BR_IDS=$(echo "$TEST_OUTPUT" | grep '^\[PASS\]' | grep -oE 'BR-[A-Z]{2}-[A-Z]{2,4}-[0-9]{2,3}' | sort -u)
-FAILING_BR_IDS=$(echo "$TEST_OUTPUT" | grep '^\[FAIL\]' | grep -oE 'BR-[A-Z]{2}-[A-Z]{2,4}-[0-9]{2,3}' | sort -u)
-BR_IDS_PASSING_COUNT=$(echo "$PASSING_BR_IDS" | grep -c 'BR-' 2>/dev/null || echo "0")
-BR_IDS_FAILING_COUNT=$(echo "$FAILING_BR_IDS" | grep -c 'BR-' 2>/dev/null || echo "0")
-
-# Detect new BR-IDs in code (run detect_br_ids in scan-only mode)
-NEW_CLAIMS=""
-if command -v python3 &>/dev/null && [ -f "$WORKSPACE_ROOT/graph-mcp/scripts/detect_br_ids.py" ]; then
-    # Quick scan for BR-IDs in source (without updating graph — just detection)
-    CODE_BR_IDS=$(find "$SERVICE_DIR/src" -type f \( -name "*.java" -o -name "*.kt" -o -name "*.ts" -o -name "*.py" -o -name "*.cs" \) -exec grep -ohE 'BR-[A-Z]{2}-[A-Z]{2,4}-[0-9]{2,3}' {} \; 2>/dev/null | sort -u)
-    NEW_CLAIMS_LIST=$(echo "$CODE_BR_IDS" | tr '\n' ',' | sed 's/,$//')
-fi
-
-# --- Write YAML artifact ---
-cat > "$ARTIFACT" << EOF
+if [ $BUILD_EXIT_CODE -ne 0 ]; then
+    echo "$BUILD_OUTPUT"
+    echo ""
+    echo "BUILD FAILED for $SERVICE — not running tests."
+    cat > "$ARTIFACT" << EOF
 schema_version: "1.0"
 service: "$SERVICE"
 run_id: "$RUN_ID"
@@ -207,28 +133,229 @@ trigger: "$TRIGGER"
 implementation_type: "${IMPLEMENTATION_TYPE:-unknown}"
 
 build:
-  status: "$([ $TEST_EXIT_CODE -le 1 ] && echo 'pass' || echo 'fail')"
-  duration_seconds: $DURATION
+  status: "fail"
+  duration_seconds: $BUILD_DURATION
 
 test_execution:
-  suite: "comprehensive-test-suite.sh"
-  total: $TOTAL
-  passed: $PASSED
-  failed: $FAILED
-  skipped: $SKIPPED
-  pass_rate: $PASS_RATE
-  duration_seconds: $DURATION
-  exit_code: $TEST_EXIT_CODE
+  suite: "${TEST_CLASS}.cs"
+  total: 0
+  passed: 0
+  failed: 0
+  skipped: 0
+  pass_rate: 0
+  duration_seconds: 0
+  exit_code: $BUILD_EXIT_CODE
 
   failures:
-${FAILURES:-    []}
+    []
 
-  br_ids_passing: $BR_IDS_PASSING_COUNT
-  br_ids_failing: $BR_IDS_FAILING_COUNT
+  br_ids_passing: 0
+  br_ids_failing: 0
 
 br_id_detection:
-  code_br_ids: "${NEW_CLAIMS_LIST:-}"
+  code_br_ids: ""
 EOF
+    exit 1
+fi
+
+# --- Run the integration suite ---
+# The Aspire host provisions PostgreSQL and RabbitMQ; this requires a container runtime.
+echo "[run-and-reconcile] Running $TEST_CLASS..."
+TEST_START=$(date +%s)
+
+dotnet test "$TEST_PROJECT" \
+    --nologo \
+    --no-build \
+    --filter "FullyQualifiedName~$TEST_CLASS" \
+    --logger "trx;LogFileName=$TRX_FILE" \
+    > "$TRX_DIR/${RUN_ID}.log" 2>&1
+TEST_EXIT_CODE=$?
+
+TEST_END=$(date +%s)
+DURATION=$((TEST_END - TEST_START))
+
+tail -20 "$TRX_DIR/${RUN_ID}.log"
+
+# --- Parse the TRX into the reconciliation artifact ---
+# BR-IDs are resolved by joining the TRX outcomes against the [Trait("BR", "...")]
+# attributes in the test source, which is deterministic and independent of how the
+# TRX logger chooses to serialize traits.
+export WORKSPACE_ROOT SERVICE RUN_ID TIMESTAMP TRIGGER TEST_CLASS SERVICE_DIR
+export BUILD_DURATION DURATION TEST_EXIT_CODE
+export IMPLEMENTATION_TYPE="${IMPLEMENTATION_TYPE:-unknown}"
+
+python3 - "$TRX_FILE" "$TEST_FILE" "$ARTIFACT" << 'PYEOF'
+import os, re, sys, xml.etree.ElementTree as ET
+
+trx_path, test_file, artifact_path = sys.argv[1], sys.argv[2], sys.argv[3]
+
+service = os.environ.get("SERVICE", "")
+run_id = os.environ.get("RUN_ID", "")
+timestamp = os.environ.get("TIMESTAMP", "")
+trigger = os.environ.get("TRIGGER", "manual")
+test_class = os.environ.get("TEST_CLASS", "")
+service_dir = os.environ.get("SERVICE_DIR", "")
+implementation_type = os.environ.get("IMPLEMENTATION_TYPE", "unknown")
+build_duration = os.environ.get("BUILD_DURATION", "0")
+duration = os.environ.get("DURATION", "0")
+exit_code = os.environ.get("TEST_EXIT_CODE", "1")
+
+BR_PATTERN = r"BR-[A-Z0-9]{2,6}(?:-[A-Z0-9]{2,6})?-[0-9]{2,3}"
+
+
+def br_id_regex():
+    """Read the BR-ID pattern from saam-calibration.yaml — the single source of truth."""
+    root = os.environ.get("WORKSPACE_ROOT", "")
+    candidate = os.path.join(root, ".github", "saam-calibration.yaml")
+    try:
+        with open(candidate, encoding="utf-8", errors="ignore") as handle:
+            text = handle.read()
+        block = text.split("br_id_pattern:", 1)
+        if len(block) == 2:
+            match = re.search(r'regex_tolerant:\s*"([^"]+)"', block[1]) or \
+                    re.search(r'regex:\s*"([^"]+)"', block[1])
+            if match:
+                return match.group(1)
+    except OSError:
+        pass
+    return BR_PATTERN
+
+
+pattern = br_id_regex()
+
+# method name -> [BR-IDs] from [Trait("BR", "...")] attributes in the test source
+traits: dict[str, list[str]] = {}
+pending: list[str] = []
+try:
+    with open(test_file, encoding="utf-8", errors="ignore") as handle:
+        for line in handle:
+            trait = re.search(r'\[\s*Trait\s*\(\s*"BR"\s*,\s*"([^"]+)"\s*\)\s*\]', line)
+            if trait:
+                pending.append(trait.group(1))
+                continue
+            method = re.search(r'\b(?:public|private|internal)\s+(?:async\s+)?[\w<>,\s\[\]?]+\s+(\w+)\s*\(', line)
+            if method:
+                if pending:
+                    traits.setdefault(method.group(1), []).extend(pending)
+                pending = []
+except OSError:
+    pass
+
+total = passed = failed = skipped = 0
+failures = []
+passing_br_ids: set[str] = set()
+failing_br_ids: set[str] = set()
+
+try:
+    tree = ET.parse(trx_path)
+    ns = {"t": "http://microsoft.com/schemas/VisualStudio/TeamTest/2010"}
+    for result in tree.getroot().findall(".//t:UnitTestResult", ns):
+        name = result.get("testName") or ""
+        outcome = (result.get("outcome") or "").lower()
+        method = name.split("(")[0].split(".")[-1]
+        br_ids = traits.get(method) or re.findall(pattern, name) or ["UNKNOWN"]
+        total += 1
+        if outcome == "passed":
+            passed += 1
+            passing_br_ids.update(br_ids)
+        elif outcome in ("notexecuted", "skipped"):
+            # A skipped test is NOT a pass. It counts as a failure of the gate.
+            skipped += 1
+            failing_br_ids.update(br_ids)
+            failures.append((method, br_ids[0], "test was skipped or not executed"))
+        else:
+            failed += 1
+            failing_br_ids.update(br_ids)
+            message = result.find(".//t:Message", ns)
+            reason = (message.text or "").strip().replace("\n", " ") if message is not None else "assertion failed"
+            failures.append((method, br_ids[0], reason[:400]))
+except (OSError, ET.ParseError) as error:
+    failures.append(("<suite>", "UNKNOWN", f"could not parse TRX results: {error}"))
+
+pass_rate = round(passed / total, 3) if total else 0
+
+# BR-IDs claimed by annotations in the service source
+code_br_ids: set[str] = set()
+for current, _dirs, files in os.walk(service_dir):
+    if f"{os.sep}bin{os.sep}" in current + os.sep or f"{os.sep}obj{os.sep}" in current + os.sep:
+        continue
+    for filename in files:
+        if not filename.endswith(".cs"):
+            continue
+        try:
+            with open(os.path.join(current, filename), encoding="utf-8", errors="ignore") as handle:
+                code_br_ids.update(re.findall(pattern, handle.read()))
+        except OSError:
+            pass
+
+
+def quote(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
+
+lines = [
+    'schema_version: "1.0"',
+    f'service: "{service}"',
+    f'run_id: "{run_id}"',
+    f'timestamp: "{timestamp}"',
+    f'trigger: "{trigger}"',
+    f'implementation_type: "{implementation_type}"',
+    "",
+    "build:",
+    '  status: "pass"',
+    f"  duration_seconds: {build_duration}",
+    "",
+    "test_execution:",
+    f'  suite: "{test_class}.cs"',
+    f"  total: {total}",
+    f"  passed: {passed}",
+    f"  failed: {failed}",
+    f"  skipped: {skipped}",
+    f"  pass_rate: {pass_rate}",
+    f"  duration_seconds: {duration}",
+    f"  exit_code: {exit_code}",
+    "",
+    "  failures:",
+]
+
+if failures:
+    for index, (name, br_id, reason) in enumerate(failures, start=1):
+        lines += [
+            f"    - test_num: {index}",
+            f'      name: "{quote(name)}"',
+            f'      br_id: "{quote(br_id)}"',
+            f'      reason: "{quote(reason)}"',
+        ]
+else:
+    lines.append("    []")
+
+lines += [
+    "",
+    f"  br_ids_passing: {len(passing_br_ids)}",
+    f"  br_ids_failing: {len(failing_br_ids)}",
+    "",
+    "br_id_detection:",
+    f'  code_br_ids: "{",".join(sorted(code_br_ids))}"',
+]
+
+with open(artifact_path, "w", encoding="utf-8") as handle:
+    handle.write("\n".join(lines) + "\n")
+PYEOF
+PARSE_EXIT_CODE=$?
+
+if [ $PARSE_EXIT_CODE -ne 0 ]; then
+    echo "ERROR: Failed to parse test results into $ARTIFACT"
+    exit 1
+fi
+
+# --- Report ---
+TOTAL=$(sed -n 's/^  total: \([0-9]*\)$/\1/p' "$ARTIFACT")
+PASSED=$(sed -n 's/^  passed: \([0-9]*\)$/\1/p' "$ARTIFACT")
+FAILED=$(sed -n 's/^  failed: \([0-9]*\)$/\1/p' "$ARTIFACT")
+SKIPPED=$(sed -n 's/^  skipped: \([0-9]*\)$/\1/p' "$ARTIFACT")
+PASS_RATE=$(sed -n 's/^  pass_rate: \(.*\)$/\1/p' "$ARTIFACT")
+BR_IDS_PASSING_COUNT=$(sed -n 's/^  br_ids_passing: \([0-9]*\)$/\1/p' "$ARTIFACT")
+BR_IDS_FAILING_COUNT=$(sed -n 's/^  br_ids_failing: \([0-9]*\)$/\1/p' "$ARTIFACT")
 
 echo ""
 echo "=== Results ==="
@@ -236,6 +363,7 @@ echo "  Total: $TOTAL | Passed: $PASSED | Failed: $FAILED | Skipped: $SKIPPED"
 echo "  Pass rate: $PASS_RATE"
 echo "  BR-IDs passing: $BR_IDS_PASSING_COUNT | failing: $BR_IDS_FAILING_COUNT"
 echo "  Artifact: $ARTIFACT"
+echo "  TRX: $TRX_FILE"
 
 # --- Call reconciliation script ---
 RECONCILE_SCRIPT="$WORKSPACE_ROOT/graph-mcp/scripts/reconcile_validation.py"
@@ -248,13 +376,19 @@ else
     echo "[run-and-reconcile] Reconciliation script not found — artifact produced but graph not updated"
 fi
 
-# --- Exit with test result ---
-if [ "$FAILED" = "0" ] && [ "$TOTAL" -gt "0" ]; then
+# --- Exit with the gate result ---
+# A suite that ran zero tests, or skipped any, is a FAILED gate — never a pass.
+if [ "${TOTAL:-0}" = "0" ]; then
+    echo ""
+    echo "NO TESTS EXECUTED for $SERVICE — the Aspire host requires a container runtime with PostgreSQL and RabbitMQ."
+    echo "A non-executed suite is a FAILED gate."
+    exit 1
+elif [ "${FAILED:-0}" = "0" ] && [ "${SKIPPED:-0}" = "0" ]; then
     echo ""
     echo "ALL TESTS PASSED for $SERVICE"
     exit 0
 else
     echo ""
-    echo "$FAILED test(s) failed for $SERVICE — see artifact for details"
+    echo "$FAILED failed / $SKIPPED skipped for $SERVICE — see artifact for details"
     exit 1
 fi
