@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using Shopizer.CatalogProduct.DTOs;
 using Shopizer.CatalogProduct.Middleware;
 using Shopizer.CatalogProduct.Services;
-using Shopizer.Services.Ms02.Contracts;
 
 namespace Shopizer.CatalogProduct.Controllers;
 

@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Net.Http.Headers;
+using Shopizer.IntegrationTests.Fixtures;
 
 namespace Shopizer.IntegrationTests;
 
@@ -14,6 +15,7 @@ public sealed class CustomerIdentityComprehensiveTests(AspireHostFixture fixture
     private static class Payloads
     {
         public const string Login = """{"username":"phase4c-test","password":"Phase4c!Password2026"}""";
+        public const string CustomerLogin = """{"username":"phase4c-target","password":"Phase4c!Password2026"}""";
         public const string Empty = "{}";
         public const string Registration = """
             {"emailAddress":"phase4c@example.com","password":"Phase4c!Password2026","firstName":"phase4c-test","lastName":"phase4c-test","gender":"M","language":"en","provider":"phase4c-test","billing":{"addressType":"Billing","firstName":"phase4c-test","lastName":"phase4c-test","companyName":"phase4c-test","streetAddress":"1 Main Street","city":"Seattle","postalCode":"98101","stateProvince":"WA","telephone":"2065550100","countryCode":"US","zoneCode":"WA","latitude":"47.6062","longitude":"-122.3321"},"delivery":{"addressType":"Delivery","firstName":"phase4c-test","lastName":"phase4c-test","companyName":"phase4c-test","streetAddress":"1 Main Street","city":"Seattle","postalCode":"98101","stateProvince":"WA","telephone":"2065550100","countryCode":"US","zoneCode":"WA","latitude":"47.6062","longitude":"-122.3321"},"attributes":[{"optionId":"00000000-0000-0000-0000-000000000001","optionValueId":"00000000-0000-0000-0000-000000000001","textValue":"phase4c-test"}]}
@@ -221,7 +223,7 @@ public sealed class CustomerIdentityComprehensiveTests(AspireHostFixture fixture
     [Trait("BR", "BR-CUS-019")]
     public async Task Test021_PostCustomerAuthLogin_Returns200WithSubjectId()
     {
-        using var response = await SendAsync(HttpMethod.Post, "/api/v1/customer-auth/login", Payloads.Login);
+        using var response = await SendAsync(HttpMethod.Post, "/api/v1/customer-auth/login", Payloads.CustomerLogin);
         await AssertResponseAsync(response, 200, "subjectId");
     }
 
@@ -239,7 +241,7 @@ public sealed class CustomerIdentityComprehensiveTests(AspireHostFixture fixture
     [Trait("BR", "BR-CUS-019")]
     public async Task Test023_PostCustomerAuthLogin_Returns200WithSubjectId()
     {
-        using var response = await SendAsync(HttpMethod.Post, "/api/v1/customer-auth/login", Payloads.Login);
+        using var response = await SendAsync(HttpMethod.Post, "/api/v1/customer-auth/login", Payloads.CustomerLogin);
         await AssertResponseAsync(response, 200, "subjectId");
     }
 
@@ -248,7 +250,7 @@ public sealed class CustomerIdentityComprehensiveTests(AspireHostFixture fixture
     [Trait("BR", "BR-CUS-NN-010")]
     public async Task Test024_PostCustomerAuthLogin_Returns200WithSubjectId()
     {
-        using var response = await SendAsync(HttpMethod.Post, "/api/v1/customer-auth/login", Payloads.Login);
+        using var response = await SendAsync(HttpMethod.Post, "/api/v1/customer-auth/login", Payloads.CustomerLogin);
         await AssertResponseAsync(response, 200, "subjectId");
     }
 

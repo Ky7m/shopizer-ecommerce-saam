@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using Shopizer.Services.Ms02.Contracts;
+using Shopizer.CatalogProduct.DTOs;
 
 namespace Shopizer.CatalogProduct.Models;
 

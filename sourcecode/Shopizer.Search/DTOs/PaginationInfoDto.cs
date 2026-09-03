@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
-namespace Shopizer.Services.Ms03.Contracts;
+namespace Shopizer.Search.DTOs;
 
 public sealed class PaginationInfoDto
 {

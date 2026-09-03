@@ -1,6 +1,6 @@
 using System.Security.Claims;
 using System.Runtime.CompilerServices;
-using Shopizer.Services.Ms03.Contracts;
+using Shopizer.Search.DTOs;
 
 namespace Shopizer.Search.Models;
 

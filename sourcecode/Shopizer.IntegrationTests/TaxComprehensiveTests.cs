@@ -1,3 +1,5 @@
+using Shopizer.IntegrationTests.Fixtures;
+
 namespace Shopizer.IntegrationTests;
 
 [Collection(ShopizerAspireCollection.Name)]

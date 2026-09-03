@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Npgsql;
+using Shopizer.IntegrationTests.Fixtures;
 
 namespace Shopizer.IntegrationTests;
 
@@ -66,7 +67,7 @@ public sealed class SearchComprehensiveTests(AspireHostFixture fixture)
     public async Task ProjectionRemoval_IsPersistedAsARemovedDocument()
     {
         var productId = await SeedProductAsync("removable-product");
-        await using var connection = await fixture.OpenDatabaseAsync("searchdb");
+        await using var connection = await fixture.OpenDatabaseAsync("shopizerDb");
         await using var command = new NpgsqlCommand("""
             UPDATE search.search_document SET state='Removed', updated_at=now()
             WHERE tenant_id=@tenant AND store_id=@store AND product_id=@product
@@ -143,7 +144,7 @@ public sealed class SearchComprehensiveTests(AspireHostFixture fixture)
         Assert.Equal("Requested", document.RootElement.GetProperty("status").GetString());
         Assert.True(document.RootElement.GetProperty("accepted").GetBoolean());
 
-        await using var connection = await fixture.OpenDatabaseAsync("searchdb");
+        await using var connection = await fixture.OpenDatabaseAsync("shopizerDb");
         for (var i = 0; i < 30; i++)
         {
             await using var status = new NpgsqlCommand(
@@ -172,7 +173,7 @@ public sealed class SearchComprehensiveTests(AspireHostFixture fixture)
     public async Task ComponentProjectionUpdate_PreservesTheUnchangedLocalizedComponent()
     {
         var productId = await SeedProductAsync("component-merge");
-        await using var connection = await fixture.OpenDatabaseAsync("searchdb");
+        await using var connection = await fixture.OpenDatabaseAsync("shopizerDb");
         await using var command = new NpgsqlCommand("""
             UPDATE search.search_document_locale
             SET image_url='/images/updated.jpg'
@@ -354,7 +355,7 @@ public sealed class SearchComprehensiveTests(AspireHostFixture fixture)
     private async Task<long> SeedProductAsync(string key, string? name = null, bool includeFrench = false)
     {
         var productId = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000 + Random.Shared.Next(1000);
-        await using var connection = await fixture.OpenDatabaseAsync("searchdb");
+        await using var connection = await fixture.OpenDatabaseAsync("shopizerDb");
         await using var transaction = await connection.BeginTransactionAsync();
         var indexId = Guid.NewGuid();
         await using (var index = new NpgsqlCommand("""

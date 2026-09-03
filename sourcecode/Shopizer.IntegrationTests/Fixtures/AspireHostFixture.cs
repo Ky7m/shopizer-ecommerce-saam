@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Npgsql;
 
-namespace Shopizer.IntegrationTests;
+namespace Shopizer.IntegrationTests.Fixtures;
 
 public sealed class AspireHostFixture : IAsyncLifetime
 {
@@ -24,11 +24,14 @@ public sealed class AspireHostFixture : IAsyncLifetime
     public string AdminAccessToken { get; private set; } = null!;
     public string BasicAdminAccessToken { get; private set; } = null!;
     public string CustomerAccessToken { get; private set; } = null!;
+    public string CartCheckoutCustomerAccessToken { get; private set; } = null!;
 
     public async ValueTask InitializeAsync()
     {
-        var builder = await DistributedApplicationTestingBuilder
-            .CreateAsync<Projects.Shopizer_AppHost>();
+        var builder = await DistributedApplicationTestingBuilder.CreateAsync<Projects.Shopizer_AppHost>(
+            [
+                "DcpPublisher:RandomizePorts=true"
+            ]);
 
         _application = await builder.BuildAsync();
         await _application.StartAsync();
@@ -40,7 +43,7 @@ public sealed class AspireHostFixture : IAsyncLifetime
             ["customer-identity"] = (client => CustomerIdentityClient = client, "tenant-demo", "default", "00000000-0000-0000-0000-000000000001", false, null, null),
             ["catalog-product"] = (client => CatalogProductClient = client, "test-tenant-001", "test-store-001", "11111111-1111-4111-8111-111111111111", false, null, "phase4c-test"),
             ["search"] = (client => SearchClient = client, "tenant-demo", "default", "corr-ms03-0001", false, null, null),
-            ["cart-checkout"] = (client => CartCheckoutClient = client, "tenant-001", "store-001", "00000000-0000-0000-0000-000000000001", false, null, null),
+            ["cart-checkout"] = (client => CartCheckoutClient = client, "test-tenant-001", "test-store-001", "00000000-0000-0000-0000-000000000001", false, null, null),
             ["order-management"] = (client => OrderManagementClient = client, "tenant-a", "store-12", "corr-ms05-001", true, null, null),
             ["payments"] = (client => PaymentsClient = client, "test-tenant-001", "test-store-001", "corr-ms06-001", true, null, null),
             ["pricing-promotions"] = (client => PricingPromotionsClient = client, "2e6d7b63-5b1d-4f8a-8e12-8cf43c9f2001", "store-us-east", "corr-20260901-000184", false, null, null),
@@ -62,15 +65,19 @@ public sealed class AspireHostFixture : IAsyncLifetime
         }
 
         await EnsureTestCatalogAsync();
+        await EnsureCartCheckoutCustomerAsync();
         AdminAccessToken = await LoginAsync("phase4c-test", "Phase4c!Password2026", true);
         BasicAdminAccessToken = await LoginAsync("phase4c-basic", "Phase4c!Password2026", true);
         CustomerAccessToken = await LoginAsync("phase4c-test", "Phase4c!Password2026", false);
+        var cartCustomerClient = _application.CreateHttpClient("customer-identity");
+        ConfigureClient(cartCustomerClient, "test-tenant-001", "test-store-001", "00000000-0000-0000-0000-000000000001", false, null, null);
+        CartCheckoutCustomerAccessToken = await LoginAsync(cartCustomerClient, "phase4c-cart-test", "Phase4c!Password2026", false);
     }
 
     private async Task EnsureTestAdministratorAsync()
     {
-        var connectionString = await _application!.GetConnectionStringAsync("customeridentitydb")
-            ?? throw new InvalidOperationException("The customer identity database connection string is unavailable.");
+        var connectionString = await _application!.GetConnectionStringAsync("shopizerDb")
+            ?? throw new InvalidOperationException("The shopizer database connection string is unavailable.");
 
         await using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync();
@@ -173,8 +180,8 @@ public sealed class AspireHostFixture : IAsyncLifetime
 
     private async Task EnsureTestCustomersAsync()
     {
-        var connectionString = await _application!.GetConnectionStringAsync("customeridentitydb")
-            ?? throw new InvalidOperationException("The customer identity database connection string is unavailable.");
+        var connectionString = await _application!.GetConnectionStringAsync("shopizerDb")
+            ?? throw new InvalidOperationException("The shopizer database connection string is unavailable.");
 
         await using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync();
@@ -231,6 +238,47 @@ public sealed class AspireHostFixture : IAsyncLifetime
         await EnsureTestCustomersAsync();
     }
 
+    private async Task EnsureCartCheckoutCustomerAsync()
+    {
+        var connectionString = await _application!.GetConnectionStringAsync("shopizerDb")
+            ?? throw new InvalidOperationException("The shopizer database connection string is unavailable.");
+
+        await using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync();
+        var salt = RandomNumberGenerator.GetBytes(16);
+        var hash = Rfc2898DeriveBytes.Pbkdf2("Phase4c!Password2026", salt, 120_000, HashAlgorithmName.SHA256, 32);
+        var encodedPassword = $"PBKDF2-SHA256$120000${Convert.ToBase64String(salt)}${Convert.ToBase64String(hash)}";
+
+        await using var command = new NpgsqlCommand(
+            """
+            INSERT INTO customer_identity.customer_accounts
+                (id, tenant_id, store_id, login_name, email_address, password_hash, gender, company_name, provider, status, default_language_code)
+            VALUES
+                ('00000000-0000-0000-0000-000000000003', 'test-tenant-001', 'test-store-001',
+                 'phase4c-cart-test', 'phase4c-cart@example.test', @password, 'M', 'phase4c',
+                 'phase4c', 'Active', 'en')
+            ON CONFLICT (id) DO UPDATE SET
+                tenant_id = EXCLUDED.tenant_id, store_id = EXCLUDED.store_id,
+                login_name = EXCLUDED.login_name, email_address = EXCLUDED.email_address,
+                password_hash = EXCLUDED.password_hash, status = 'Active',
+                default_language_code = 'en', last_password_reset_at = NULL;
+
+            INSERT INTO customer_identity.customer_addresses
+                (customer_id, address_type, first_name, last_name, street_address, city, postal_code, country_code, zone_code)
+            VALUES
+                ('00000000-0000-0000-0000-000000000003', 'Billing', 'Ada', 'Lovelace', '1 Main St', 'Montreal', 'H2Y 1C6', 'CA', NULL),
+                ('00000000-0000-0000-0000-000000000003', 'Delivery', 'Ada', 'Lovelace', '1 Main St', 'Montreal', 'H2Y 1C6', 'CA', NULL)
+            ON CONFLICT (customer_id, address_type) DO UPDATE SET
+                first_name = EXCLUDED.first_name, last_name = EXCLUDED.last_name,
+                street_address = EXCLUDED.street_address, city = EXCLUDED.city,
+                postal_code = EXCLUDED.postal_code, country_code = EXCLUDED.country_code,
+                zone_code = EXCLUDED.zone_code;
+            """,
+            connection);
+        command.Parameters.AddWithValue("password", encodedPassword);
+        await command.ExecuteNonQueryAsync();
+    }
+
     public async Task EnsureAuthenticatedTestCustomerAsync()
     {
         await EnsureTestCustomersAsync();
@@ -251,8 +299,8 @@ public sealed class AspireHostFixture : IAsyncLifetime
 
     public async Task EnsureTestResetTokenAsync(string token, bool administrator)
     {
-        var connectionString = await _application!.GetConnectionStringAsync("customeridentitydb")
-            ?? throw new InvalidOperationException("The customer identity database connection string is unavailable.");
+        var connectionString = await _application!.GetConnectionStringAsync("shopizerDb")
+            ?? throw new InvalidOperationException("The shopizer database connection string is unavailable.");
 
         await using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync();
@@ -287,8 +335,8 @@ public sealed class AspireHostFixture : IAsyncLifetime
 
         await CleanupCatalogTestDataAsync();
 
-        var connectionString = await _application!.GetConnectionStringAsync("catalogproductdb")
-            ?? throw new InvalidOperationException("The catalog product database connection string is unavailable.");
+        var connectionString = await _application!.GetConnectionStringAsync("shopizerDb")
+            ?? throw new InvalidOperationException("The shopizer database connection string is unavailable.");
 
         await using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync();
@@ -548,8 +596,11 @@ public sealed class AspireHostFixture : IAsyncLifetime
     }
 
     private async Task<string> LoginAsync(string username, string password, bool administrator)
+        => await LoginAsync(CustomerIdentityClient, username, password, administrator);
+
+    private static async Task<string> LoginAsync(HttpClient client, string username, string password, bool administrator)
     {
-        using var response = await CustomerIdentityClient.PostAsync(
+        using var response = await client.PostAsync(
             administrator ? "/api/v1/admin-auth/login" : "/api/v1/customer-auth/login",
             new StringContent(
                 JsonSerializer.Serialize(new { username, password }),
@@ -582,8 +633,8 @@ public sealed class AspireHostFixture : IAsyncLifetime
         const string tenant = "test-tenant-001";
         const string store = "test-store-001";
 
-        var connectionString = await _application!.GetConnectionStringAsync("catalogproductdb")
-            ?? throw new InvalidOperationException("The catalog product database connection string is unavailable.");
+        var connectionString = await _application!.GetConnectionStringAsync("shopizerDb")
+            ?? throw new InvalidOperationException("The shopizer database connection string is unavailable.");
 
         await using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync();
@@ -679,8 +730,8 @@ public sealed class AspireHostFixture : IAsyncLifetime
 
     private async Task CleanupTestDataAsync()
     {
-        var connectionString = await _application!.GetConnectionStringAsync("customeridentitydb")
-            ?? throw new InvalidOperationException("The customer identity database connection string is unavailable.");
+        var connectionString = await _application!.GetConnectionStringAsync("shopizerDb")
+            ?? throw new InvalidOperationException("The shopizer database connection string is unavailable.");
 
         await using var connection = new NpgsqlConnection(connectionString);
         await connection.OpenAsync();
@@ -705,6 +756,13 @@ public sealed class AspireHostFixture : IAsyncLifetime
             )
                OR (user_id = '00000000-0000-0000-0000-000000000001'
                    AND provider_id = '00000000-0000-0000-0000-000000000001');
+
+            DELETE FROM customer_identity.customer_addresses
+            WHERE customer_id = '00000000-0000-0000-0000-000000000003'::uuid;
+
+            DELETE FROM customer_identity.customer_accounts
+            WHERE id = '00000000-0000-0000-0000-000000000003'::uuid
+              AND tenant_id = 'test-tenant-001' AND store_id = 'test-store-001';
 
             DELETE FROM customer_identity.customer_reviews
             WHERE reviewer_customer_id IN (
@@ -820,10 +878,4 @@ public sealed class AspireHostFixture : IAsyncLifetime
         await connection.OpenAsync();
         return connection;
     }
-}
-
-[CollectionDefinition(Name, DisableParallelization = true)]
-public sealed class ShopizerAspireCollection : ICollectionFixture<AspireHostFixture>
-{
-    public const string Name = "Shopizer Aspire";
 }

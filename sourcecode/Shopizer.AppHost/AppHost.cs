@@ -1,101 +1,123 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
 var postgres = builder.AddPostgres("postgres")
-    .WithPgAdmin()
-    .WithLifetime(ContainerLifetime.Persistent);
+    .WithPgAdmin();
 
 var rabbitmq = builder.AddRabbitMQ("rabbitmq")
     .WithManagementPlugin();
 
 var redis = builder.AddRedis("redis")
-    .WithDataVolume()
     .WithRedisCommander();
 
-var customerIdentityDb = postgres.AddDatabase("customeridentitydb");
-var catalogProductDb = postgres.AddDatabase("catalogproductdb");
-var searchDb = postgres.AddDatabase("searchdb");
-var cartCheckoutDb = postgres.AddDatabase("cartcheckoutdb");
-var orderManagementDb = postgres.AddDatabase("ordermanagementdb");
-var paymentsDb = postgres.AddDatabase("paymentsdb");
-var pricingPromotionsDb = postgres.AddDatabase("pricingpromotionsdb");
-var taxDb = postgres.AddDatabase("taxdb");
-var shippingDb = postgres.AddDatabase("shippingdb");
-var merchantAdministrationDb = postgres.AddDatabase("merchantadministrationdb");
-var contentConfigurationDb = postgres.AddDatabase("contentconfigurationdb");
-var platformIntegrationsDb = postgres.AddDatabase("platformintegrationsdb");
+var shopizerDb = postgres.AddDatabase("shopizerDb");
 
 var customerIdentity = builder.AddProject<Projects.Shopizer_CustomerIdentity>("customer-identity")
-    .WithReference(customerIdentityDb)
+    .WithReference(shopizerDb)
     .WithReference(rabbitmq)
     .WithExternalHttpEndpoints()
-    .WithHttpEndpoint(port: 8101, name: "http")
-    .WithHttpHealthCheck("/health");
+    .WithHttpHealthCheck("/health")
+    .WaitFor(shopizerDb)
+    .WaitFor(rabbitmq);
+
 var catalogProduct = builder.AddProject<Projects.Shopizer_CatalogProduct>("catalog-product")
-    .WithReference(catalogProductDb)
+    .WithReference(shopizerDb)
     .WithReference(rabbitmq)
     .WithExternalHttpEndpoints()
-    .WithHttpEndpoint(port: 8102, name: "http")
-    .WithHttpHealthCheck("/health");
+    .WithHttpHealthCheck("/health")
+    .WaitFor(shopizerDb)
+    .WaitFor(rabbitmq);
+
 var search = builder.AddProject<Projects.Shopizer_Search>("search")
-    .WithReference(searchDb)
+    .WithReference(shopizerDb)
     .WithReference(rabbitmq)
     .WithExternalHttpEndpoints()
-    .WithHttpEndpoint(port: 8103, name: "http")
-    .WithHttpHealthCheck("/health");
+    .WithHttpHealthCheck("/health")
+    .WaitFor(shopizerDb)
+    .WaitFor(rabbitmq);
+
+var orderManagement = builder.AddProject<Projects.Shopizer_OrderManagement>("order-management")
+    .WithReference(shopizerDb)
+    .WithReference(rabbitmq)
+    .WithExternalHttpEndpoints()
+    .WithHttpHealthCheck("/health")
+    .WaitFor(shopizerDb)
+    .WaitFor(rabbitmq);
+
+var payments = builder.AddProject<Projects.Shopizer_Payments>("payments")
+    .WithReference(shopizerDb)
+    .WithReference(rabbitmq)
+    .WithExternalHttpEndpoints()
+    .WithHttpHealthCheck("/health")
+    .WaitFor(shopizerDb)
+    .WaitFor(rabbitmq);
+
+var pricingPromotions = builder.AddProject<Projects.Shopizer_PricingPromotions>("pricing-promotions")
+    .WithReference(shopizerDb)
+    .WithReference(rabbitmq)
+    .WithExternalHttpEndpoints()
+    .WithHttpHealthCheck("/health")
+    .WaitFor(shopizerDb)
+    .WaitFor(rabbitmq);
+
+var tax = builder.AddProject<Projects.Shopizer_Tax>("tax")
+    .WithReference(shopizerDb)
+    .WithExternalHttpEndpoints()
+    .WithHttpHealthCheck("/health")
+    .WaitFor(shopizerDb);
+
+var shipping = builder.AddProject<Projects.Shopizer_Shipping>("shipping")
+    .WithReference(shopizerDb)
+    .WithReference(rabbitmq)
+    .WithExternalHttpEndpoints()
+    .WithHttpHealthCheck("/health")
+    .WaitFor(shopizerDb)
+    .WaitFor(rabbitmq);
+
 var cartCheckout = builder.AddProject<Projects.Shopizer_CartCheckout>("cart-checkout")
-    .WithReference(cartCheckoutDb)
+    .WithReference(shopizerDb)
     .WithReference(rabbitmq)
     .WithReference(redis)
+    .WithReference(customerIdentity)
+    .WithReference(catalogProduct)
+    .WithReference(pricingPromotions)
+    .WithReference(tax)
+    .WithReference(shipping)
+    .WithReference(payments)
     .WithExternalHttpEndpoints()
-    .WithHttpEndpoint(port: 8104, name: "http")
-    .WithHttpHealthCheck("/health");
-var orderManagement = builder.AddProject<Projects.Shopizer_OrderManagement>("order-management")
-    .WithReference(orderManagementDb)
-    .WithReference(rabbitmq)
-    .WithExternalHttpEndpoints()
-    .WithHttpEndpoint(port: 8105, name: "http")
-    .WithHttpHealthCheck("/health");
-var payments = builder.AddProject<Projects.Shopizer_Payments>("payments")
-    .WithReference(paymentsDb)
-    .WithReference(rabbitmq)
-    .WithExternalHttpEndpoints()
-    .WithHttpEndpoint(port: 8106, name: "http")
-    .WithHttpHealthCheck("/health");
-var pricingPromotions = builder.AddProject<Projects.Shopizer_PricingPromotions>("pricing-promotions")
-    .WithReference(pricingPromotionsDb)
-    .WithReference(rabbitmq)
-    .WithExternalHttpEndpoints()
-    .WithHttpEndpoint(port: 8107, name: "http")
-    .WithHttpHealthCheck("/health");
-var tax = builder.AddProject<Projects.Shopizer_Tax>("tax")
-    .WithReference(taxDb)
-    .WithExternalHttpEndpoints()
-    .WithHttpEndpoint(port: 8108, name: "http")
-    .WithHttpHealthCheck("/health");
-var shipping = builder.AddProject<Projects.Shopizer_Shipping>("shipping")
-    .WithReference(shippingDb)
-    .WithReference(rabbitmq)
-    .WithExternalHttpEndpoints()
-    .WithHttpEndpoint(port: 8109, name: "http")
-    .WithHttpHealthCheck("/health");
+    .WithHttpHealthCheck("/health")
+    .WaitFor(shopizerDb)
+    .WaitFor(rabbitmq)
+    .WaitFor(redis)
+    .WaitFor(customerIdentity)
+    .WaitFor(catalogProduct)
+    .WaitFor(pricingPromotions)
+    .WaitFor(tax)
+    .WaitFor(shipping)
+    .WaitFor(payments);
+
 var merchantAdministration = builder.AddProject<Projects.Shopizer_MerchantAdministration>("merchant-administration")
-    .WithReference(merchantAdministrationDb)
+    .WithReference(shopizerDb)
     .WithReference(rabbitmq)
     .WithExternalHttpEndpoints()
-    .WithHttpEndpoint(port: 8110, name: "http")
-    .WithHttpHealthCheck("/health");
+    .WithHttpHealthCheck("/health")
+    .WaitFor(shopizerDb)
+    .WaitFor(rabbitmq);
+
 var contentConfiguration = builder.AddProject<Projects.Shopizer_ContentConfiguration>("content-configuration")
-    .WithReference(contentConfigurationDb)
+    .WithReference(shopizerDb)
     .WithReference(rabbitmq)
     .WithExternalHttpEndpoints()
-    .WithHttpEndpoint(port: 8111, name: "http")
-    .WithHttpHealthCheck("/health");
+    .WithHttpHealthCheck("/health")
+    .WaitFor(shopizerDb)
+    .WaitFor(rabbitmq);
+
 var platformIntegrations = builder.AddProject<Projects.Shopizer_PlatformIntegrations>("platform-integrations")
-    .WithReference(platformIntegrationsDb)
+    .WithReference(shopizerDb)
     .WithReference(rabbitmq)
     .WithExternalHttpEndpoints()
-    .WithHttpEndpoint(port: 8112, name: "http")
-    .WithHttpHealthCheck("/health");
+    .WithHttpHealthCheck("/health")
+    .WaitFor(shopizerDb)
+    .WaitFor(rabbitmq);
 
 builder.AddProject<Projects.Shopizer_Admin>("admin")
     .WithExternalHttpEndpoints()
@@ -106,7 +128,13 @@ builder.AddProject<Projects.Shopizer_Admin>("admin")
     .WithReference(orderManagement)
     .WithReference(merchantAdministration)
     .WithReference(contentConfiguration)
-    .WaitFor(customerIdentity);
+    .WaitFor(customerIdentity)
+    .WaitFor(catalogProduct)
+    .WaitFor(search)
+    .WaitFor(cartCheckout)
+    .WaitFor(orderManagement)
+    .WaitFor(merchantAdministration)
+    .WaitFor(contentConfiguration);
 
 builder.AddProject<Projects.Shopizer_Storefront>("storefront")
     .WithExternalHttpEndpoints()
@@ -116,6 +144,11 @@ builder.AddProject<Projects.Shopizer_Storefront>("storefront")
     .WithReference(cartCheckout)
     .WithReference(orderManagement)
     .WithReference(contentConfiguration)
-    .WaitFor(catalogProduct);
+    .WaitFor(customerIdentity)
+    .WaitFor(catalogProduct)
+    .WaitFor(search)
+    .WaitFor(cartCheckout)
+    .WaitFor(orderManagement)
+    .WaitFor(contentConfiguration);
 
 builder.Build().Run();

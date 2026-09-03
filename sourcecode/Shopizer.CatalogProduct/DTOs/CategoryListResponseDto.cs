@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Shopizer.Services.Ms02.Contracts;
+namespace Shopizer.CatalogProduct.DTOs;
 
 public sealed class CategoryListResponseDto
 {

@@ -3,8 +3,8 @@ using System.Text;
 using System.Text.Json;
 using Npgsql;
 using NpgsqlTypes;
+using Shopizer.Search.DTOs;
 using Shopizer.Search.Models;
-using Shopizer.Services.Ms03.Contracts;
 
 namespace Shopizer.Search.Data;
 

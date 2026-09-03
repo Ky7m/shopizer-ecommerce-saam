@@ -3,8 +3,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Npgsql;
+using Shopizer.CatalogProduct.DTOs;
 using Shopizer.CatalogProduct.Models;
-using Shopizer.Services.Ms02.Contracts;
 
 namespace Shopizer.CatalogProduct.Data;
 

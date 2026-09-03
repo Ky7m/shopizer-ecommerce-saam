@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
+using Shopizer.Search.DTOs;
 using Shopizer.Search.Middleware;
 using Shopizer.Search.Models;
 using Shopizer.Search.Services;
-using Shopizer.Services.Ms03.Contracts;
 
 namespace Shopizer.Search.Controllers;
 

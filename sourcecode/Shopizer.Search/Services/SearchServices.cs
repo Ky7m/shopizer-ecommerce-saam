@@ -1,7 +1,7 @@
 using System.Threading.Channels;
 using Shopizer.Search.Data;
+using Shopizer.Search.DTOs;
 using Shopizer.Search.Models;
-using Shopizer.Services.Ms03.Contracts;
 
 namespace Shopizer.Search.Services;
 

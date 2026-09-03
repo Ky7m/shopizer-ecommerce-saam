@@ -1,6 +1,8 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Shopizer.Search;
 using Shopizer.Search.Data;
+using Shopizer.Search.DTOs;
 using Shopizer.Search.Middleware;
 using Shopizer.Search.Models;
 using Shopizer.Search.Services;
@@ -9,7 +11,7 @@ using Shopizer.ServiceDefaults;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
-builder.AddNpgsqlDataSource("searchdb");
+builder.AddNpgsqlDataSource("shopizerDb");
 builder.AddRabbitMQClient("rabbitmq");
 if (!builder.Environment.IsDevelopment() &&
     string.IsNullOrWhiteSpace(builder.Configuration["Search:JwtSecret"]))
@@ -47,17 +49,20 @@ app.MapDefaultEndpoints();
 
 app.Run();
 
-public sealed class RebuildStatusJsonConverter : JsonConverter<Shopizer.Services.Ms03.Contracts.RebuildStatusDto>
+namespace Shopizer.Search
 {
-    public override Shopizer.Services.Ms03.Contracts.RebuildStatusDto Read(
-        ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public sealed class RebuildStatusJsonConverter : JsonConverter<RebuildStatusDto>
     {
-        reader.GetString();
-        return RebuildStatusRegistry.Create("Requested");
-    }
+        public override RebuildStatusDto Read(
+            ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            reader.GetString();
+            return RebuildStatusRegistry.Create("Requested");
+        }
 
-    public override void Write(
-        Utf8JsonWriter writer, Shopizer.Services.Ms03.Contracts.RebuildStatusDto value,
-        JsonSerializerOptions options) =>
-        writer.WriteStringValue(RebuildStatusRegistry.Get(value));
+        public override void Write(
+            Utf8JsonWriter writer, RebuildStatusDto value,
+            JsonSerializerOptions options) =>
+            writer.WriteStringValue(RebuildStatusRegistry.Get(value));
+    }
 }

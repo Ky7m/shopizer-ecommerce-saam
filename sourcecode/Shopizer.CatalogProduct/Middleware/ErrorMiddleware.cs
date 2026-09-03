@@ -1,5 +1,5 @@
+using Shopizer.CatalogProduct.DTOs;
 using Shopizer.CatalogProduct.Models;
-using Shopizer.Services.Ms02.Contracts;
 
 namespace Shopizer.CatalogProduct.Middleware;
 

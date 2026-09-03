@@ -6,7 +6,7 @@ using Shopizer.ServiceDefaults;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
-builder.AddNpgsqlDataSource("catalogproductdb");
+builder.AddNpgsqlDataSource("shopizerDb");
 builder.AddRabbitMQClient("rabbitmq");
 builder.Services.AddSingleton<CatalogRepository>();
 builder.Services.AddSingleton<EventPublisher>();
