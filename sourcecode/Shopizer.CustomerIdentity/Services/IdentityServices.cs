@@ -265,7 +265,7 @@ public sealed class IdentityService(
     public async Task UpdateAddressesAsync(Guid customerId, AddressUpdateRequestDto request, RequestContext context, CancellationToken ct)
     {
         await RequiredCustomer(customerId, context, ct);
-        if (request.Billing is null && request.Delivery is null) throw new DomainException("ADDRESS_REQUIRED", "Billing or delivery address is required", 422);
+        if (request.Billing is null && request.Delivery is null) throw new DomainException("ADDRESS_REQUIRED", "Billing or delivery address is required", 400);
         if (request.Billing is not null) ValidateAddress(request.Billing, true);
         if (request.Delivery is not null) ValidateAddress(request.Delivery, false, allowPartial: true);
         var delivery = request.Delivery;

@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Mvc;
 using Shopizer.CustomerIdentity.Data;
 using Shopizer.CustomerIdentity.Middleware;
 using Shopizer.CustomerIdentity.Services;
@@ -21,29 +20,9 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
     });
-builder.Services.Configure<ApiBehaviorOptions>(options =>
-{
-    options.InvalidModelStateResponseFactory = context =>
-    {
-        var errors = context.ModelState
-            .Where(x => x.Value?.Errors.Count > 0)
-            .SelectMany(x => x.Value!.Errors.Select(e => new { field = x.Key, message = string.IsNullOrWhiteSpace(e.ErrorMessage) ? "The value is invalid." : e.ErrorMessage }))
-            .ToArray();
-        return new ObjectResult(new
-        {
-            error = "VALIDATION_FAILED",
-            message = "Request validation failed",
-            statusCode = 422,
-            timestamp = DateTimeOffset.UtcNow.ToString("O"),
-            correlationId = context.HttpContext.Response.Headers["x-correlation-id"].FirstOrDefault(),
-            details = errors
-        }) { StatusCode = 422 };
-    };
-});
 
 var app = builder.Build();
 await app.Services.GetRequiredService<SchemaInitializer>().InitializeAsync(CancellationToken.None);
-app.UseMiddleware<CorrelationMiddleware>();
 app.UseMiddleware<ErrorMiddleware>();
 app.UseMiddleware<TokenMiddleware>();
 app.MapControllers();

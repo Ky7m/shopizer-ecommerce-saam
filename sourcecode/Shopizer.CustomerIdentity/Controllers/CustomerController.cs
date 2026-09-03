@@ -1,95 +1,11 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Shopizer.CustomerIdentity.Data;
 using Shopizer.CustomerIdentity.DTOs;
+using Shopizer.CustomerIdentity.Middleware;
 using Shopizer.CustomerIdentity.Models;
 using Shopizer.CustomerIdentity.Services;
 
-namespace Shopizer.CustomerIdentity.Middleware;
-
-public sealed class CorrelationMiddleware(RequestDelegate next)
-{
-    public async Task InvokeAsync(HttpContext context)
-    {
-        var correlation = context.Request.Headers["x-correlation-id"].FirstOrDefault();
-        correlation = string.IsNullOrWhiteSpace(correlation) ? Guid.NewGuid().ToString() : correlation;
-        context.Response.Headers["x-correlation-id"] = correlation;
-        await next(context);
-    }
-}
-
-public sealed class ErrorMiddleware(RequestDelegate next, ILogger<ErrorMiddleware> logger)
-{
-    public async Task InvokeAsync(HttpContext context)
-    {
-        try { await next(context); }
-        catch (DomainException ex)
-        {
-            await WriteError(context, ex.StatusCode, ex.Code, ex.Message);
-        }
-        catch (FormatException)
-        {
-            await WriteError(context, 400, "INVALID_REQUEST", "A route identifier is invalid");
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Unhandled customer identity failure");
-            await WriteError(context, 500, "INTERNAL_ERROR", "Internal server error");
-        }
-    }
-
-    private static async Task WriteError(HttpContext context, int status, string code, string message)
-    {
-        if (context.Response.HasStarted) return;
-        context.Response.StatusCode = status; context.Response.ContentType = "application/json";
-        await context.Response.WriteAsJsonAsync(new ErrorResponseDto
-        {
-            Error = code, Message = message, StatusCode = status,
-            Timestamp = DateTimeOffset.UtcNow.ToString("O"),
-            CorrelationId = context.Response.Headers["x-correlation-id"].FirstOrDefault()
-        });
-    }
-}
-
-public sealed class TokenMiddleware(RequestDelegate next, TokenService tokens)
-{
-    public async Task InvokeAsync(HttpContext context)
-    {
-        if (context.Request.Headers.Authorization.ToString() is { Length: > 7 } authorization &&
-            authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-        {
-            try
-            {
-                var request = RequestContext.From(context);
-                var token = await tokens.ValidateAsync(authorization[7..].Trim(), request, context.RequestAborted);
-                if (token is not null)
-                {
-                    var claims = new List<Claim>
-                    {
-                        new(ClaimTypes.NameIdentifier, token.SubjectId.ToString()), new(ClaimTypes.Name, token.Login),
-                        new("sub", token.SubjectId.ToString()), new("kind", token.Kind), new("tenantId", token.TenantId), new("storeId", token.StoreId)
-                    };
-                    claims.AddRange(token.Roles.Select(role => new Claim(ClaimTypes.Role, role)));
-                    context.User = new ClaimsPrincipal(new ClaimsIdentity(claims, "Bearer"));
-                }
-            }
-            catch (DomainException) { }
-        }
-        await next(context);
-    }
-}
-
-public static class HttpIdentity
-{
-    public static RequestContext Context(HttpContext http) => RequestContext.From(http);
-    public static Guid RequireSubject(HttpContext http, string kind, params string[] roles)
-    {
-        if (http.User.Identity?.IsAuthenticated != true || !http.User.Kind().Equals(kind, StringComparison.OrdinalIgnoreCase))
-            throw new DomainException("UNAUTHORIZED", "Authentication token is invalid", 401);
-        if (roles.Length > 0 && !http.User.HasRole(roles)) throw new DomainException("FORBIDDEN", "Administrator is not authorized for this operation", 403);
-        return http.User.SubjectId() ?? throw new DomainException("UNAUTHORIZED", "Authentication token is invalid", 401);
-    }
-}
+namespace Shopizer.CustomerIdentity.Controllers;
 
 [ApiController]
 [Route("api/v1")]
@@ -106,9 +22,9 @@ public sealed class CustomerController(IdentityService service) : ControllerBase
     {
         var context = HttpIdentity.Context(HttpContext); var id = HttpIdentity.RequireSubject(HttpContext, "customer");
         var authorization = Request.Headers.Authorization.ToString();
-        var token = await serviceToken().ValidateAsync(authorization[7..].Trim(), context, ct) ?? throw new DomainException("REFRESH_NOT_ALLOWED", "Token cannot be refreshed", 400);
+        var token = await ServiceToken().ValidateAsync(authorization[7..].Trim(), context, ct) ?? throw new DomainException("REFRESH_NOT_ALLOWED", "Token cannot be refreshed", 400);
         return await service.RefreshAsync(token, context, ct);
-        TokenService serviceToken() => HttpContext.RequestServices.GetRequiredService<TokenService>();
+        TokenService ServiceToken() => HttpContext.RequestServices.GetRequiredService<TokenService>();
     }
 
     [HttpGet("customers")]

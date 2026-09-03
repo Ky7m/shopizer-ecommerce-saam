@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Npgsql;
+using NpgsqlTypes;
 using Shopizer.CustomerIdentity.DTOs;
 using Shopizer.CustomerIdentity.Models;
 
@@ -34,6 +35,8 @@ public sealed class IdentityRepository
     private NpgsqlConnection Connection() => new(_connectionString!);
     private static void P(NpgsqlCommand c, string name, object? value) =>
         c.Parameters.AddWithValue(name, value ?? DBNull.Value);
+    private static void PT(NpgsqlCommand c, string name, string? value) =>
+        c.Parameters.Add(name, NpgsqlDbType.Text).Value = value ?? (object)DBNull.Value;
 
     public async Task<CustomerAccount?> FindCustomerAsync(Guid id, RequestContext ctx, CancellationToken ct)
     {
@@ -90,9 +93,9 @@ public sealed class IdentityRepository
 
     private static void AddFilterParameters(NpgsqlCommand c, RequestContext ctx, string? name, string? email, string? first, string? last, string? country)
     {
-        P(c, "tenant", ctx.TenantId); P(c, "store", ctx.StoreId); P(c, "name", string.IsNullOrWhiteSpace(name) ? null : name);
-        P(c, "email", string.IsNullOrWhiteSpace(email) ? null : email); P(c, "first", string.IsNullOrWhiteSpace(first) ? null : first);
-        P(c, "last", string.IsNullOrWhiteSpace(last) ? null : last); P(c, "country", string.IsNullOrWhiteSpace(country) ? null : country);
+        P(c, "tenant", ctx.TenantId); P(c, "store", ctx.StoreId); PT(c, "name", string.IsNullOrWhiteSpace(name) ? null : name);
+        PT(c, "email", string.IsNullOrWhiteSpace(email) ? null : email); PT(c, "first", string.IsNullOrWhiteSpace(first) ? null : first);
+        PT(c, "last", string.IsNullOrWhiteSpace(last) ? null : last); PT(c, "country", string.IsNullOrWhiteSpace(country) ? null : country);
     }
 
     public async Task<List<AddressRecord>> GetAddressesAsync(Guid customerId, CancellationToken ct)
@@ -137,7 +140,7 @@ public sealed class IdentityRepository
             foreach (var attr in attributes) await InsertAttributeAsync(db, tx, c, attr, ct);
             var eventId = c.Id; var occurredAt = DateTimeOffset.UtcNow;
             await using var eventCmd = new NpgsqlCommand("INSERT INTO customer_identity.event_outbox(id,event_type,tenant_id,store_id,correlation_id,payload,occurred_at) VALUES(@id,'CustomerRegistered',@tenant,@store,@correlation,@payload,@at)", db, tx);
-            P(eventCmd, "id", eventId); P(eventCmd, "tenant", ctx.TenantId); P(eventCmd, "store", ctx.StoreId); P(eventCmd, "correlation", ctx.CorrelationId); P(eventCmd, "payload", JsonSerializer.Serialize(new { eventId, eventType = "CustomerRegistered", eventVersion = 1, occurredAt, tenantId = ctx.TenantId, storeId = ctx.StoreId, correlationId = ctx.CorrelationId, customerId = c.Id, loginName = c.LoginName, emailAddress = c.EmailAddress, status = c.Status })); P(eventCmd, "at", occurredAt); await eventCmd.ExecuteNonQueryAsync(ct);
+            P(eventCmd, "id", eventId); P(eventCmd, "tenant", ctx.TenantId); P(eventCmd, "store", ctx.StoreId); P(eventCmd, "correlation", ctx.CorrelationId); eventCmd.Parameters.Add("payload", NpgsqlDbType.Jsonb).Value = JsonSerializer.Serialize(new { eventId, eventType = "CustomerRegistered", eventVersion = 1, occurredAt, tenantId = ctx.TenantId, storeId = ctx.StoreId, correlationId = ctx.CorrelationId, customerId = c.Id, loginName = c.LoginName, emailAddress = c.EmailAddress, status = c.Status }); P(eventCmd, "at", occurredAt); await eventCmd.ExecuteNonQueryAsync(ct);
             await tx.CommitAsync(ct);
         }
         catch (PostgresException ex) when (ex.SqlState == "23505") { await tx.RollbackAsync(ct); throw new DomainException("CUSTOMER_IDENTITY_CONFLICT", "Login identifier is already registered for this store", 409); }
@@ -195,10 +198,10 @@ public sealed class IdentityRepository
         }
         await using var db = Connection(); await db.OpenAsync(ct);
         await using var cmd = new NpgsqlCommand("SELECT id,tenant_id,store_id,user_name,email_address,password_hash,first_name,last_name,is_active,default_language_code,last_password_reset_at FROM customer_identity.administrator_accounts WHERE tenant_id=@tenant AND store_id=@store AND (@email IS NULL OR email_address ILIKE '%' || @email || '%') ORDER BY user_name OFFSET @offset LIMIT @limit", db);
-        P(cmd, "tenant", ctx.TenantId); P(cmd, "store", ctx.StoreId); P(cmd, "email", string.IsNullOrWhiteSpace(email) ? null : email); P(cmd, "offset", Math.Max(0, page - 1) * pageSize); P(cmd, "limit", pageSize);
+        P(cmd, "tenant", ctx.TenantId); P(cmd, "store", ctx.StoreId); PT(cmd, "email", string.IsNullOrWhiteSpace(email) ? null : email); P(cmd, "offset", Math.Max(0, page - 1) * pageSize); P(cmd, "limit", pageSize);
         var result = new List<AdministratorAccount>(); await using var r = await cmd.ExecuteReaderAsync(ct); while (await r.ReadAsync(ct)) result.Add(ReadAdmin(r)); await r.CloseAsync();
         await using var count = new NpgsqlCommand("SELECT COUNT(*) FROM customer_identity.administrator_accounts WHERE tenant_id=@tenant AND store_id=@store AND (@email IS NULL OR email_address ILIKE '%' || @email || '%')", db);
-        P(count, "tenant", ctx.TenantId); P(count, "store", ctx.StoreId); P(count, "email", string.IsNullOrWhiteSpace(email) ? null : email); return (result, (long)(await count.ExecuteScalarAsync(ct) ?? 0L));
+        P(count, "tenant", ctx.TenantId); P(count, "store", ctx.StoreId); PT(count, "email", string.IsNullOrWhiteSpace(email) ? null : email); return (result, (long)(await count.ExecuteScalarAsync(ct) ?? 0L));
     }
 
     public async Task AddAdminAsync(AdministratorAccount a, IEnumerable<string> groups, RequestContext ctx, CancellationToken ct)
@@ -267,7 +270,7 @@ public sealed class IdentityRepository
         await using var cmd = new NpgsqlCommand("INSERT INTO customer_identity.email_outbox(id,tenant_id,store_id,recipient,template,payload) VALUES(@id,@tenant,@store,@recipient,@template,@payload)", db);
         P(cmd, "id", Guid.NewGuid()); P(cmd, "tenant", context.TenantId); P(cmd, "store", context.StoreId); P(cmd, "recipient", recipient);
         P(cmd, "template", subjectType == "Administrator" ? "administrator-password-reset" : "customer-password-reset");
-        P(cmd, "payload", JsonSerializer.Serialize(new { returnUrl, token, storeCode = context.StoreId }));
+        cmd.Parameters.Add("payload", NpgsqlDbType.Jsonb).Value = JsonSerializer.Serialize(new { returnUrl, token, storeCode = context.StoreId });
         await cmd.ExecuteNonQueryAsync(ct);
     }
 
