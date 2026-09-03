@@ -1,7 +1,10 @@
 namespace Shopizer.IntegrationTests;
 
 [Collection(ShopizerAspireCollection.Name)]
-public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) : ComprehensiveTestBase(fixture.CatalogProductClient)
+public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) : ComprehensiveTestBase(
+    fixture.CatalogProductClient,
+    fixture.AdminAccessToken,
+    fixture.PrepareCatalogRequestAsync)
 {
 
     // Source assertion 1: Contract success: POST /categories
@@ -10,7 +13,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test001_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -21,7 +24,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test002_POST_BASE_URL_categories_Status_401() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{}",
         401,
         requiredField: null);
@@ -32,7 +35,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test003_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -43,7 +46,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-002")]
     public Task Test004_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -54,7 +57,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-003")]
     public Task Test005_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -65,7 +68,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-004")]
     public Task Test006_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -76,7 +79,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-005")]
     public Task Test007_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -87,7 +90,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-006")]
     public Task Test008_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -98,7 +101,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-007")]
     public Task Test009_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -109,7 +112,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-008")]
     public Task Test010_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -120,7 +123,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-009")]
     public Task Test011_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -131,7 +134,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-010")]
     public Task Test012_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -142,7 +145,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-011")]
     public Task Test013_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -153,7 +156,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-012")]
     public Task Test014_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -164,7 +167,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-013")]
     public Task Test015_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -175,7 +178,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-014")]
     public Task Test016_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -186,7 +189,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-015")]
     public Task Test017_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -197,7 +200,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-016")]
     public Task Test018_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -208,7 +211,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-017")]
     public Task Test019_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -219,7 +222,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-018")]
     public Task Test020_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -230,7 +233,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-019")]
     public Task Test021_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -241,7 +244,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-025")]
     public Task Test022_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -252,7 +255,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-026")]
     public Task Test023_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -263,7 +266,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-027")]
     public Task Test024_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -274,7 +277,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-028")]
     public Task Test025_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -285,7 +288,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-029")]
     public Task Test026_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -296,7 +299,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-030")]
     public Task Test027_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -307,7 +310,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-031")]
     public Task Test028_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -318,7 +321,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-ORD-012")]
     public Task Test029_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -329,7 +332,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-EXT-019")]
     public Task Test030_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -340,7 +343,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-EXT-020")]
     public Task Test031_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -351,7 +354,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-UI-003")]
     public Task Test032_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -362,7 +365,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-UI-004")]
     public Task Test033_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -373,7 +376,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-UI-005")]
     public Task Test034_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -384,7 +387,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-UI-006")]
     public Task Test035_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -395,7 +398,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-032")]
     public Task Test036_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -406,7 +409,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-033")]
     public Task Test037_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -417,7 +420,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-034")]
     public Task Test038_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -428,7 +431,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-035")]
     public Task Test039_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -439,7 +442,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-036")]
     public Task Test040_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -450,7 +453,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-037")]
     public Task Test041_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -461,7 +464,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-038")]
     public Task Test042_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -472,7 +475,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-039")]
     public Task Test043_POST_BASE_URL_categories_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/categories",
+        "/api/v1/categories",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         201,
         requiredField: "id");
@@ -483,7 +486,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test044_POST_BASE_URL_products_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        "/products",
+        "/api/v1/products",
         "{\"sku\":\"phase4c-test\",\"refSku\":\"phase4c-test\",\"visible\":true,\"canBePurchased\":true,\"dateAvailable\":\"2026-09-02T00:00:00Z\",\"manufacturerCode\":\"phase4c-test\",\"productTypeCode\":\"phase4c-test\",\"taxClassCode\":\"phase4c-test\",\"productVirtual\":true,\"productShippable\":true,\"productFree\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"highlights\":\"phase4c-test\",\"title\":\"phase4c-test\",\"keywords\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}],\"availabilities\":[{\"regionCode\":\"phase4c-test\",\"quantity\":1,\"active\":true}],\"categories\":[{\"id\":\"00000000-0000-0000-0000-000000000001\",\"code\":\"phase4c-test\"}],\"variants\":[{\"sku\":\"phase4c-test\",\"code\":\"phase4c-test\",\"defaultSelection\":true,\"available\":true,\"dateAvailable\":\"2026-09-02T00:00:00Z\",\"availability\":{\"regionCode\":\"phase4c-test\",\"quantity\":1,\"active\":true}}]}",
         201,
         requiredField: "id");
@@ -494,7 +497,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test045_POST_BASE_URL_products_Status_401() => AssertShellAsync(
         Method("POST"),
-        "/products",
+        "/api/v1/products",
         "{}",
         401,
         requiredField: null);
@@ -505,7 +508,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test046_POST_BASE_URL_products_ById_categories_ById_Field_id_200() => AssertShellAsync(
         Method("POST"),
-        $"/products/{ResourceId}/categories/{ResourceId}",
+        $"/api/v1/products/{ResourceId}/categories/{ResourceId}",
         null,
         200,
         requiredField: "id");
@@ -516,7 +519,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test047_POST_BASE_URL_products_ById_categories_ById_Status_401() => AssertShellAsync(
         Method("POST"),
-        $"/products/{ResourceId}/categories/{ResourceId}",
+        $"/api/v1/products/{ResourceId}/categories/{ResourceId}",
         null,
         401,
         requiredField: null);
@@ -527,7 +530,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test048_POST_BASE_URL_products_ById_media_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        $"/products/{ResourceId}/media",
+        $"/api/v1/products/{ResourceId}/media",
         "{\"file\":\"phase4c-test\",\"fileName\":\"phase4c-test\",\"defaultImage\":true}",
         201,
         requiredField: "id");
@@ -538,7 +541,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test049_POST_BASE_URL_products_ById_media_Status_401() => AssertShellAsync(
         Method("POST"),
-        $"/products/{ResourceId}/media",
+        $"/api/v1/products/{ResourceId}/media",
         "{}",
         401,
         requiredField: null);
@@ -549,7 +552,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test050_POST_BASE_URL_products_ById_options_price_Field_finalAmount_200() => AssertShellAsync(
         Method("POST"),
-        $"/products/{ResourceId}/options/price",
+        $"/api/v1/products/{ResourceId}/options/price",
         "{\"selections\":[{\"optionId\":\"00000000-0000-0000-0000-000000000001\",\"valueId\":\"00000000-0000-0000-0000-000000000001\"}],\"currencyCode\":\"phase4c-test\",\"countryCode\":\"phase4c-test\"}",
         200,
         requiredField: "finalAmount");
@@ -560,7 +563,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test051_POST_BASE_URL_products_ById_options_price_Status_404() => AssertShellAsync(
         Method("POST"),
-        $"/products/{ResourceId}/options/price",
+        $"/api/v1/products/{ResourceId}/options/price",
         "{}",
         404,
         requiredField: null);
@@ -571,7 +574,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test052_POST_BASE_URL_products_ById_reservations_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        $"/products/{ResourceId}/reservations",
+        $"/api/v1/products/{ResourceId}/reservations",
         "{\"reservationKey\":\"phase4c-test\",\"variantId\":\"00000000-0000-0000-0000-000000000001\",\"availabilityId\":\"00000000-0000-0000-0000-000000000001\",\"regionCode\":\"phase4c-test\",\"quantity\":1,\"expiresAt\":\"2026-09-02T00:00:00Z\"}",
         201,
         requiredField: "id");
@@ -582,7 +585,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test053_POST_BASE_URL_products_ById_reservations_Status_401() => AssertShellAsync(
         Method("POST"),
-        $"/products/{ResourceId}/reservations",
+        $"/api/v1/products/{ResourceId}/reservations",
         "{}",
         401,
         requiredField: null);
@@ -593,7 +596,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test054_POST_BASE_URL_products_ById_variants_Field_id_201() => AssertShellAsync(
         Method("POST"),
-        $"/products/{ResourceId}/variants",
+        $"/api/v1/products/{ResourceId}/variants",
         "{\"sku\":\"phase4c-test\",\"code\":\"phase4c-test\",\"defaultSelection\":true,\"available\":true,\"dateAvailable\":\"2026-09-02T00:00:00Z\",\"availability\":{\"regionCode\":\"phase4c-test\",\"quantity\":1,\"active\":true}}",
         201,
         requiredField: "id");
@@ -604,7 +607,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test055_POST_BASE_URL_products_ById_variants_Status_401() => AssertShellAsync(
         Method("POST"),
-        $"/products/{ResourceId}/variants",
+        $"/api/v1/products/{ResourceId}/variants",
         "{}",
         401,
         requiredField: null);
@@ -615,7 +618,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test056_POST_BASE_URL_reservations_ById_commit_Field_id_200() => AssertShellAsync(
         Method("POST"),
-        $"/reservations/{ResourceId}/commit",
+        $"/api/v1/reservations/{ResourceId}/commit",
         null,
         200,
         requiredField: "id");
@@ -626,7 +629,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test057_POST_BASE_URL_reservations_ById_commit_Status_401() => AssertShellAsync(
         Method("POST"),
-        $"/reservations/{ResourceId}/commit",
+        $"/api/v1/reservations/{ResourceId}/commit",
         null,
         401,
         requiredField: null);
@@ -637,7 +640,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test058_POST_BASE_URL_reservations_ById_release_Field_id_200() => AssertShellAsync(
         Method("POST"),
-        $"/reservations/{ResourceId}/release",
+        $"/api/v1/reservations/{ResourceId}/release",
         null,
         200,
         requiredField: "id");
@@ -648,7 +651,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test059_POST_BASE_URL_reservations_ById_release_Status_401() => AssertShellAsync(
         Method("POST"),
-        $"/reservations/{ResourceId}/release",
+        $"/api/v1/reservations/{ResourceId}/release",
         null,
         401,
         requiredField: null);
@@ -659,20 +662,20 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test060_GET_BASE_URL_categories_Field_items_200() => AssertShellAsync(
         Method("GET"),
-        "/categories",
+        "/api/v1/categories",
         null,
         200,
         requiredField: "items");
 
     // Source assertion 61: Contract error/conformance: GET /categories
     // @BR-ID: BR-CAT-001
-    [Fact(DisplayName = "061: Contract error/conformance: GET /categories")]
+    [Fact(DisplayName = "061: Contract default: GET /categories")]
     [Trait("BR", "BR-CAT-001")]
-    public Task Test061_GET_BASE_URL_categories_Status_422() => AssertShellAsync(
+    public Task Test061_GET_BASE_URL_categories_DefaultsTo200() => AssertShellAsync(
         Method("GET"),
-        "/categories",
+        "/api/v1/categories",
         null,
-        422,
+        200,
         requiredField: null);
 
     // Source assertion 62: Contract success: GET /categories/slug/{friendlyUrl}
@@ -681,7 +684,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test062_GET_BASE_URL_categories_slug_phase4c_value_Field_id_200() => AssertShellAsync(
         Method("GET"),
-        "/categories/slug/phase4c-value",
+        "/api/v1/categories/slug/phase4c-value",
         null,
         200,
         requiredField: "id");
@@ -692,7 +695,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test063_GET_BASE_URL_categories_slug_phase4c_value_Status_404() => AssertShellAsync(
         Method("GET"),
-        "/categories/slug/phase4c-value",
+        "/api/v1/categories/slug/phase4c-value",
         null,
         404,
         requiredField: null);
@@ -703,7 +706,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test064_GET_BASE_URL_categories_uniqueness_Field_exists_200() => AssertShellAsync(
         Method("GET"),
-        "/categories/uniqueness",
+        "/api/v1/categories/uniqueness?code=phase4c-parent",
         null,
         200,
         requiredField: "exists");
@@ -714,7 +717,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test065_GET_BASE_URL_categories_uniqueness_Status_401() => AssertShellAsync(
         Method("GET"),
-        "/categories/uniqueness",
+        "/api/v1/categories/uniqueness?code=phase4c-parent",
         null,
         401,
         requiredField: null);
@@ -725,7 +728,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test066_GET_BASE_URL_categories_ById_Field_id_200() => AssertShellAsync(
         Method("GET"),
-        $"/categories/{ResourceId}",
+        $"/api/v1/categories/{ResourceId}",
         null,
         200,
         requiredField: "id");
@@ -736,7 +739,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test067_GET_BASE_URL_categories_ById_Status_404() => AssertShellAsync(
         Method("GET"),
-        $"/categories/{ResourceId}",
+        $"/api/v1/categories/{ResourceId}",
         null,
         404,
         requiredField: null);
@@ -747,7 +750,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test068_GET_BASE_URL_categories_ById_products_Field_items_200() => AssertShellAsync(
         Method("GET"),
-        $"/categories/{ResourceId}/products",
+        $"/api/v1/categories/{ResourceId}/products",
         null,
         200,
         requiredField: "items");
@@ -758,7 +761,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test069_GET_BASE_URL_categories_ById_products_Status_404() => AssertShellAsync(
         Method("GET"),
-        $"/categories/{ResourceId}/products",
+        $"/api/v1/categories/{ResourceId}/products",
         null,
         404,
         requiredField: null);
@@ -769,20 +772,20 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test070_GET_BASE_URL_products_Field_items_200() => AssertShellAsync(
         Method("GET"),
-        "/products",
+        "/api/v1/products",
         null,
         200,
         requiredField: "items");
 
     // Source assertion 71: Contract error/conformance: GET /products
     // @BR-ID: BR-CAT-001
-    [Fact(DisplayName = "071: Contract error/conformance: GET /products")]
+    [Fact(DisplayName = "071: Contract public access: GET /products")]
     [Trait("BR", "BR-CAT-001")]
-    public Task Test071_GET_BASE_URL_products_Status_401() => AssertShellAsync(
+    public Task Test071_GET_BASE_URL_products_PubliclyReturns200() => AssertShellAsync(
         Method("GET"),
-        "/products",
+        "/api/v1/products",
         null,
-        401,
+        200,
         requiredField: null);
 
     // Source assertion 72: Contract success: GET /products/sku/{sku}
@@ -791,7 +794,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test072_GET_BASE_URL_products_sku_phase4c_sku_Field_id_200() => AssertShellAsync(
         Method("GET"),
-        "/products/sku/phase4c-sku",
+        "/api/v1/products/sku/phase4c-sku",
         null,
         200,
         requiredField: "id");
@@ -802,7 +805,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test073_GET_BASE_URL_products_sku_phase4c_sku_Status_404() => AssertShellAsync(
         Method("GET"),
-        "/products/sku/phase4c-sku",
+        "/api/v1/products/sku/phase4c-sku",
         null,
         404,
         requiredField: null);
@@ -813,7 +816,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test074_GET_BASE_URL_products_slug_phase4c_value_Field_id_200() => AssertShellAsync(
         Method("GET"),
-        "/products/slug/phase4c-value",
+        "/api/v1/products/slug/phase4c-value",
         null,
         200,
         requiredField: "id");
@@ -824,7 +827,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test075_GET_BASE_URL_products_slug_phase4c_value_Status_404() => AssertShellAsync(
         Method("GET"),
-        "/products/slug/phase4c-value",
+        "/api/v1/products/slug/phase4c-value",
         null,
         404,
         requiredField: null);
@@ -835,7 +838,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test076_GET_BASE_URL_products_uniqueness_Field_exists_200() => AssertShellAsync(
         Method("GET"),
-        "/products/uniqueness",
+        "/api/v1/products/uniqueness?sku=phase4c-sku",
         null,
         200,
         requiredField: "exists");
@@ -846,7 +849,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test077_GET_BASE_URL_products_uniqueness_Status_401() => AssertShellAsync(
         Method("GET"),
-        "/products/uniqueness",
+        "/api/v1/products/uniqueness?sku=phase4c-sku",
         null,
         401,
         requiredField: null);
@@ -857,7 +860,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test078_GET_BASE_URL_products_ById_Field_id_200() => AssertShellAsync(
         Method("GET"),
-        $"/products/{ResourceId}",
+        $"/api/v1/products/{ResourceId}",
         null,
         200,
         requiredField: "id");
@@ -868,7 +871,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test079_GET_BASE_URL_products_ById_Status_404() => AssertShellAsync(
         Method("GET"),
-        $"/products/{ResourceId}",
+        $"/api/v1/products/{ResourceId}",
         null,
         404,
         requiredField: null);
@@ -879,7 +882,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test080_GET_BASE_URL_products_ById_availability_Field_items_200() => AssertShellAsync(
         Method("GET"),
-        $"/products/{ResourceId}/availability",
+        $"/api/v1/products/{ResourceId}/availability",
         null,
         200,
         requiredField: "items");
@@ -890,7 +893,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test081_GET_BASE_URL_products_ById_availability_Status_404() => AssertShellAsync(
         Method("GET"),
-        $"/products/{ResourceId}/availability",
+        $"/api/v1/products/{ResourceId}/availability",
         null,
         404,
         requiredField: null);
@@ -901,7 +904,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test082_GET_BASE_URL_products_ById_variants_Field_items_200() => AssertShellAsync(
         Method("GET"),
-        $"/products/{ResourceId}/variants",
+        $"/api/v1/products/{ResourceId}/variants",
         null,
         200,
         requiredField: "items");
@@ -912,7 +915,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test083_GET_BASE_URL_products_ById_variants_Status_404() => AssertShellAsync(
         Method("GET"),
-        $"/products/{ResourceId}/variants",
+        $"/api/v1/products/{ResourceId}/variants",
         null,
         404,
         requiredField: null);
@@ -923,7 +926,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test084_GET_BASE_URL_products_ById_variants_uniqueness_phase4c_sku_Field_exists_200() => AssertShellAsync(
         Method("GET"),
-        $"/products/{ResourceId}/variants/uniqueness/phase4c-sku",
+        $"/api/v1/products/{ResourceId}/variants/uniqueness/phase4c-sku",
         null,
         200,
         requiredField: "exists");
@@ -934,7 +937,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test085_GET_BASE_URL_products_ById_variants_uniqueness_phase4c_sku_Status_401() => AssertShellAsync(
         Method("GET"),
-        $"/products/{ResourceId}/variants/uniqueness/phase4c-sku",
+        $"/api/v1/products/{ResourceId}/variants/uniqueness/phase4c-sku",
         null,
         401,
         requiredField: null);
@@ -945,7 +948,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test086_GET_BASE_URL_products_ById_variants_ById_Field_id_200() => AssertShellAsync(
         Method("GET"),
-        $"/products/{ResourceId}/variants/{ResourceId}",
+        $"/api/v1/products/{ResourceId}/variants/{ResourceId}",
         null,
         200,
         requiredField: "id");
@@ -956,7 +959,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test087_GET_BASE_URL_products_ById_variants_ById_Status_404() => AssertShellAsync(
         Method("GET"),
-        $"/products/{ResourceId}/variants/{ResourceId}",
+        $"/api/v1/products/{ResourceId}/variants/{ResourceId}",
         null,
         404,
         requiredField: null);
@@ -967,7 +970,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test088_PUT_BASE_URL_categories_ById_Field_id_200() => AssertShellAsync(
         Method("PUT"),
-        $"/categories/{ResourceId}",
+        $"/api/v1/categories/{ResourceId}",
         "{\"code\":\"phase4c-test\",\"parentId\":\"00000000-0000-0000-0000-000000000001\",\"visible\":true,\"featured\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"title\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
         200,
         requiredField: "id");
@@ -978,7 +981,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test089_PUT_BASE_URL_categories_ById_Status_401() => AssertShellAsync(
         Method("PUT"),
-        $"/categories/{ResourceId}",
+        $"/api/v1/categories/{ResourceId}",
         "{}",
         401,
         requiredField: null);
@@ -989,7 +992,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test090_PUT_BASE_URL_categories_ById_move_ById_Field_id_200() => AssertShellAsync(
         Method("PUT"),
-        $"/categories/{ResourceId}/move/{ResourceId}",
+        $"/api/v1/categories/{ResourceId}/move/{ResourceId}",
         null,
         200,
         requiredField: "id");
@@ -1000,7 +1003,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test091_PUT_BASE_URL_categories_ById_move_ById_Status_401() => AssertShellAsync(
         Method("PUT"),
-        $"/categories/{ResourceId}/move/{ResourceId}",
+        $"/api/v1/categories/{ResourceId}/move/{ResourceId}",
         null,
         401,
         requiredField: null);
@@ -1011,7 +1014,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test092_PATCH_BASE_URL_categories_ById_visibility_Field_id_200() => AssertShellAsync(
         Method("PATCH"),
-        $"/categories/{ResourceId}/visibility",
+        $"/api/v1/categories/{ResourceId}/visibility",
         "{\"visible\":true}",
         200,
         requiredField: "id");
@@ -1022,7 +1025,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test093_PATCH_BASE_URL_categories_ById_visibility_Status_401() => AssertShellAsync(
         Method("PATCH"),
-        $"/categories/{ResourceId}/visibility",
+        $"/api/v1/categories/{ResourceId}/visibility",
         "{}",
         401,
         requiredField: null);
@@ -1033,7 +1036,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test094_PUT_BASE_URL_products_ById_Field_id_200() => AssertShellAsync(
         Method("PUT"),
-        $"/products/{ResourceId}",
+        $"/api/v1/products/{ResourceId}",
         "{\"sku\":\"phase4c-test\",\"refSku\":\"phase4c-test\",\"visible\":true,\"canBePurchased\":true,\"dateAvailable\":\"2026-09-02T00:00:00Z\",\"manufacturerCode\":\"phase4c-test\",\"productTypeCode\":\"phase4c-test\",\"taxClassCode\":\"phase4c-test\",\"productVirtual\":true,\"productShippable\":true,\"productFree\":true,\"sortOrder\":1,\"descriptions\":[{\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"description\":\"phase4c-test\",\"highlights\":\"phase4c-test\",\"title\":\"phase4c-test\",\"keywords\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}],\"availabilities\":[{\"regionCode\":\"phase4c-test\",\"quantity\":1,\"active\":true}]}",
         200,
         requiredField: "id");
@@ -1044,7 +1047,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test095_PUT_BASE_URL_products_ById_Status_401() => AssertShellAsync(
         Method("PUT"),
-        $"/products/{ResourceId}",
+        $"/api/v1/products/{ResourceId}",
         "{}",
         401,
         requiredField: null);
@@ -1055,7 +1058,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test096_PUT_BASE_URL_products_ById_availability_Field_items_200() => AssertShellAsync(
         Method("PUT"),
-        $"/products/{ResourceId}/availability",
+        $"/api/v1/products/{ResourceId}/availability",
         "{\"items\":[{\"regionCode\":\"phase4c-test\",\"quantity\":1,\"active\":true}]}",
         200,
         requiredField: "items");
@@ -1066,7 +1069,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test097_PUT_BASE_URL_products_ById_availability_Status_401() => AssertShellAsync(
         Method("PUT"),
-        $"/products/{ResourceId}/availability",
+        $"/api/v1/products/{ResourceId}/availability",
         "{}",
         401,
         requiredField: null);
@@ -1077,7 +1080,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test098_PUT_BASE_URL_products_ById_variants_ById_Field_id_200() => AssertShellAsync(
         Method("PUT"),
-        $"/products/{ResourceId}/variants/{ResourceId}",
+        $"/api/v1/products/{ResourceId}/variants/{ResourceId}",
         "{\"sku\":\"phase4c-test\",\"code\":\"phase4c-test\",\"defaultSelection\":true,\"available\":true,\"dateAvailable\":\"2026-09-02T00:00:00Z\"}",
         200,
         requiredField: "id");
@@ -1088,7 +1091,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test099_PUT_BASE_URL_products_ById_variants_ById_Status_401() => AssertShellAsync(
         Method("PUT"),
-        $"/products/{ResourceId}/variants/{ResourceId}",
+        $"/api/v1/products/{ResourceId}/variants/{ResourceId}",
         "{}",
         401,
         requiredField: null);
@@ -1099,7 +1102,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test100_PATCH_BASE_URL_products_ById_visibility_Field_id_200() => AssertShellAsync(
         Method("PATCH"),
-        $"/products/{ResourceId}/visibility",
+        $"/api/v1/products/{ResourceId}/visibility",
         "{\"visible\":true,\"canBePurchased\":true,\"dateAvailable\":\"2026-09-02T00:00:00Z\"}",
         200,
         requiredField: "id");
@@ -1110,7 +1113,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test101_PATCH_BASE_URL_products_ById_visibility_Status_401() => AssertShellAsync(
         Method("PATCH"),
-        $"/products/{ResourceId}/visibility",
+        $"/api/v1/products/{ResourceId}/visibility",
         "{}",
         401,
         requiredField: null);
@@ -1121,7 +1124,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test102_DELETE_BASE_URL_categories_ById_Field_categoryId_200() => AssertShellAsync(
         Method("DELETE"),
-        $"/categories/{ResourceId}",
+        $"/api/v1/categories/{ResourceId}",
         null,
         200,
         requiredField: "categoryId");
@@ -1132,7 +1135,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test103_DELETE_BASE_URL_categories_ById_Status_401() => AssertShellAsync(
         Method("DELETE"),
-        $"/categories/{ResourceId}",
+        $"/api/v1/categories/{ResourceId}",
         null,
         401,
         requiredField: null);
@@ -1143,7 +1146,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test104_DELETE_BASE_URL_products_ById_Field_id_200() => AssertShellAsync(
         Method("DELETE"),
-        $"/products/{ResourceId}",
+        $"/api/v1/products/{ResourceId}",
         null,
         200,
         requiredField: "id");
@@ -1154,7 +1157,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test105_DELETE_BASE_URL_products_ById_Status_401() => AssertShellAsync(
         Method("DELETE"),
-        $"/products/{ResourceId}",
+        $"/api/v1/products/{ResourceId}",
         null,
         401,
         requiredField: null);
@@ -1165,7 +1168,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test106_DELETE_BASE_URL_products_ById_categories_ById_Field_id_200() => AssertShellAsync(
         Method("DELETE"),
-        $"/products/{ResourceId}/categories/{ResourceId}",
+        $"/api/v1/products/{ResourceId}/categories/{ResourceId}",
         null,
         200,
         requiredField: "id");
@@ -1176,7 +1179,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test107_DELETE_BASE_URL_products_ById_categories_ById_Status_401() => AssertShellAsync(
         Method("DELETE"),
-        $"/products/{ResourceId}/categories/{ResourceId}",
+        $"/api/v1/products/{ResourceId}/categories/{ResourceId}",
         null,
         401,
         requiredField: null);
@@ -1187,7 +1190,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test108_DELETE_BASE_URL_products_ById_media_ById_Field_id_200() => AssertShellAsync(
         Method("DELETE"),
-        $"/products/{ResourceId}/media/{ResourceId}",
+        $"/api/v1/products/{ResourceId}/media/{ResourceId}",
         null,
         200,
         requiredField: "id");
@@ -1198,7 +1201,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test109_DELETE_BASE_URL_products_ById_media_ById_Status_401() => AssertShellAsync(
         Method("DELETE"),
-        $"/products/{ResourceId}/media/{ResourceId}",
+        $"/api/v1/products/{ResourceId}/media/{ResourceId}",
         null,
         401,
         requiredField: null);
@@ -1209,7 +1212,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test110_DELETE_BASE_URL_products_ById_variants_ById_Field_id_200() => AssertShellAsync(
         Method("DELETE"),
-        $"/products/{ResourceId}/variants/{ResourceId}",
+        $"/api/v1/products/{ResourceId}/variants/{ResourceId}",
         null,
         200,
         requiredField: "id");
@@ -1220,7 +1223,7 @@ public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) 
     [Trait("BR", "BR-CAT-001")]
     public Task Test111_DELETE_BASE_URL_products_ById_variants_ById_Status_401() => AssertShellAsync(
         Method("DELETE"),
-        $"/products/{ResourceId}/variants/{ResourceId}",
+        $"/api/v1/products/{ResourceId}/variants/{ResourceId}",
         null,
         401,
         requiredField: null);

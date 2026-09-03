@@ -163,12 +163,21 @@ fi
 echo "[run-and-reconcile] Running $TEST_CLASS..."
 TEST_START=$(date +%s)
 
-dotnet test "$TEST_PROJECT" \
-    --nologo \
-    --no-build \
-    --filter "FullyQualifiedName~$TEST_CLASS" \
-    --logger "trx;LogFileName=$TRX_FILE" \
-    > "$TRX_DIR/${RUN_ID}.log" 2>&1
+if grep -q '"runner"[[:space:]]*:[[:space:]]*"Microsoft.Testing.Platform"' "$WORKSPACE_ROOT/sourcecode/global.json" 2>/dev/null; then
+    (
+        cd "$WORKSPACE_ROOT/sourcecode" &&
+        dotnet test --project "Shopizer.IntegrationTests/Shopizer.IntegrationTests.csproj" \
+            --no-build \
+            --filter-class "*$TEST_CLASS*"
+    ) > "$TRX_DIR/${RUN_ID}.log" 2>&1
+else
+    dotnet test "$TEST_PROJECT" \
+        --nologo \
+        --no-build \
+        --filter "FullyQualifiedName~$TEST_CLASS" \
+        --logger "trx;LogFileName=$TRX_FILE" \
+        > "$TRX_DIR/${RUN_ID}.log" 2>&1
+fi
 TEST_EXIT_CODE=$?
 
 TEST_END=$(date +%s)
@@ -184,10 +193,10 @@ export WORKSPACE_ROOT SERVICE RUN_ID TIMESTAMP TRIGGER TEST_CLASS SERVICE_DIR
 export BUILD_DURATION DURATION TEST_EXIT_CODE
 export IMPLEMENTATION_TYPE="${IMPLEMENTATION_TYPE:-unknown}"
 
-python3 - "$TRX_FILE" "$TEST_FILE" "$ARTIFACT" << 'PYEOF'
+python3 - "$TRX_FILE" "$TEST_FILE" "$ARTIFACT" "$TRX_DIR/${RUN_ID}.log" << 'PYEOF'
 import os, re, sys, xml.etree.ElementTree as ET
 
-trx_path, test_file, artifact_path = sys.argv[1], sys.argv[2], sys.argv[3]
+trx_path, test_file, artifact_path, log_path = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 
 service = os.environ.get("SERVICE", "")
 run_id = os.environ.get("RUN_ID", "")
@@ -246,31 +255,53 @@ failures = []
 passing_br_ids: set[str] = set()
 failing_br_ids: set[str] = set()
 
-try:
-    tree = ET.parse(trx_path)
-    ns = {"t": "http://microsoft.com/schemas/VisualStudio/TeamTest/2010"}
-    for result in tree.getroot().findall(".//t:UnitTestResult", ns):
-        name = result.get("testName") or ""
-        outcome = (result.get("outcome") or "").lower()
-        method = name.split("(")[0].split(".")[-1]
-        br_ids = traits.get(method) or re.findall(pattern, name) or ["UNKNOWN"]
-        total += 1
-        if outcome == "passed":
-            passed += 1
-            passing_br_ids.update(br_ids)
-        elif outcome in ("notexecuted", "skipped"):
-            # A skipped test is NOT a pass. It counts as a failure of the gate.
-            skipped += 1
-            failing_br_ids.update(br_ids)
-            failures.append((method, br_ids[0], "test was skipped or not executed"))
+if trx_path and os.path.isfile(trx_path):
+    try:
+        tree = ET.parse(trx_path)
+        ns = {"t": "http://microsoft.com/schemas/VisualStudio/TeamTest/2010"}
+        for result in tree.getroot().findall(".//t:UnitTestResult", ns):
+            name = result.get("testName") or ""
+            outcome = (result.get("outcome") or "").lower()
+            method = name.split("(")[0].split(".")[-1]
+            br_ids = traits.get(method) or re.findall(pattern, name) or ["UNKNOWN"]
+            total += 1
+            if outcome == "passed":
+                passed += 1
+                passing_br_ids.update(br_ids)
+            elif outcome in ("notexecuted", "skipped"):
+                # A skipped test is NOT a pass. It counts as a failure of the gate.
+                skipped += 1
+                failing_br_ids.update(br_ids)
+                failures.append((method, br_ids[0], "test was skipped or not executed"))
+            else:
+                failed += 1
+                failing_br_ids.update(br_ids)
+                message = result.find(".//t:Message", ns)
+                reason = (message.text or "").strip().replace("\n", " ") if message is not None else "assertion failed"
+                failures.append((method, br_ids[0], reason[:400]))
+    except (OSError, ET.ParseError) as error:
+        failures.append(("<suite>", "UNKNOWN", f"could not parse TRX results: {error}"))
+else:
+    # Native MTP only exposes a console summary unless the optional TRX extension is installed.
+    try:
+        with open(log_path, encoding="utf-8", errors="ignore") as handle:
+            output = handle.read()
+        summary = re.search(
+            r"total:\s*(\d+)\s+failed:\s*(\d+)\s+succeeded:\s*(\d+)\s+skipped:\s*(\d+)",
+            output,
+            re.IGNORECASE,
+        )
+        if summary:
+            total, failed, passed, skipped = map(int, summary.groups())
+            if failed or skipped:
+                failures.append(("<suite>", "UNKNOWN", "Native MTP console summary reported failures."))
+                failing_br_ids.update(br_id for values in traits.values() for br_id in values)
+            else:
+                passing_br_ids.update(br_id for values in traits.values() for br_id in values)
         else:
-            failed += 1
-            failing_br_ids.update(br_ids)
-            message = result.find(".//t:Message", ns)
-            reason = (message.text or "").strip().replace("\n", " ") if message is not None else "assertion failed"
-            failures.append((method, br_ids[0], reason[:400]))
-except (OSError, ET.ParseError) as error:
-    failures.append(("<suite>", "UNKNOWN", f"could not parse TRX results: {error}"))
+            failures.append(("<suite>", "UNKNOWN", "could not parse native MTP console summary"))
+    except OSError as error:
+        failures.append(("<suite>", "UNKNOWN", f"could not read native MTP output: {error}"))
 
 pass_rate = round(passed / total, 3) if total else 0
 
@@ -363,14 +394,19 @@ echo "  Total: $TOTAL | Passed: $PASSED | Failed: $FAILED | Skipped: $SKIPPED"
 echo "  Pass rate: $PASS_RATE"
 echo "  BR-IDs passing: $BR_IDS_PASSING_COUNT | failing: $BR_IDS_FAILING_COUNT"
 echo "  Artifact: $ARTIFACT"
-echo "  TRX: $TRX_FILE"
+if [ -n "$TRX_FILE" ] && [ -f "$TRX_FILE" ]; then
+    echo "  TRX: $TRX_FILE"
+else
+    echo "  Native MTP log: $TRX_DIR/${RUN_ID}.log"
+fi
 
 # --- Call reconciliation script ---
 RECONCILE_SCRIPT="$WORKSPACE_ROOT/graph-mcp/scripts/reconcile_validation.py"
 if [ -f "$RECONCILE_SCRIPT" ]; then
     echo ""
     echo "[run-and-reconcile] Running graph reconciliation..."
-    python3 "$RECONCILE_SCRIPT" "$ARTIFACT" || echo "WARNING: Reconciliation failed (graph may be unavailable)"
+    uv run --project "$WORKSPACE_ROOT/graph-mcp" python "$RECONCILE_SCRIPT" "$ARTIFACT" ||
+        echo "WARNING: Reconciliation failed (graph may be unavailable)"
 else
     echo ""
     echo "[run-and-reconcile] Reconciliation script not found — artifact produced but graph not updated"

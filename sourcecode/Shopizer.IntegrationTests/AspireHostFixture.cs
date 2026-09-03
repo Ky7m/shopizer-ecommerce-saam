@@ -38,7 +38,7 @@ public sealed class AspireHostFixture : IAsyncLifetime
         var clients = new Dictionary<string, (Action<HttpClient> Assign, string Tenant, string Store, string Correlation, bool Authorization, string? Language, string? IdempotencyKey)>
         {
             ["customer-identity"] = (client => CustomerIdentityClient = client, "tenant-demo", "default", "00000000-0000-0000-0000-000000000001", false, null, null),
-            ["catalog-product"] = (client => CatalogProductClient = client, "test-tenant-001", "test-store-001", "11111111-1111-4111-8111-111111111111", false, null, null),
+            ["catalog-product"] = (client => CatalogProductClient = client, "test-tenant-001", "test-store-001", "11111111-1111-4111-8111-111111111111", false, null, "phase4c-test"),
             ["search"] = (client => SearchClient = client, "test-tenant-001", "test-store-001", "corr-ms03-0001", false, null, null),
             ["cart-checkout"] = (client => CartCheckoutClient = client, "tenant-001", "store-001", "00000000-0000-0000-0000-000000000001", false, null, null),
             ["order-management"] = (client => OrderManagementClient = client, "tenant-a", "store-12", "corr-ms05-001", true, null, null),
@@ -61,6 +61,7 @@ public sealed class AspireHostFixture : IAsyncLifetime
             configuration.Assign(client);
         }
 
+        await EnsureTestCatalogAsync();
         AdminAccessToken = await LoginAsync("phase4c-test", "Phase4c!Password2026", true);
         BasicAdminAccessToken = await LoginAsync("phase4c-basic", "Phase4c!Password2026", true);
         CustomerAccessToken = await LoginAsync("phase4c-test", "Phase4c!Password2026", false);
@@ -275,6 +276,277 @@ public sealed class AspireHostFixture : IAsyncLifetime
         await command.ExecuteNonQueryAsync();
     }
 
+    private async Task EnsureTestCatalogAsync(bool includeReservation = true)
+    {
+        const string tenant = "test-tenant-001";
+        const string store = "test-store-001";
+        const string resourceId = "00000000-0000-0000-0000-000000000001";
+        const string moveParentId = "00000000-0000-0000-0000-000000000002";
+        const string secondAvailabilityId = "00000000-0000-0000-0000-000000000002";
+        const string reservationPayload = """{"reservationKey":"phase4c-test","variantId":"00000000-0000-0000-0000-000000000001","availabilityId":"00000000-0000-0000-0000-000000000001","regionCode":"phase4c-test","quantity":1,"expiresAt":"2026-09-02T00:00:00Z"}""";
+
+        await CleanupCatalogTestDataAsync();
+
+        var connectionString = await _application!.GetConnectionStringAsync("catalogproductdb")
+            ?? throw new InvalidOperationException("The catalog product database connection string is unavailable.");
+
+        await using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        await using var command = new NpgsqlCommand(
+            """
+            INSERT INTO catalog_product.category
+                (id, tenant_id, store_id, code, sort_order, status, visible, featured, depth, lineage)
+            VALUES
+                (@resource_id, @tenant, @store, 'phase4c-parent', 0, 'Active', true, true, 0, '/' || @resource_id || '/')
+            ON CONFLICT (id) DO UPDATE SET
+                tenant_id = EXCLUDED.tenant_id,
+                store_id = EXCLUDED.store_id,
+                code = EXCLUDED.code,
+                parent_id = NULL,
+                sort_order = EXCLUDED.sort_order,
+                status = EXCLUDED.status,
+                visible = EXCLUDED.visible,
+                featured = EXCLUDED.featured,
+                depth = EXCLUDED.depth,
+                lineage = EXCLUDED.lineage;
+
+            INSERT INTO catalog_product.category_description
+                (category_id, language_code, name, friendly_url, description, title, meta_description)
+            VALUES
+                (@resource_id, 'en', 'phase4c-parent', 'phase4c-value', 'phase4c-test', 'phase4c-test', 'phase4c-test')
+            ON CONFLICT (category_id, language_code) DO UPDATE SET
+                name = EXCLUDED.name,
+                friendly_url = EXCLUDED.friendly_url,
+                description = EXCLUDED.description,
+                title = EXCLUDED.title,
+                meta_description = EXCLUDED.meta_description;
+
+            INSERT INTO catalog_product.category
+                (id, tenant_id, store_id, code, sort_order, status, visible, featured, depth, lineage)
+            VALUES
+                (@move_parent_id, @tenant, @store, 'phase4c-move-parent', 1, 'Active', true, false, 0, '/' || @move_parent_id || '/')
+            ON CONFLICT (id) DO UPDATE SET
+                tenant_id = EXCLUDED.tenant_id,
+                store_id = EXCLUDED.store_id,
+                code = EXCLUDED.code,
+                parent_id = NULL,
+                sort_order = EXCLUDED.sort_order,
+                status = EXCLUDED.status,
+                visible = EXCLUDED.visible,
+                featured = EXCLUDED.featured,
+                depth = EXCLUDED.depth,
+                lineage = EXCLUDED.lineage;
+
+            INSERT INTO catalog_product.category_description
+                (category_id, language_code, name, friendly_url, description, title, meta_description)
+            VALUES
+                (@move_parent_id, 'en', 'phase4c-move-parent', 'phase4c-move-parent', 'phase4c-test', 'phase4c-test', 'phase4c-test')
+            ON CONFLICT (category_id, language_code) DO UPDATE SET
+                name = EXCLUDED.name,
+                friendly_url = EXCLUDED.friendly_url,
+                description = EXCLUDED.description,
+                title = EXCLUDED.title,
+                meta_description = EXCLUDED.meta_description;
+
+            INSERT INTO catalog_product.product
+                (id, tenant_id, store_id, sku, ref_sku, status, visible, available, can_be_purchased,
+                 date_available, manufacturer_code, product_type_code, tax_class_code, product_virtual,
+                 product_shippable, product_free, sort_order)
+            VALUES
+                (@resource_id, @tenant, @store, 'phase4c-sku', 'phase4c-ref-sku', 'Active', true, true, true,
+                 now() - interval '1 day', 'phase4c-test', 'phase4c-test', 'phase4c-test', true, true, true, 1)
+            ON CONFLICT (id) DO UPDATE SET
+                tenant_id = EXCLUDED.tenant_id,
+                store_id = EXCLUDED.store_id,
+                sku = EXCLUDED.sku,
+                ref_sku = EXCLUDED.ref_sku,
+                status = EXCLUDED.status,
+                visible = EXCLUDED.visible,
+                available = EXCLUDED.available,
+                can_be_purchased = EXCLUDED.can_be_purchased,
+                date_available = EXCLUDED.date_available,
+                manufacturer_code = EXCLUDED.manufacturer_code,
+                product_type_code = EXCLUDED.product_type_code,
+                tax_class_code = EXCLUDED.tax_class_code,
+                product_virtual = EXCLUDED.product_virtual,
+                product_shippable = EXCLUDED.product_shippable,
+                product_free = EXCLUDED.product_free,
+                sort_order = EXCLUDED.sort_order,
+                version = 0;
+
+            INSERT INTO catalog_product.product_description
+                (product_id, language_code, name, friendly_url, description, highlights, title, keywords, meta_description)
+            VALUES
+                (@resource_id, 'en', 'phase4c-product', 'phase4c-value', 'phase4c-test', 'phase4c-test',
+                 'phase4c-test', 'phase4c-test', 'phase4c-test')
+            ON CONFLICT (product_id, language_code) DO UPDATE SET
+                name = EXCLUDED.name,
+                friendly_url = EXCLUDED.friendly_url,
+                description = EXCLUDED.description,
+                highlights = EXCLUDED.highlights,
+                title = EXCLUDED.title,
+                keywords = EXCLUDED.keywords,
+                meta_description = EXCLUDED.meta_description;
+
+            INSERT INTO catalog_product.product_variant
+                (id, product_id, store_id, sku, code, status, available, default_selection, date_available, sort_order)
+            VALUES
+                (@resource_id, @resource_id, @store, 'phase4c-sku', 'phase4c-value', 'Active', true, true,
+                 now() - interval '1 day', 0)
+            ON CONFLICT (id) DO UPDATE SET
+                product_id = EXCLUDED.product_id,
+                store_id = EXCLUDED.store_id,
+                sku = EXCLUDED.sku,
+                code = EXCLUDED.code,
+                status = EXCLUDED.status,
+                available = EXCLUDED.available,
+                default_selection = EXCLUDED.default_selection,
+                date_available = EXCLUDED.date_available,
+                sort_order = EXCLUDED.sort_order;
+
+            INSERT INTO catalog_product.product_availability
+                (id, variant_id, store_id, region_code, quantity, reserved_quantity, active)
+            VALUES
+                (@resource_id, @resource_id, @store, 'phase4c-test', 10, 0, true)
+            ON CONFLICT (id) DO UPDATE SET
+                product_id = NULL,
+                variant_id = EXCLUDED.variant_id,
+                store_id = EXCLUDED.store_id,
+                region_code = EXCLUDED.region_code,
+                quantity = EXCLUDED.quantity,
+                reserved_quantity = 0,
+                active = EXCLUDED.active;
+
+            INSERT INTO catalog_product.product_availability
+                (id, product_id, store_id, region_code, quantity, reserved_quantity, active)
+            VALUES
+                (@second_availability_id, @resource_id, @store, '*', 10, 0, true)
+            ON CONFLICT (id) DO UPDATE SET
+                product_id = EXCLUDED.product_id,
+                variant_id = NULL,
+                store_id = EXCLUDED.store_id,
+                region_code = EXCLUDED.region_code,
+                quantity = EXCLUDED.quantity,
+                reserved_quantity = 0,
+                active = EXCLUDED.active;
+
+            INSERT INTO catalog_product.product_price
+                (id, availability_id, store_id, currency_code, amount, price_type, default_price)
+            VALUES
+                (@resource_id, @resource_id, @store, 'USD', 19.99, 'OneTime', true)
+            ON CONFLICT (id) DO UPDATE SET
+                availability_id = EXCLUDED.availability_id,
+                store_id = EXCLUDED.store_id,
+                currency_code = EXCLUDED.currency_code,
+                amount = EXCLUDED.amount,
+                price_type = EXCLUDED.price_type,
+                default_price = EXCLUDED.default_price;
+
+            INSERT INTO catalog_product.product_option
+                (id, store_id, code, option_type, display_only, sort_order)
+            VALUES
+                (@resource_id, @store, 'phase4c-option', 'TEXT', false, 0)
+            ON CONFLICT (id) DO UPDATE SET
+                store_id = EXCLUDED.store_id,
+                code = EXCLUDED.code,
+                option_type = EXCLUDED.option_type,
+                display_only = EXCLUDED.display_only,
+                sort_order = EXCLUDED.sort_order;
+
+            INSERT INTO catalog_product.product_option_value
+                (id, option_id, store_id, code, display_only, sort_order)
+            VALUES
+                (@resource_id, @resource_id, @store, 'phase4c-value', false, 0)
+            ON CONFLICT (id) DO UPDATE SET
+                option_id = EXCLUDED.option_id,
+                store_id = EXCLUDED.store_id,
+                code = EXCLUDED.code,
+                display_only = EXCLUDED.display_only,
+                sort_order = EXCLUDED.sort_order;
+
+            INSERT INTO catalog_product.product_attribute
+                (id, product_id, option_id, option_value_id, display_only, price_adjustment, default_selection)
+            VALUES
+                (@resource_id, @resource_id, @resource_id, @resource_id, false, 2.50, true)
+            ON CONFLICT (id) DO UPDATE SET
+                product_id = EXCLUDED.product_id,
+                option_id = EXCLUDED.option_id,
+                option_value_id = EXCLUDED.option_value_id,
+                display_only = EXCLUDED.display_only,
+                price_adjustment = EXCLUDED.price_adjustment,
+                default_selection = EXCLUDED.default_selection;
+
+            INSERT INTO catalog_product.product_image
+                (id, product_id, image_type, file_name, original_uri, external_url, default_image, media_status)
+            VALUES
+                (@resource_id, @resource_id, 'ExternalUrl', 'phase4c-image.jpg',
+                 'https://example.com/phase4c-image.jpg', 'https://example.com/phase4c-image.jpg', true, 'Ready')
+            ON CONFLICT (id) DO UPDATE SET
+                product_id = EXCLUDED.product_id,
+                image_type = EXCLUDED.image_type,
+                file_name = EXCLUDED.file_name,
+                original_uri = EXCLUDED.original_uri,
+                external_url = EXCLUDED.external_url,
+                default_image = EXCLUDED.default_image,
+                media_status = EXCLUDED.media_status;
+
+            INSERT INTO catalog_product.inventory_reservation
+                (id, tenant_id, store_id, product_id, variant_id, availability_id, reservation_key,
+                 request_hash, quantity, state, expires_at)
+            VALUES
+                (@resource_id, @tenant, @store, @resource_id, @resource_id, @resource_id, 'phase4c-fixture',
+                 upper(encode(digest(@reservation_payload, 'sha256'), 'hex')), 1, 'Held', now() + interval '1 day')
+            ON CONFLICT (id) DO UPDATE SET
+                tenant_id = EXCLUDED.tenant_id,
+                store_id = EXCLUDED.store_id,
+                product_id = EXCLUDED.product_id,
+                variant_id = EXCLUDED.variant_id,
+                availability_id = EXCLUDED.availability_id,
+                reservation_key = EXCLUDED.reservation_key,
+                request_hash = EXCLUDED.request_hash,
+                quantity = EXCLUDED.quantity,
+                state = 'Held',
+                expires_at = EXCLUDED.expires_at,
+                committed_at = NULL,
+                released_at = NULL;
+            """,
+            connection,
+            transaction);
+        command.Parameters.AddWithValue("tenant", tenant);
+        command.Parameters.AddWithValue("store", store);
+        command.Parameters.AddWithValue("resource_id", Guid.Parse(resourceId));
+        command.Parameters.AddWithValue("move_parent_id", Guid.Parse(moveParentId));
+        command.Parameters.AddWithValue("second_availability_id", Guid.Parse(secondAvailabilityId));
+        command.Parameters.AddWithValue("reservation_payload", reservationPayload);
+        await command.ExecuteNonQueryAsync();
+        await transaction.CommitAsync();
+
+        if (!includeReservation)
+        {
+            await using var reservationCleanup = new NpgsqlCommand(
+                """
+                DELETE FROM catalog_product.inventory_reservation
+                WHERE tenant_id = @tenant AND store_id = @store;
+                """,
+                connection);
+            reservationCleanup.Parameters.AddWithValue("tenant", tenant);
+            reservationCleanup.Parameters.AddWithValue("store", store);
+            await reservationCleanup.ExecuteNonQueryAsync();
+        }
+    }
+
+    public Task PrepareCatalogRequestAsync(HttpMethod method, string path, int expectedStatus)
+    {
+        if (expectedStatus == (int)HttpStatusCode.Unauthorized)
+        {
+            return Task.CompletedTask;
+        }
+
+        var includeReservation = path.StartsWith("/api/v1/reservations/", StringComparison.Ordinal);
+        return EnsureTestCatalogAsync(includeReservation);
+    }
+
     private async Task<string> LoginAsync(string username, string password, bool administrator)
     {
         using var response = await CustomerIdentityClient.PostAsync(
@@ -295,6 +567,7 @@ public sealed class AspireHostFixture : IAsyncLifetime
         {
             try
             {
+                await CleanupCatalogTestDataAsync();
                 await CleanupTestDataAsync();
             }
             finally
@@ -302,6 +575,106 @@ public sealed class AspireHostFixture : IAsyncLifetime
                 await _application.DisposeAsync();
             }
         }
+    }
+
+    private async Task CleanupCatalogTestDataAsync()
+    {
+        const string tenant = "test-tenant-001";
+        const string store = "test-store-001";
+
+        var connectionString = await _application!.GetConnectionStringAsync("catalogproductdb")
+            ?? throw new InvalidOperationException("The catalog product database connection string is unavailable.");
+
+        await using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        await using var command = new NpgsqlCommand(
+            """
+            DELETE FROM catalog_product.event_outbox
+            WHERE tenant_id = @tenant AND store_id = @store;
+
+            DELETE FROM catalog_product.inventory_reservation
+            WHERE tenant_id = @tenant AND store_id = @store;
+
+            DELETE FROM catalog_product.product_image
+            WHERE product_id IN (
+                SELECT id FROM catalog_product.product
+                WHERE tenant_id = @tenant AND store_id = @store
+            );
+
+            DELETE FROM catalog_product.product_relationship
+            WHERE product_id IN (
+                SELECT id FROM catalog_product.product
+                WHERE tenant_id = @tenant AND store_id = @store
+            )
+               OR related_product_id IN (
+                SELECT id FROM catalog_product.product
+                WHERE tenant_id = @tenant AND store_id = @store
+            );
+
+            DELETE FROM catalog_product.product_category
+            WHERE product_id IN (
+                SELECT id FROM catalog_product.product
+                WHERE tenant_id = @tenant AND store_id = @store
+            )
+               OR category_id IN (
+                SELECT id FROM catalog_product.category
+                WHERE tenant_id = @tenant AND store_id = @store
+            );
+
+            DELETE FROM catalog_product.product_attribute
+            WHERE product_id IN (
+                SELECT id FROM catalog_product.product
+                WHERE tenant_id = @tenant AND store_id = @store
+            );
+
+            DELETE FROM catalog_product.product_price
+            WHERE store_id = @store;
+
+            DELETE FROM catalog_product.product_availability
+            WHERE store_id = @store;
+
+            DELETE FROM catalog_product.product_variant
+            WHERE store_id = @store;
+
+            DELETE FROM catalog_product.product_description
+            WHERE product_id IN (
+                SELECT id FROM catalog_product.product
+                WHERE tenant_id = @tenant AND store_id = @store
+            );
+
+            DELETE FROM catalog_product.category_description
+            WHERE category_id IN (
+                SELECT id FROM catalog_product.category
+                WHERE tenant_id = @tenant AND store_id = @store
+            );
+
+            DELETE FROM catalog_product.product_option_value
+            WHERE store_id = @store;
+
+            DELETE FROM catalog_product.product_variation
+            WHERE store_id = @store;
+
+            DELETE FROM catalog_product.product_option
+            WHERE store_id = @store;
+
+            DELETE FROM catalog_product.product
+            WHERE tenant_id = @tenant AND store_id = @store;
+
+            DELETE FROM catalog_product.category
+            WHERE id IN (
+                SELECT id
+                FROM catalog_product.category
+                WHERE tenant_id = @tenant AND store_id = @store
+                ORDER BY depth DESC, id DESC
+            );
+            """,
+            connection,
+            transaction);
+        command.Parameters.AddWithValue("tenant", tenant);
+        command.Parameters.AddWithValue("store", store);
+        await command.ExecuteNonQueryAsync();
+        await transaction.CommitAsync();
     }
 
     private async Task CleanupTestDataAsync()

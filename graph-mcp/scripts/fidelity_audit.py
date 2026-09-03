@@ -65,7 +65,8 @@ NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "saamgraph")
 
 WORKSPACE_ROOT = Path(__file__).resolve().parent.parent.parent
 
-BR_ID_PATTERN = re.compile(r"BR-[A-Z]{2,4}-[A-Z]{2,5}-[0-9]{2,3}")
+# Accept both flat IDs (BR-CAT-001) and grouped IDs (BR-CAT-NN-005).
+BR_ID_PATTERN = re.compile(r"BR-[A-Z]{2,4}(?:-[A-Z]{2,5})?-[0-9]{2,3}")
 SOURCE_EXTENSIONS = {
     ".java", ".kt", ".ts", ".js", ".py", ".cs", ".go", ".rs", ".rb", ".php", ".scala", ".groovy",
 }
@@ -134,14 +135,25 @@ def audit_service(service_dir: Path) -> dict:
         if _is_route_surface_file(fp) or any(tok in text for tok in ROUTE_REGISTRATION_TOKENS):
             route_surface_files.add(fp)
 
-    # 2. Build the set of file "stems" referenced from route-surface files (cheap transitive signal:
-    #    a service file whose class/module name is mentioned in a route surface is considered wired).
+    # 2. Build the set of file stems and declared type names referenced from route-surface files
+    # (cheap transitive signal: a service file whose class/module name is mentioned in a route
+    # surface is considered wired). Type-name matching handles files such as CatalogServices.cs
+    # declaring the injected CatalogService class.
     referenced_stems: set[str] = set()
+    referenced_types: set[str] = set()
+    declared_types_by_file: dict[Path, set[str]] = {}
+    for fp, text in all_text_by_file.items():
+        declared_types_by_file[fp] = set(
+            re.findall(r"\b(?:class|interface|record|struct|enum)\s+([A-Za-z_]\w*)", text)
+        )
     for rf in route_surface_files:
         txt = all_text_by_file.get(rf, "")
         for other in all_text_by_file:
             if other.stem and other.stem in txt:
                 referenced_stems.add(other.stem)
+        referenced_types.update(
+            re.findall(r"\b[A-Za-z_]\w*\b", txt)
+        )
 
     # 3. Decide reachability per BR-ID
     result: dict[str, bool] = {}
@@ -153,6 +165,9 @@ def audit_service(service_dir: Path) -> dict:
                 break
             # annotated file is referenced from a route surface (wired via DI/registration)
             if f.stem in referenced_stems:
+                reachable = True
+                break
+            if declared_types_by_file.get(f, set()) & referenced_types:
                 reachable = True
                 break
             # the annotated file itself contains a route-registration token

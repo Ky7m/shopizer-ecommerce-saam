@@ -1,0 +1,29 @@
+schema_version: "1.0"
+service: "ms-02"
+run_id: "val-20260903-194107"
+timestamp: "2026-09-03T15:41:07Z"
+trigger: "stage4_final"
+implementation_type: "unknown"
+
+build:
+  status: "pass"
+  duration_seconds: 3
+
+test_execution:
+  suite: "CatalogProductComprehensiveTests.cs"
+  total: 111
+  passed: 111
+  failed: 0
+  skipped: 0
+  pass_rate: 1.0
+  duration_seconds: 32
+  exit_code: 0
+
+  failures:
+    []
+
+  br_ids_passing: 41
+  br_ids_failing: 0
+
+br_id_detection:
+  code_br_ids: "BR-CAT-001,BR-CAT-002,BR-CAT-003,BR-CAT-004,BR-CAT-005,BR-CAT-006,BR-CAT-007,BR-CAT-008,BR-CAT-009,BR-CAT-010,BR-CAT-011,BR-CAT-012,BR-CAT-013,BR-CAT-014,BR-CAT-015,BR-CAT-016,BR-CAT-017,BR-CAT-018,BR-CAT-019,BR-CAT-025,BR-CAT-026,BR-CAT-027,BR-CAT-028,BR-CAT-029,BR-CAT-030,BR-CAT-031,BR-CAT-032,BR-CAT-033,BR-CAT-034,BR-CAT-035,BR-CAT-036,BR-CAT-037,BR-CAT-038,BR-CAT-039,BR-EXT-019,BR-EXT-020,BR-ORD-012,BR-UI-003,BR-UI-004,BR-UI-005,BR-UI-006"

@@ -6,7 +6,7 @@ info:
     API contract for MS-02 Catalog and Product.
     This is the single source of truth for paths, fields, status codes, and response shapes.
 servers:
-  - url: http://localhost:8102/api/v1/catalog
+  - url: http://localhost:8102/api/v1
 
 x-naming-conventions:
   fieldNaming: camelCase

@@ -1,0 +1,29 @@
+schema_version: "1.0"
+service: "ms-01"
+run_id: "val-20260903-194607"
+timestamp: "2026-09-03T15:46:07Z"
+trigger: "stage4_final"
+implementation_type: "unknown"
+
+build:
+  status: "pass"
+  duration_seconds: 3
+
+test_execution:
+  suite: "CustomerIdentityComprehensiveTests.cs"
+  total: 156
+  passed: 156
+  failed: 0
+  skipped: 0
+  pass_rate: 1.0
+  duration_seconds: 42
+  exit_code: 0
+
+  failures:
+    []
+
+  br_ids_passing: 51
+  br_ids_failing: 0
+
+br_id_detection:
+  code_br_ids: "BR-CUS-001,BR-CUS-002,BR-CUS-003,BR-CUS-004,BR-CUS-005,BR-CUS-006,BR-CUS-007,BR-CUS-008,BR-CUS-009,BR-CUS-010,BR-CUS-011,BR-CUS-012,BR-CUS-013,BR-CUS-014,BR-CUS-015,BR-CUS-016,BR-CUS-017,BR-CUS-018,BR-CUS-019,BR-CUS-020,BR-CUS-021,BR-CUS-022,BR-CUS-023,BR-CUS-024,BR-CUS-025,BR-CUS-026,BR-CUS-027,BR-CUS-028,BR-CUS-NN-001,BR-CUS-NN-002,BR-CUS-NN-003,BR-CUS-NN-004,BR-CUS-NN-005,BR-CUS-NN-006,BR-CUS-NN-007,BR-CUS-NN-008,BR-CUS-NN-009,BR-CUS-NN-010,BR-CUS-NN-011,BR-CUS-NN-012,BR-CUS-NN-013,BR-CUS-NN-014,BR-CUS-NN-015,BR-CUS-NN-016,BR-CUS-NN-017,BR-CUS-NN-018,BR-CUS-NN-019,BR-CUS-NN-020,BR-CUS-NN-021,BR-UI-001,BR-UI-002"

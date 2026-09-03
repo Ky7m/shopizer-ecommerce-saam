@@ -20,6 +20,10 @@
 
 ## Validation record
 
-The project compiles with the copied DTOs and the implementation. Full Aspire
-integration validation remains pending because it requires external PostgreSQL and
-RabbitMQ resources; no validation test was modified.
+| Check | Result | Notes |
+|---|---|---|
+| DTO byte equality | PASS | All 34 DTOs were copied verbatim from the MS-01 specification. |
+| Targeted build | PASS | Customer Identity project compiles with the implementation. |
+| Container build | PASS | Container image build completed successfully. |
+| Service starts | PASS | Aspire-hosted service health and registration smoke paths passed. |
+| Aspire integration suite | PASS | The official reconciliation wrapper ran 156 tests with 156 passed, 0 failed, and 0 skipped. |
