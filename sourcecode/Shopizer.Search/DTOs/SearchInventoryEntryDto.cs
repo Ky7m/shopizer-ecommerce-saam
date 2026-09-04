@@ -5,24 +5,24 @@ namespace Shopizer.Search.DTOs;
 
 public sealed class SearchInventoryEntryDto
 {
-        [JsonPropertyName("sku")]
-        [Required]
-        public string Sku { get; set; }
+    [JsonPropertyName("sku")]
+    [Required]
+    public string Sku { get; set; }
 
-        [JsonPropertyName("variantSku")]
-        public string? VariantSku { get; set; }
+    [JsonPropertyName("variantSku")]
+    public string? VariantSku { get; set; }
 
-        [JsonPropertyName("quantity")]
-        [Range(0, double.MaxValue)]
-        public decimal Quantity { get; set; }
+    [JsonPropertyName("quantity")]
+    [Range(0, double.MaxValue)]
+    public decimal Quantity { get; set; }
 
-        [JsonPropertyName("price")]
-        [Range(0, double.MaxValue)]
-        public decimal Price { get; set; }
+    [JsonPropertyName("price")]
+    [Range(0, double.MaxValue)]
+    public decimal Price { get; set; }
 
-        [JsonPropertyName("discountedPrice")]
-        public decimal? DiscountedPrice { get; set; }
+    [JsonPropertyName("discountedPrice")]
+    public decimal? DiscountedPrice { get; set; }
 
-        [JsonPropertyName("optionValues")]
-        public Dictionary<string, object?> OptionValues { get; set; } = new();
+    [JsonPropertyName("optionValues")]
+    public Dictionary<string, object?> OptionValues { get; set; } = new();
 }

@@ -1582,7 +1582,7 @@ public sealed class CustomerIdentityComprehensiveTests(AspireHostFixture fixture
     }
 
     #endregion
-    
+
     private Task<HttpResponseMessage> SendAsync(HttpMethod method, string path, string? payload = null) =>
         SendCoreAsync(method, path, payload, fixture.AdminAccessToken, true);
 
@@ -1672,7 +1672,7 @@ public sealed class CustomerIdentityComprehensiveTests(AspireHostFixture fixture
             }
         }
 
-        using var request = new HttpRequestMessage(method, path);
+        using var request = new HttpRequestMessage(method, ComprehensiveTestBase.NormalizeApiPath(path));
         if (payload is not null)
         {
             request.Content = new StringContent(payload, Encoding.UTF8, "application/json");

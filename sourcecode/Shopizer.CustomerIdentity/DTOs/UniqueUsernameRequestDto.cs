@@ -5,7 +5,7 @@ namespace Shopizer.CustomerIdentity.DTOs;
 
 public sealed class UniqueUsernameRequestDto
 {
-        [JsonPropertyName("username")]
-        [Required]
-        public string Username { get; set; }
+    [JsonPropertyName("username")]
+    [Required]
+    public string Username { get; set; }
 }

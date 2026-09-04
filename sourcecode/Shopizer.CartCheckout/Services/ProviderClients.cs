@@ -65,8 +65,12 @@ public sealed class CustomerClient(HttpClient client)
         if (string.IsNullOrWhiteSpace(password)) return new CustomerFact(DtoMapper.OpaqueNumericId(customer.Email), customer.Billing, null);
         var body = new
         {
-            emailAddress = customer.Email, password, firstName = customer.FirstName, lastName = customer.LastName,
-            billing = customer.Billing, delivery = (object?)null
+            emailAddress = customer.Email,
+            password,
+            firstName = customer.FirstName,
+            lastName = customer.LastName,
+            billing = customer.Billing,
+            delivery = (object?)null
         };
         using var response = await client.PostAsJsonAsync("/api/v1/customer-auth/registrations", body, cancellationToken: ct);
         using var document = await ProviderResponse.Read(response, "Customer registration", ct);
@@ -80,11 +84,14 @@ public sealed class CustomerClient(HttpClient client)
         if (!root.TryGetProperty(property, out var value) || value.ValueKind == JsonValueKind.Null) return null;
         return new AddressDto
         {
-            FirstName = JsonHelpers.String(value, "firstName") ?? "", LastName = JsonHelpers.String(value, "lastName") ?? "",
+            FirstName = JsonHelpers.String(value, "firstName") ?? "",
+            LastName = JsonHelpers.String(value, "lastName") ?? "",
             Company = JsonHelpers.String(value, "company") ?? JsonHelpers.String(value, "companyName"),
             Address = JsonHelpers.String(value, "address") ?? JsonHelpers.String(value, "streetAddress") ?? "",
-            City = JsonHelpers.String(value, "city") ?? "", StateProvince = JsonHelpers.String(value, "stateProvince"),
-            CountryCode = JsonHelpers.String(value, "countryCode") ?? "", PostalCode = JsonHelpers.String(value, "postalCode") ?? "",
+            City = JsonHelpers.String(value, "city") ?? "",
+            StateProvince = JsonHelpers.String(value, "stateProvince"),
+            CountryCode = JsonHelpers.String(value, "countryCode") ?? "",
+            PostalCode = JsonHelpers.String(value, "postalCode") ?? "",
             Phone = JsonHelpers.String(value, "phone") ?? JsonHelpers.String(value, "telephone")
         };
     }
@@ -202,10 +209,15 @@ public sealed class ShippingClient(HttpClient client)
                 options.Add(new ShippingOptionDto { Code = JsonHelpers.String(option, "optionCode") ?? "", Name = JsonHelpers.String(option, "optionName"), Price = DtoMapper.Money(JsonHelpers.Decimal(option, "optionPrice")), Currency = "CAD" });
         return new ShippingFact(new ShippingSummaryDto
         {
-            QuoteId = Guid.NewGuid().ToString(), ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(15).ToString("O"),
-            ShippingRequired = true, Delivery = address, Shipping = DtoMapper.Money(JsonHelpers.Decimal(root, "shipping")),
-            Handling = DtoMapper.Money(JsonHelpers.Decimal(root, "handling")), FreeShipping = JsonHelpers.Bool(root, "freeShipping"),
-            TaxOnShipping = JsonHelpers.Bool(root, "taxOnShipping"), Options = options
+            QuoteId = Guid.NewGuid().ToString(),
+            ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(15).ToString("O"),
+            ShippingRequired = true,
+            Delivery = address,
+            Shipping = DtoMapper.Money(JsonHelpers.Decimal(root, "shipping")),
+            Handling = DtoMapper.Money(JsonHelpers.Decimal(root, "handling")),
+            FreeShipping = JsonHelpers.Bool(root, "freeShipping"),
+            TaxOnShipping = JsonHelpers.Bool(root, "taxOnShipping"),
+            Options = options
         }, null);
     }
 }
@@ -214,8 +226,16 @@ public sealed class TaxClient(HttpClient client)
 {
     public async Task<decimal> QuoteAsync(string currency, AddressDto address, IEnumerable<CartLine> items, string? idempotencyKey, CancellationToken ct)
     {
-        var billingAddress = new { firstName = address.FirstName, lastName = address.LastName, streetAddress = address.Address,
-            city = address.City, stateProvince = address.StateProvince, countryCode = address.CountryCode, postalCode = address.PostalCode };
+        var billingAddress = new
+        {
+            firstName = address.FirstName,
+            lastName = address.LastName,
+            streetAddress = address.Address,
+            city = address.City,
+            stateProvince = address.StateProvince,
+            countryCode = address.CountryCode,
+            postalCode = address.PostalCode
+        };
         var body = new { currencyCode = currency, billingAddress, items = items.Select(x => new { productId = x.ProductId.ToString(), sku = x.Sku, quantity = x.Quantity, unitPrice = x.UnitPrice, taxClassCode = (string?)null }), idempotencyKey };
         using var response = await client.PostAsJsonAsync("/api/v1/tax-calculations", body, ct);
         using var document = await ProviderResponse.Read(response, "Tax calculation", ct);

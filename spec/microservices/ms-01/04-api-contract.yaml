@@ -6,7 +6,10 @@ info:
     Implementation contract for MS-01 Customer and Identity on port 8101.
     This contract is the naming authority for Phase 4c tests and Phase 5 code generation.
 servers:
-  - url: http://localhost:8101/api/v1
+  - url: http://localhost:{port}/api/v1
+    variables:
+      port:
+        default: "8101"
 x-naming-conventions:
   fieldNaming: camelCase
   endpointNaming: kebab-case

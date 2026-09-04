@@ -65,8 +65,9 @@ NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "saamgraph")
 
 WORKSPACE_ROOT = Path(__file__).resolve().parent.parent.parent
 
-# Accept both flat IDs (BR-CAT-001) and grouped IDs (BR-CAT-NN-005).
-BR_ID_PATTERN = re.compile(r"BR-[A-Z]{2,4}(?:-[A-Z]{2,5})?-[0-9]{2,3}")
+# Accept both flat and grouped IDs using the repository calibration pattern.
+# Group segments may contain digits (for example, BR-INT-MS12-001).
+BR_ID_PATTERN = re.compile(r"BR-[A-Z0-9]{2,6}(?:-[A-Z0-9]{2,6})?-[0-9]{2,3}")
 SOURCE_EXTENSIONS = {
     ".java", ".kt", ".ts", ".js", ".py", ".cs", ".go", ".rs", ".rb", ".php", ".scala", ".groovy",
 }

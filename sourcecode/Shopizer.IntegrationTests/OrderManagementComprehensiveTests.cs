@@ -24,7 +24,7 @@ public sealed class OrderManagementComprehensiveTests(AspireHostFixture fixture)
         Assert.Equal("Ordered", order.GetProperty("status").GetString());
         using var history = await SendAsync(HttpMethod.Get, $"/api/v1/orders/{id}/history", token: fixture.AdminAccessToken);
         Assert.Equal(HttpStatusCode.OK, history.StatusCode);
-        Assert.Contains("ORDERED", await history.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("ORDERED", await history.Content.ReadAsStringAsync(TestContext.Current.CancellationToken), StringComparison.OrdinalIgnoreCase);
     }
 
     // @BR-ID: BR-OR-SUB-002
@@ -85,7 +85,7 @@ public sealed class OrderManagementComprehensiveTests(AspireHostFixture fixture)
         using var response = await SendAsync(HttpMethod.Put, $"/api/v1/orders/{id}/status", """{"status":"Processed","reason":"operator"}""", "history-1", fixture.AdminAccessToken);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var history = await SendAsync(HttpMethod.Get, $"/api/v1/orders/{id}/history", token: fixture.AdminAccessToken);
-        Assert.Contains("operator", await history.Content.ReadAsStringAsync());
+        Assert.Contains("operator", await history.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
     }
 
     // @BR-ID: BR-OR-AUTH-001

@@ -68,9 +68,13 @@ public sealed class CartRepository(NpgsqlDataSource dataSource)
 
     private static Cart ReadCart(NpgsqlDataReader reader) => new()
     {
-        Id = reader.GetInt64(0), Code = reader.GetString(1), TenantId = reader.GetString(2), StoreId = reader.GetString(3),
+        Id = reader.GetInt64(0),
+        Code = reader.GetString(1),
+        TenantId = reader.GetString(2),
+        StoreId = reader.GetString(3),
         CustomerId = reader.IsDBNull(4) ? null : reader.GetInt64(4),
-        SubmittedOrderId = reader.IsDBNull(5) ? null : reader.GetGuid(5), Status = reader.GetString(6),
+        SubmittedOrderId = reader.IsDBNull(5) ? null : reader.GetGuid(5),
+        Status = reader.GetString(6),
         PromoCode = reader.IsDBNull(7) ? null : reader.GetString(7),
         PromoAddedAt = reader.IsDBNull(8) ? null : reader.GetFieldValue<DateTimeOffset>(8),
         CurrencyCode = reader.GetString(9)
@@ -88,9 +92,15 @@ public sealed class CartRepository(NpgsqlDataSource dataSource)
         while (await reader.ReadAsync(ct))
             items.Add(new CartLine
             {
-                Id = reader.GetInt64(0), CartId = cart.Id, ProductId = reader.GetInt64(1), Sku = reader.GetString(2),
-                VariantId = reader.IsDBNull(3) ? null : reader.GetInt64(3), Quantity = reader.GetInt32(4),
-                UnitPrice = reader.GetDecimal(5), SubTotal = reader.GetDecimal(6), Obsolete = reader.GetBoolean(7)
+                Id = reader.GetInt64(0),
+                CartId = cart.Id,
+                ProductId = reader.GetInt64(1),
+                Sku = reader.GetString(2),
+                VariantId = reader.IsDBNull(3) ? null : reader.GetInt64(3),
+                Quantity = reader.GetInt32(4),
+                UnitPrice = reader.GetDecimal(5),
+                SubTotal = reader.GetDecimal(6),
+                Obsolete = reader.GetBoolean(7)
             });
         await reader.CloseAsync();
         foreach (var item in items)
@@ -262,6 +272,7 @@ public sealed class CartRepository(NpgsqlDataSource dataSource)
     {
         await using var connection = await dataSource.OpenConnectionAsync(ct);
         await using var transaction = await connection.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        var inserted = 0;
         await using (var insert = new NpgsqlCommand("""
             INSERT INTO cart_checkout_schema.checkout_idempotency_key
                 (tenant_id,store_id,customer_id,cart_id,operation,idempotency_key,request_hash)
@@ -271,7 +282,13 @@ public sealed class CartRepository(NpgsqlDataSource dataSource)
         {
             Add(insert, "tenant", context.TenantId); Add(insert, "store", context.StoreId); Add(insert, "customer", customerId);
             Add(insert, "cart", cartId); Add(insert, "key", idempotencyKey); Add(insert, "hash", requestHash);
-            await insert.ExecuteNonQueryAsync(ct);
+            inserted = await insert.ExecuteNonQueryAsync(ct);
+        }
+
+        if (inserted == 1)
+        {
+            await transaction.CommitAsync(ct);
+            return null;
         }
 
         await using var select = new NpgsqlCommand("""
@@ -354,6 +371,7 @@ public sealed class CartRepository(NpgsqlDataSource dataSource)
         await using var connection = await dataSource.OpenConnectionAsync(ct);
         await using var transaction = await connection.BeginTransactionAsync(IsolationLevel.Serializable, ct);
         var idempotency = Guid.NewGuid();
+        var inserted = 0;
         await using (var insertKey = new NpgsqlCommand("""
             INSERT INTO cart_checkout_schema.checkout_idempotency_key(idempotency_record_id,tenant_id,store_id,customer_id,cart_id,operation,idempotency_key,request_hash)
             VALUES(@id,@tenant,@store,@customer,@cart,'checkout',@key,@hash) ON CONFLICT DO NOTHING
@@ -361,14 +379,15 @@ public sealed class CartRepository(NpgsqlDataSource dataSource)
         {
             Add(insertKey, "id", idempotency); Add(insertKey, "tenant", context.TenantId); Add(insertKey, "store", context.StoreId);
             Add(insertKey, "customer", customerId); Add(insertKey, "cart", cart.Id); Add(insertKey, "key", idempotencyKey); Add(insertKey, "hash", requestHash);
-            await insertKey.ExecuteNonQueryAsync(ct);
+            inserted = await insertKey.ExecuteNonQueryAsync(ct);
         }
-        await using (var existing = new NpgsqlCommand("""
+        if (inserted == 0)
+        {
+            await using var existing = new NpgsqlCommand("""
             SELECT request_hash,state::text,original_response FROM cart_checkout_schema.checkout_idempotency_key
             WHERE tenant_id=@tenant AND store_id=@store AND customer_id IS NOT DISTINCT FROM @customer
               AND cart_id=@cart AND operation='checkout' AND idempotency_key=@key FOR UPDATE
-            """, connection, transaction))
-        {
+            """, connection, transaction);
             Add(existing, "tenant", context.TenantId); Add(existing, "store", context.StoreId); Add(existing, "customer", customerId);
             Add(existing, "cart", cart.Id); Add(existing, "key", idempotencyKey);
             await using var reader = await existing.ExecuteReaderAsync(ct);
@@ -398,8 +417,15 @@ public sealed class CartRepository(NpgsqlDataSource dataSource)
         }
         var lines = cart.Items.Where(x => !x.Obsolete).Select((item, index) => new
         {
-            lineNumber = index + 1, item.Sku, productName = products.FirstOrDefault(p => p.Sku == item.Sku)?.Name ?? item.Sku,
-            item.Quantity, unitPrice = item.UnitPrice, lineSubTotal = item.SubTotal, item.ProductId, item.VariantId, isVirtual = products.FirstOrDefault(p => p.Sku == item.Sku)?.IsVirtual ?? false,
+            lineNumber = index + 1,
+            item.Sku,
+            productName = products.FirstOrDefault(p => p.Sku == item.Sku)?.Name ?? item.Sku,
+            item.Quantity,
+            unitPrice = item.UnitPrice,
+            lineSubTotal = item.SubTotal,
+            item.ProductId,
+            item.VariantId,
+            isVirtual = products.FirstOrDefault(p => p.Sku == item.Sku)?.IsVirtual ?? false,
             attributes = item.Attributes.Select(id => new { id }).ToArray()
         }).ToArray();
         foreach (var line in lines)

@@ -5,20 +5,20 @@ namespace Shopizer.CatalogProduct.DTOs;
 
 public sealed class ProductOptionDto
 {
-        [JsonPropertyName("id")]
-        [Required]
-        public string Id { get; set; }
+    [JsonPropertyName("id")]
+    [Required]
+    public string Id { get; set; }
 
-        [JsonPropertyName("code")]
-        [Required]
-        public string Code { get; set; }
+    [JsonPropertyName("code")]
+    [Required]
+    public string Code { get; set; }
 
-        [JsonPropertyName("name")]
-        public string? Name { get; set; }
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
 
-        [JsonPropertyName("displayOnly")]
-        public bool DisplayOnly { get; set; }
+    [JsonPropertyName("displayOnly")]
+    public bool DisplayOnly { get; set; }
 
-        [JsonPropertyName("values")]
-        public List<ProductOptionValueDto> Values { get; set; } = new();
+    [JsonPropertyName("values")]
+    public List<ProductOptionValueDto> Values { get; set; } = new();
 }

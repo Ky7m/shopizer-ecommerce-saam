@@ -7,8 +7,10 @@ info:
     paths, JSON field names, required fields, enum values, response bodies, and
     status codes. Configuration persistence remains owned by MS-11.
 servers:
-  - url: http://localhost:8112/api/v1/integrations
-    description: Local development
+  - url: http://localhost:{port}/api/v1
+    variables:
+      port:
+        default: "8112"
 x-naming-conventions:
   fieldNaming: camelCase
   endpointNaming: kebab-case

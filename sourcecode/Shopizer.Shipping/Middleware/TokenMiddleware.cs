@@ -1,0 +1,36 @@
+using System.Security.Claims;
+using Shopizer.Shipping.Models;
+using Shopizer.Shipping.Services;
+
+namespace Shopizer.Shipping.Middleware;
+
+public sealed class TokenMiddleware(RequestDelegate next, TokenService tokens)
+{
+    public async Task InvokeAsync(HttpContext context)
+    {
+        if (context.Request.Headers.Authorization.ToString() is { Length: > 7 } authorization &&
+            authorization.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var request = RequestContext.From(context);
+                var token = tokens.Validate(authorization[7..].Trim(), request);
+                if (token is not null)
+                {
+                    var claims = new List<Claim>
+                    {
+                        new(ClaimTypes.NameIdentifier, token.SubjectId.ToString()),
+                        new(ClaimTypes.Name, token.Login),
+                        new("sub", token.SubjectId.ToString()),
+                        new("kind", token.Kind), new("tenantId", token.TenantId),
+                        new("storeId", token.StoreId)
+                    };
+                    claims.AddRange(token.Roles.Select(role => new Claim(ClaimTypes.Role, role)));
+                    context.User = new ClaimsPrincipal(new ClaimsIdentity(claims, "Bearer"));
+                }
+            }
+            catch (DomainException) { }
+        }
+        await next(context);
+    }
+}

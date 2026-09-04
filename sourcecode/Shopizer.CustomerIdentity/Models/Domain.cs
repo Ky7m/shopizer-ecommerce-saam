@@ -173,24 +173,35 @@ public static class DtoMapper
             Delivery = list.FirstOrDefault(x => x.AddressType == "Delivery") is { } d ? Address(d) : null,
             Attributes = attributes.Select(x => new CustomerAttributeDto
             {
-                OptionId = x.OptionId, OptionValueId = x.ValueId, TextValue = x.Text
+                OptionId = x.OptionId,
+                OptionValueId = x.ValueId,
+                TextValue = x.Text
             }).ToList()
         };
     }
 
     public static AdministratorDto Administrator(AdministratorAccount a) => new()
     {
-        Id = a.Id.ToString(), StoreId = a.StoreId, UserName = a.UserName,
-        EmailAddress = a.EmailAddress, FirstName = a.FirstName, LastName = a.LastName,
-        IsActive = a.IsActive, DefaultLanguageCode = a.DefaultLanguageCode,
-        Groups = a.Groups.ToList(), Permissions = a.Permissions.ToList()
+        Id = a.Id.ToString(),
+        StoreId = a.StoreId,
+        UserName = a.UserName,
+        EmailAddress = a.EmailAddress,
+        FirstName = a.FirstName,
+        LastName = a.LastName,
+        IsActive = a.IsActive,
+        DefaultLanguageCode = a.DefaultLanguageCode,
+        Groups = a.Groups.ToList(),
+        Permissions = a.Permissions.ToList()
     };
 
     public static CustomerReviewDto Review(ReviewRecord r) => new()
     {
-        Id = r.Id.ToString(), ReviewerCustomerId = r.ReviewerCustomerId.ToString(),
-        ReviewedCustomerId = r.ReviewedCustomerId.ToString(), Rating = r.Rating,
-        Description = r.Description, ReviewDate = r.ReviewDate.ToString("O"),
+        Id = r.Id.ToString(),
+        ReviewerCustomerId = r.ReviewerCustomerId.ToString(),
+        ReviewedCustomerId = r.ReviewedCustomerId.ToString(),
+        Rating = r.Rating,
+        Description = r.Description,
+        ReviewDate = r.ReviewDate.ToString("O"),
         Status = r.Status
     };
 }

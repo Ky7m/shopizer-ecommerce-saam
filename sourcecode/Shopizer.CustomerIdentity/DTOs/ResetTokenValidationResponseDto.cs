@@ -4,9 +4,9 @@ namespace Shopizer.CustomerIdentity.DTOs;
 
 public sealed class ResetTokenValidationResponseDto
 {
-        [JsonPropertyName("valid")]
-        public bool Valid { get; set; }
+    [JsonPropertyName("valid")]
+    public bool Valid { get; set; }
 
-        [JsonPropertyName("expiresAt")]
-        public string? ExpiresAt { get; set; }
+    [JsonPropertyName("expiresAt")]
+    public string? ExpiresAt { get; set; }
 }

@@ -7,7 +7,10 @@ info:
     This contract is the single source of truth for paths, fields, schemas,
     status codes, required headers, and error responses.
 servers:
-  - url: http://localhost:8008/api/v1
+  - url: http://localhost:{port}/api/v1
+    variables:
+      port:
+        default: "8008"
 
 x-naming-conventions:
   fieldNaming: camelCase

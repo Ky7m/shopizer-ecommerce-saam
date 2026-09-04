@@ -81,19 +81,32 @@ public static class DtoMapper
     {
         Cart = new CartDto
         {
-            Id = cart.Id.ToString(), Code = cart.Code, TenantId = cart.TenantId, StoreId = cart.StoreId,
-            CustomerId = cart.CustomerId?.ToString(), SubmittedOrderId = cart.SubmittedOrderId?.ToString(),
+            Id = cart.Id.ToString(),
+            Code = cart.Code,
+            TenantId = cart.TenantId,
+            StoreId = cart.StoreId,
+            CustomerId = cart.CustomerId?.ToString(),
+            SubmittedOrderId = cart.SubmittedOrderId?.ToString(),
             Status = cart.Status switch { "OPEN" => "Open", "COMPLETED" => "Completed", "OBSOLETE" => "Obsolete", _ => cart.Status },
-            PromoCode = cart.PromoCode, PromoAddedAt = cart.PromoAddedAt?.ToString("O"), Currency = currency,
-            Items = cart.Items.Select(Item).ToList(), SubTotal = Money(cart.Items.Sum(x => x.SubTotal)),
+            PromoCode = cart.PromoCode,
+            PromoAddedAt = cart.PromoAddedAt?.ToString("O"),
+            Currency = currency,
+            Items = cart.Items.Select(Item).ToList(),
+            SubTotal = Money(cart.Items.Sum(x => x.SubTotal)),
             Total = Money(total ?? cart.Items.Sum(x => x.SubTotal))
         }
     };
     public static CartItemDto Item(CartLine item) => new()
     {
-        Id = item.Id.ToString(), ProductId = item.ProductId, Sku = item.Sku, VariantId = item.VariantId,
-        Quantity = item.Quantity, UnitPrice = Money(item.UnitPrice), SubTotal = Money(item.SubTotal),
-        Obsolete = item.Obsolete, Attributes = item.Attributes.Select(x => new CartAttributeReferenceDto { Id = x }).ToList()
+        Id = item.Id.ToString(),
+        ProductId = item.ProductId,
+        Sku = item.Sku,
+        VariantId = item.VariantId,
+        Quantity = item.Quantity,
+        UnitPrice = Money(item.UnitPrice),
+        SubTotal = Money(item.SubTotal),
+        Obsolete = item.Obsolete,
+        Attributes = item.Attributes.Select(x => new CartAttributeReferenceDto { Id = x }).ToList()
     };
     public static string Money(decimal amount) => amount.ToString("0.0000", CultureInfo.InvariantCulture).TrimEnd('0').TrimEnd('.');
     public static long OpaqueNumericId(string value)

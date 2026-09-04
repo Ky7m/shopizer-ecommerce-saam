@@ -81,8 +81,8 @@ public sealed class IdentityRepository(NpgsqlDataSource dataSource)
     public async Task AddCustomerAsync(CustomerAccount c, AddressDto billing, AddressDto? delivery, IEnumerable<CustomerAttributeDto> attributes, RequestContext ctx, CancellationToken ct)
     {
         var effectiveDelivery = delivery ?? CopyAddress(billing, "Delivery");
-        await using var db = await dataSource.OpenConnectionAsync(ct); await using var tx = await db.BeginTransactionAsync(ct); 
-        
+        await using var db = await dataSource.OpenConnectionAsync(ct); await using var tx = await db.BeginTransactionAsync(ct);
+
         try
         {
             await using (var cmd = new NpgsqlCommand("""INSERT INTO customer_identity.customer_accounts(id,tenant_id,store_id,login_name,email_address,password_hash,gender,date_of_birth,company_name,provider,status,default_language_code,review_average,review_count,anonymous,created_by,correlation_id) VALUES(@id,@tenant,@store,@login,@email,@hash,@gender,@dob,@company,@provider,@status::customer_identity.customer_status,@language,0,0,@anonymous,@created,@correlation)""", db, tx))
@@ -151,7 +151,7 @@ public sealed class IdentityRepository(NpgsqlDataSource dataSource)
     {
         a.Groups.AddRange(groups.Distinct(StringComparer.OrdinalIgnoreCase));
         await using var db = await dataSource.OpenConnectionAsync(ct); await using var tx = await db.BeginTransactionAsync(ct);
-        
+
         try
         {
             await using var cmd = new NpgsqlCommand("INSERT INTO customer_identity.administrator_accounts(id,tenant_id,store_id,user_name,email_address,password_hash,first_name,last_name,is_active,default_language_code) VALUES(@id,@tenant,@store,@username,@email,@hash,@first,@last,true,@language)", db, tx);
@@ -194,7 +194,7 @@ public sealed class IdentityRepository(NpgsqlDataSource dataSource)
 
     public async Task ConsumeResetAsync(string token, string store, CancellationToken ct)
     {
-        var hash = Hash(token); 
+        var hash = Hash(token);
         await using var db = await dataSource.OpenConnectionAsync(ct);
         await using var cmd = new NpgsqlCommand("UPDATE customer_identity.credential_reset_tokens SET consumed_at=now() WHERE token_hash=@hash AND store_id=@store AND consumed_at IS NULL", db);
         P(cmd, "hash", hash); P(cmd, "store", store); await cmd.ExecuteNonQueryAsync(ct);

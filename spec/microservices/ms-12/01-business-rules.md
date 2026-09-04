@@ -91,9 +91,9 @@ RETURN modules
 **Preservation:** OK
 
 **Concrete Example:**
-- **API Input:** `GET /api/v1/integrations/adapters?moduleType=Shipping&page=1&pageSize=20`
+- **API Input:** `GET /api/v1/adapters?moduleType=Shipping&page=1&pageSize=20`
 - **Success:** `200 {"items":[{"endpointId":"4fd4f7f6-0f9a-4903-965e-4bb4cd1d9e85","integrationType":"Shipping","provider":"UPS","code":"ups","environment":"PROD","status":"Active","configurationRef":"ms11://module/ups/prod","capabilities":{"rating":true},"timeoutMs":10000,"maxAttempts":3}],"pagination":{"page":1,"pageSize":20,"totalItems":1,"totalPages":1}}`
-- **Error Input:** `GET /api/v1/integrations/adapters?moduleType=Shipping&environment=QA&page=1&pageSize=20`
+- **Error Input:** `GET /api/v1/adapters?moduleType=Shipping&environment=QA&page=1&pageSize=20`
 - **Error Output:** `500 {"error":"INTERNAL_ERROR","message":"Adapter projection could not be loaded","statusCode":500,"timestamp":"2026-09-01T17:49:37Z"}`
 
 ### BR-INT-MS12-002: Atomic active adapter replacement
@@ -140,9 +140,9 @@ IF module == null OR parsing/replacement fails:
 **Preservation:** FLAGGED — the source uses delete-then-create; atomic replacement is a justified target reliability correction.
 
 **Concrete Example:**
-- **API Input:** `POST /api/v1/integrations/adapters/refresh` `{"moduleType":"Shipping","code":"ups","provider":"UPS","environment":"PROD","configurationRef":"ms11://module/ups/prod","capabilities":{"rating":true},"timeoutMs":10000,"maxAttempts":3}`
+- **API Input:** `POST /api/v1/adapters/refresh` `{"moduleType":"Shipping","code":"ups","provider":"UPS","environment":"PROD","configurationRef":"ms11://module/ups/prod","capabilities":{"rating":true},"timeoutMs":10000,"maxAttempts":3}`
 - **Success:** `200 {"endpointId":"4fd4f7f6-0f9a-4903-965e-4bb4cd1d9e85","integrationType":"Shipping","provider":"UPS","code":"ups","environment":"PROD","status":"Active","capabilities":{"rating":true},"configurationRef":"ms11://module/ups/prod","timeoutMs":10000,"maxAttempts":3}`
-- **Error Input:** `POST /api/v1/integrations/adapters/refresh` `{"moduleType":"Shipping","code":"ups","provider":"UPS","environment":"PROD","configurationRef":"ms11://module/ups/prod","capabilities":{"rating":true},"timeoutMs":10000,"maxAttempts":3}` while another replacement holds the adapter version.
+- **Error Input:** `POST /api/v1/adapters/refresh` `{"moduleType":"Shipping","code":"ups","provider":"UPS","environment":"PROD","configurationRef":"ms11://module/ups/prod","capabilities":{"rating":true},"timeoutMs":10000,"maxAttempts":3}` while another replacement holds the adapter version.
 - **Error Output:** `409 {"error":"ADAPTER_UPDATE_CONFLICT","message":"Adapter 'ups' was modified concurrently","statusCode":409,"timestamp":"2026-09-01T17:49:37Z"}`
 
 ### BR-INT-MS12-003: Environment-specific endpoint projection
@@ -193,9 +193,9 @@ providerUri = selected.scheme + "://" + selected.host + ":" + selected.port + se
 **Preservation:** OK
 
 **Concrete Example:**
-- **API Input:** `POST /api/v1/integrations/adapters/refresh` `{"moduleType":"Shipping","code":"ups","provider":"UPS","environment":"PROD","configurationRef":"ms11://module/ups/prod","resolvedEndpointUri":"https://onlinetools.ups.com:443/ups.app/xml/Rate","capabilities":{"rating":true},"timeoutMs":10000,"maxAttempts":3}`
+- **API Input:** `POST /api/v1/adapters/refresh` `{"moduleType":"Shipping","code":"ups","provider":"UPS","environment":"PROD","configurationRef":"ms11://module/ups/prod","resolvedEndpointUri":"https://onlinetools.ups.com:443/ups.app/xml/Rate","capabilities":{"rating":true},"timeoutMs":10000,"maxAttempts":3}`
 - **Success:** `200 {"endpointId":"4fd4f7f6-0f9a-4903-965e-4bb4cd1d9e85","integrationType":"Shipping","provider":"UPS","code":"ups","environment":"PROD","status":"Active","capabilities":{"rating":true},"configurationRef":"ms11://module/ups/prod","endpointUri":"https://onlinetools.ups.com:443/ups.app/xml/Rate","timeoutMs":10000,"maxAttempts":3}`
-- **Error Input:** `POST /api/v1/integrations/adapters/refresh` `{"moduleType":"Shipping","code":"ups","provider":"UPS","environment":"STAGE","configurationRef":"","capabilities":{"rating":true},"timeoutMs":10000,"maxAttempts":3}`
+- **Error Input:** `POST /api/v1/adapters/refresh` `{"moduleType":"Shipping","code":"ups","provider":"UPS","environment":"STAGE","configurationRef":"","capabilities":{"rating":true},"timeoutMs":10000,"maxAttempts":3}`
 - **Error Output:** `422 {"error":"ADAPTER_CONFIGURATION_INVALID","message":"No complete endpoint projection exists for environment 'STAGE'","statusCode":422,"timestamp":"2026-09-01T17:49:37Z"}`
 
 ### BR-INT-MS12-004: Independent supplemental settings
@@ -241,9 +241,9 @@ TARGET:
 **Preservation:** FLAGGED — direct reading found the `config2`-to-`config1` corruption defect; target behavior corrects it.
 
 **Concrete Example:**
-- **API Input:** `POST /api/v1/integrations/adapters/refresh` `{"moduleType":"Storage","code":"s3","provider":"S3","environment":"PROD","configurationRef":"ms11://module/s3/prod","capabilities":{"read":true},"config1":"bucket=shopizer-content","config2":"prefix=tenant","timeoutMs":10000,"maxAttempts":3}`
+- **API Input:** `POST /api/v1/adapters/refresh` `{"moduleType":"Storage","code":"s3","provider":"S3","environment":"PROD","configurationRef":"ms11://module/s3/prod","capabilities":{"read":true},"config1":"bucket=shopizer-content","config2":"prefix=tenant","timeoutMs":10000,"maxAttempts":3}`
 - **Success:** `200 {"endpointId":"c7b6b2f4-0a58-4f43-b7d6-9bd8c3f0a211","integrationType":"Storage","provider":"S3","code":"s3","environment":"PROD","status":"Active","capabilities":{"read":true},"configurationRef":"ms11://module/s3/prod","supplementalConfiguration":{"config1":"bucket=shopizer-content","config2":"prefix=tenant"},"timeoutMs":10000,"maxAttempts":3}`
-- **Error Input:** `POST /api/v1/integrations/adapters/refresh` `{"moduleType":"Storage","code":"s3","provider":"S3","environment":"PROD","configurationRef":"ms11://module/s3/prod","capabilities":{"read":true},"config1":"bucket=shopizer-content","config2":"bucket=other-bucket","timeoutMs":10000,"maxAttempts":3}` with both supplemental values mapped to one target key.
+- **Error Input:** `POST /api/v1/adapters/refresh` `{"moduleType":"Storage","code":"s3","provider":"S3","environment":"PROD","configurationRef":"ms11://module/s3/prod","capabilities":{"read":true},"config1":"bucket=shopizer-content","config2":"bucket=other-bucket","timeoutMs":10000,"maxAttempts":3}` with both supplemental values mapped to one target key.
 - **Error Output:** `422 {"error":"ADAPTER_CONFIGURATION_INVALID","message":"Supplemental settings must remain distinct","statusCode":422,"timestamp":"2026-09-01T17:49:37Z"}`
 
 ## Carrier adapters
@@ -294,9 +294,9 @@ IF missing is not empty: throw IntegrationException(ERROR_VALIDATION_SAVE, missi
 **Preservation:** OK
 
 **Concrete Example:**
-- **API Input:** `POST /api/v1/integrations/adapters/refresh` `{"moduleType":"Shipping","code":"ups","provider":"UPS","environment":"PROD","configurationRef":"ms11://module/ups/prod","capabilities":{"rating":true},"credentials":{"accessKey":"AK-9041","userId":"shopizer-prod","password":"redacted"},"packageTypes":["02"],"timeoutMs":10000,"maxAttempts":3}`
+- **API Input:** `POST /api/v1/adapters/refresh` `{"moduleType":"Shipping","code":"ups","provider":"UPS","environment":"PROD","configurationRef":"ms11://module/ups/prod","capabilities":{"rating":true},"credentials":{"accessKey":"AK-9041","userId":"shopizer-prod","password":"redacted"},"packageTypes":["02"],"timeoutMs":10000,"maxAttempts":3}`
 - **Success:** `200 {"endpointId":"4fd4f7f6-0f9a-4903-965e-4bb4cd1d9e85","integrationType":"Shipping","provider":"UPS","code":"ups","environment":"PROD","status":"Active","capabilities":{"rating":true},"configurationRef":"ms11://module/ups/prod","timeoutMs":10000,"maxAttempts":3}`
-- **Error Input:** `POST /api/v1/integrations/adapters/refresh` `{"moduleType":"Shipping","code":"ups","provider":"UPS","environment":"PROD","configurationRef":"ms11://module/ups/prod","capabilities":{"rating":true},"credentials":{"accessKey":"AK-9041","userId":"","password":"redacted"},"packageTypes":[],"timeoutMs":10000,"maxAttempts":3}`.
+- **Error Input:** `POST /api/v1/adapters/refresh` `{"moduleType":"Shipping","code":"ups","provider":"UPS","environment":"PROD","configurationRef":"ms11://module/ups/prod","capabilities":{"rating":true},"credentials":{"accessKey":"AK-9041","userId":"","password":"redacted"},"packageTypes":[],"timeoutMs":10000,"maxAttempts":3}`.
 - **Error Output:** `422 {"error":"ADAPTER_CONFIGURATION_INVALID","message":"UPS requires userId and at least one package type","statusCode":422,"timestamp":"2026-09-01T17:49:37Z"}`
 
 ### BR-INT-MS12-006: USPS configuration validation
@@ -343,9 +343,9 @@ IF missing is not empty: throw IntegrationException(ERROR_VALIDATION_SAVE, missi
 **Preservation:** OK
 
 **Concrete Example:**
-- **API Input:** `POST /api/v1/integrations/adapters/refresh` `{"moduleType":"Shipping","code":"usps","provider":"USPS","environment":"PROD","configurationRef":"ms11://module/usps/prod","capabilities":{"rating":true},"credentials":{"account":"USPS-7712"},"packageTypes":["Package"],"timeoutMs":10000,"maxAttempts":3}`
+- **API Input:** `POST /api/v1/adapters/refresh` `{"moduleType":"Shipping","code":"usps","provider":"USPS","environment":"PROD","configurationRef":"ms11://module/usps/prod","capabilities":{"rating":true},"credentials":{"account":"USPS-7712"},"packageTypes":["Package"],"timeoutMs":10000,"maxAttempts":3}`
 - **Success:** `200 {"endpointId":"7fd4f7f6-0f9a-4903-965e-4bb4cd1d9e85","integrationType":"Shipping","provider":"USPS","code":"usps","environment":"PROD","status":"Active","capabilities":{"rating":true},"configurationRef":"ms11://module/usps/prod","timeoutMs":10000,"maxAttempts":3}`
-- **Error Input:** `POST /api/v1/integrations/adapters/refresh` `{"moduleType":"Shipping","code":"usps","provider":"USPS","environment":"PROD","configurationRef":"ms11://module/usps/prod","capabilities":{"rating":true},"credentials":{"account":""},"packageTypes":[],"timeoutMs":10000,"maxAttempts":3}`.
+- **Error Input:** `POST /api/v1/adapters/refresh` `{"moduleType":"Shipping","code":"usps","provider":"USPS","environment":"PROD","configurationRef":"ms11://module/usps/prod","capabilities":{"rating":true},"credentials":{"account":""},"packageTypes":[],"timeoutMs":10000,"maxAttempts":3}`.
 - **Error Output:** `422 {"error":"ADAPTER_CONFIGURATION_INVALID","message":"USPS requires account and at least one package type","statusCode":422,"timestamp":"2026-09-01T17:49:37Z"}`
 
 ### BR-INT-MS12-007: UPS eligibility and endpoint selection
@@ -393,9 +393,9 @@ FOR each moduleConfig:
 **Preservation:** OK
 
 **Concrete Example:**
-- **API Input:** `POST /api/v1/integrations/carrier-quotes/ups` `{"environment":"PROD","origin":{"city":"Montreal","zoneCode":"QC","countryCode":"CA","postalCode":"H2Y1C6"},"destination":{"city":"Los Angeles","zoneCode":"CA","countryCode":"US","postalCode":"90210"},"packages":[{"weight":2.4,"weightUnit":"KG","length":30,"width":20,"height":10,"dimensionUnit":"CM"}]}`
+- **API Input:** `POST /api/v1/carrier-quotes/ups` `{"environment":"PROD","origin":{"city":"Montreal","zoneCode":"QC","countryCode":"CA","postalCode":"H2Y1C6"},"destination":{"city":"Los Angeles","zoneCode":"CA","countryCode":"US","postalCode":"90210"},"packages":[{"weight":2.4,"weightUnit":"KG","length":30,"width":20,"height":10,"dimensionUnit":"CM"}]}`
 - **Success:** `200 {"provider":"UPS","requestType":"Rate","options":[{"provider":"UPS","code":"03","name":"UPS Ground","price":18.75,"currency":"USD","estimatedDays":"3"}]}`
-- **Error Input:** `POST /api/v1/integrations/carrier-quotes/ups` `{"environment":"PROD","origin":{"city":"Montreal","zoneCode":"QC","countryCode":"CA","postalCode":"H2Y1C6"},"destination":{"city":"Berlin","zoneCode":"BE","countryCode":"DE","postalCode":"10115"},"packages":[{"weight":2.4,"weightUnit":"KG","length":30,"width":20,"height":10,"dimensionUnit":"CM"}]}`.
+- **Error Input:** `POST /api/v1/carrier-quotes/ups` `{"environment":"PROD","origin":{"city":"Montreal","zoneCode":"QC","countryCode":"CA","postalCode":"H2Y1C6"},"destination":{"city":"Berlin","zoneCode":"BE","countryCode":"DE","postalCode":"10115"},"packages":[{"weight":2.4,"weightUnit":"KG","length":30,"width":20,"height":10,"dimensionUnit":"CM"}]}`.
 - **Error Output:** `200 {"provider":"UPS","requestType":"Suppressed","options":[],"suppressedReason":"DESTINATION_NOT_SUPPORTED"}`
 
 ### BR-INT-MS12-008: UPS request construction
@@ -446,9 +446,9 @@ POST XML to protocol + "://" + host + ":" + port + uri
 **Preservation:** OK
 
 **Concrete Example:**
-- **API Input:** `POST /api/v1/integrations/carrier-quotes/ups` `{"environment":"PROD","origin":{"city":"Montreal","zoneCode":"QC","countryCode":"CA","postalCode":"H2Y1C6"},"destination":{"city":"Los Angeles","zoneCode":"CA","countryCode":"US","postalCode":"90210"},"packages":[{"weight":2.46,"weightUnit":"KG","length":30.125,"width":20.126,"height":10.129,"dimensionUnit":"CM"}]}`
+- **API Input:** `POST /api/v1/carrier-quotes/ups` `{"environment":"PROD","origin":{"city":"Montreal","zoneCode":"QC","countryCode":"CA","postalCode":"H2Y1C6"},"destination":{"city":"Los Angeles","zoneCode":"CA","countryCode":"US","postalCode":"90210"},"packages":[{"weight":2.46,"weightUnit":"KG","length":30.125,"width":20.126,"height":10.129,"dimensionUnit":"CM"}]}`
 - **Success:** `200 {"provider":"UPS","requestType":"Rate","options":[{"provider":"UPS","code":"03","name":"UPS Ground","price":18.75,"currency":"USD","estimatedDays":"3"}]}`
-- **Error Input:** `POST /api/v1/integrations/carrier-quotes/ups` with the same contract-valid package and address fields as the success case, but no `PROD` UPS endpoint is configured for the selected store.
+- **Error Input:** `POST /api/v1/carrier-quotes/ups` with the same contract-valid package and address fields as the success case, but no `PROD` UPS endpoint is configured for the selected store.
 - **Error Output:** `502 {"error":"CARRIER_PROVIDER_ERROR","message":"UPS request could not be constructed","statusCode":502,"timestamp":"2026-09-01T17:49:37Z"}`
 
 ### BR-INT-MS12-009: UPS response normalization
@@ -501,9 +501,9 @@ RETURN options
 **Preservation:** OK
 
 **Concrete Example:**
-- **API Input:** `POST /api/v1/integrations/carrier-quotes/ups` `{"environment":"PROD","origin":{"city":"Montreal","zoneCode":"QC","countryCode":"CA","postalCode":"H2Y1C6"},"destination":{"city":"Los Angeles","zoneCode":"CA","countryCode":"US","postalCode":"90210"},"packages":[{"weight":2.46,"weightUnit":"KG","length":30.125,"width":20.126,"height":10.129,"dimensionUnit":"CM"}]}`
+- **API Input:** `POST /api/v1/carrier-quotes/ups` `{"environment":"PROD","origin":{"city":"Montreal","zoneCode":"QC","countryCode":"CA","postalCode":"H2Y1C6"},"destination":{"city":"Los Angeles","zoneCode":"CA","countryCode":"US","postalCode":"90210"},"packages":[{"weight":2.46,"weightUnit":"KG","length":30.125,"width":20.126,"height":10.129,"dimensionUnit":"CM"}]}`
 - **Success:** `200 {"provider":"UPS","requestType":"Rate","options":[{"provider":"UPS","code":"03","name":"UPS Ground","price":18.75,"currency":"USD","estimatedDays":"3"}]}`
-- **Error Input:** `POST /api/v1/integrations/carrier-quotes/ups` `{"environment":"PROD","origin":{"city":"Montreal","zoneCode":"QC","countryCode":"CA","postalCode":"H2Y1C6"},"destination":{"city":"Los Angeles","zoneCode":"CA","countryCode":"US","postalCode":"90210"},"packages":[{"weight":2.46,"weightUnit":"KG","length":30.125,"width":20.126,"height":10.129,"dimensionUnit":"CM"}]}` when the provider returns XML error description `"Invalid postal code"`.
+- **Error Input:** `POST /api/v1/carrier-quotes/ups` `{"environment":"PROD","origin":{"city":"Montreal","zoneCode":"QC","countryCode":"CA","postalCode":"H2Y1C6"},"destination":{"city":"Los Angeles","zoneCode":"CA","countryCode":"US","postalCode":"90210"},"packages":[{"weight":2.46,"weightUnit":"KG","length":30.125,"width":20.126,"height":10.129,"dimensionUnit":"CM"}]}` when the provider returns XML error description `"Invalid postal code"`.
 - **Error Output:** `502 {"error":"CARRIER_PROVIDER_ERROR","message":"UPS provider rejected the rating request: Invalid postal code","statusCode":502,"timestamp":"2026-09-01T17:49:37Z"}`
 
 ### BR-INT-MS12-010: USPS route and package normalization
@@ -559,9 +559,9 @@ ELSE: build IntlRateRequest with Pounds, Ounces, MailType, ValueOfContents, Coun
 **Preservation:** OK
 
 **Concrete Example:**
-- **API Input:** `POST /api/v1/integrations/carrier-quotes/usps` `{"environment":"PROD","origin":{"city":"Los Angeles","zoneCode":"CA","countryCode":"US","postalCode":"90001"},"destination":{"city":"New York","zoneCode":"NY","countryCode":"US","postalCode":"10001"},"packages":[{"weight":4.2,"weightUnit":"LB","length":20,"width":12,"height":8,"dimensionUnit":"IN"}],"orderTotal":250.00}`
+- **API Input:** `POST /api/v1/carrier-quotes/usps` `{"environment":"PROD","origin":{"city":"Los Angeles","zoneCode":"CA","countryCode":"US","postalCode":"90001"},"destination":{"city":"New York","zoneCode":"NY","countryCode":"US","postalCode":"10001"},"packages":[{"weight":4.2,"weightUnit":"LB","length":20,"width":12,"height":8,"dimensionUnit":"IN"}],"orderTotal":250.00}`
 - **Success:** `200 {"provider":"USPS","requestType":"Domestic","packageSize":"REGULAR","options":[{"provider":"USPS","code":"1","name":"Priority Mail","price":14.20,"currency":"USD","estimatedDays":"2"}]}`
-- **Error Input:** `POST /api/v1/integrations/carrier-quotes/usps` `{"environment":"PROD","origin":{"city":"Toronto","zoneCode":"ON","countryCode":"CA","postalCode":"M5V2T6"},"destination":{"city":"New York","zoneCode":"NY","countryCode":"US","postalCode":"10001"},"packages":[{"weight":4.2,"weightUnit":"LB","length":20,"width":12,"height":8,"dimensionUnit":"IN"}],"orderTotal":250.00}`.
+- **Error Input:** `POST /api/v1/carrier-quotes/usps` `{"environment":"PROD","origin":{"city":"Toronto","zoneCode":"ON","countryCode":"CA","postalCode":"M5V2T6"},"destination":{"city":"New York","zoneCode":"NY","countryCode":"US","postalCode":"10001"},"packages":[{"weight":4.2,"weightUnit":"LB","length":20,"width":12,"height":8,"dimensionUnit":"IN"}],"orderTotal":250.00}`.
 - **Error Output:** `422 {"error":"ADAPTER_CONFIGURATION_INVALID","message":"USPS requires a US-origin store","statusCode":422,"timestamp":"2026-09-01T17:49:37Z"}`
 
 ### BR-INT-MS12-011: USPS response normalization
@@ -613,9 +613,9 @@ RETURN parsed.options
 **Preservation:** OK
 
 **Concrete Example:**
-- **API Input:** `POST /api/v1/integrations/carrier-quotes/usps` `{"environment":"PROD","origin":{"city":"Los Angeles","zoneCode":"CA","countryCode":"US","postalCode":"90001"},"destination":{"city":"New York","zoneCode":"NY","countryCode":"US","postalCode":"10001"},"packages":[{"weight":4.2,"weightUnit":"LB","length":20,"width":12,"height":8,"dimensionUnit":"IN"}],"orderTotal":250.00}`
+- **API Input:** `POST /api/v1/carrier-quotes/usps` `{"environment":"PROD","origin":{"city":"Los Angeles","zoneCode":"CA","countryCode":"US","postalCode":"90001"},"destination":{"city":"New York","zoneCode":"NY","countryCode":"US","postalCode":"10001"},"packages":[{"weight":4.2,"weightUnit":"LB","length":20,"width":12,"height":8,"dimensionUnit":"IN"}],"orderTotal":250.00}`
 - **Success:** `200 {"provider":"USPS","requestType":"Domestic","packageSize":"REGULAR","options":[{"provider":"USPS","code":"1","name":"Priority Mail","price":14.20,"currency":"USD","estimatedDays":"2"}]}`
-- **Error Input:** `POST /api/v1/integrations/carrier-quotes/usps` `{"environment":"PROD","origin":{"city":"Los Angeles","zoneCode":"CA","countryCode":"US","postalCode":"90001"},"destination":{"city":"New York","zoneCode":"NY","countryCode":"US","postalCode":"10001"},"packages":[{"weight":4.2,"weightUnit":"LB","length":20,"width":12,"height":8,"dimensionUnit":"IN"}],"orderTotal":250.00}` when the provider returns `"Invalid Country Name"`.
+- **Error Input:** `POST /api/v1/carrier-quotes/usps` `{"environment":"PROD","origin":{"city":"Los Angeles","zoneCode":"CA","countryCode":"US","postalCode":"90001"},"destination":{"city":"New York","zoneCode":"NY","countryCode":"US","postalCode":"10001"},"packages":[{"weight":4.2,"weightUnit":"LB","length":20,"width":12,"height":8,"dimensionUnit":"IN"}],"orderTotal":250.00}` when the provider returns `"Invalid Country Name"`.
 - **Error Output:** `502 {"error":"CARRIER_PROVIDER_ERROR","message":"USPS provider rejected the rating request: Invalid Country Name","statusCode":502,"timestamp":"2026-09-01T17:49:37Z"}`
 
 ## Maps and geolocation
@@ -675,9 +675,9 @@ IF both result arrays have length > 0:
 **Preservation:** OK
 
 **Concrete Example:**
-- **API Input:** `POST /api/v1/integrations/maps/distance` `{"origin":{"address":"100 Main St","city":"Toronto","zoneCode":"ON","countryCode":"CA","postalCode":"M5V2T6"},"destination":{"address":"200 King St","city":"Toronto","zoneCode":"ON","countryCode":"CA","postalCode":"M5H1K5"},"allowedZoneCodes":["ON"]}`
+- **API Input:** `POST /api/v1/maps/distance` `{"origin":{"address":"100 Main St","city":"Toronto","zoneCode":"ON","countryCode":"CA","postalCode":"M5V2T6"},"destination":{"address":"200 King St","city":"Toronto","zoneCode":"ON","countryCode":"CA","postalCode":"M5H1K5"},"allowedZoneCodes":["ON"]}`
 - **Success:** `200 {"enriched":true,"destination":{"latitude":43.6487,"longitude":-79.3854},"distanceKm":2.4}`
-- **Error Input:** `POST /api/v1/integrations/maps/distance` `{"origin":{"address":"100 Main St","city":"Toronto","zoneCode":"ON","countryCode":"CA","postalCode":"M5V2T6"},"destination":{"address":"200 King St","city":"Toronto","zoneCode":"ON","countryCode":"CA","postalCode":"M5H1K5"},"allowedZoneCodes":["QC"]}`.
+- **Error Input:** `POST /api/v1/maps/distance` `{"origin":{"address":"100 Main St","city":"Toronto","zoneCode":"ON","countryCode":"CA","postalCode":"M5V2T6"},"destination":{"address":"200 King St","city":"Toronto","zoneCode":"ON","countryCode":"CA","postalCode":"M5H1K5"},"allowedZoneCodes":["QC"]}`.
 - **Error Output:** `200 {"enriched":false,"suppressedReason":"DESTINATION_ZONE_NOT_ALLOWED"}`
 
 ### BR-INT-MS12-013: IP location lookup
@@ -730,9 +730,9 @@ RETURN address
 **Preservation:** OK
 
 **Concrete Example:**
-- **API Input:** `POST /api/v1/integrations/geolocation/ip` `{"ipAddress":"8.8.8.8"}`
+- **API Input:** `POST /api/v1/geolocation/ip` `{"ipAddress":"8.8.8.8"}`
 - **Success:** `200 {"resolved":true,"countryCode":"US","postalCode":"94043","zoneCode":"CA","city":"Mountain View"}`
-- **Error Input:** `POST /api/v1/integrations/geolocation/ip` `{"ipAddress":"192.0.2.1"}`
+- **Error Input:** `POST /api/v1/geolocation/ip` `{"ipAddress":"192.0.2.1"}`
 - **Error Output:** `200 {"resolved":false,"countryCode":null,"postalCode":null,"zoneCode":null,"city":null}`
 
 ## Email delivery
@@ -780,7 +780,7 @@ sender.send(email)
 **Preservation:** FLAGGED — durable sender association is target architecture, while source configuration remains owned by MS-11.
 
 **Concrete Example:**
-- **API Input:** `POST /api/v1/integrations/emails` `{"idempotencyKey":"order-10482-confirmation-v1","templateKey":"order-confirmation","locale":"en-CA","recipientEmail":"maya@example.net","senderEmail":"orders@example.ca","senderName":"Demo Store","subject":"Order 10482","tokenPayload":{"orderNumber":"10482","customerFirstName":"Maya"},"orderReference":"10482"}`
+- **API Input:** `POST /api/v1/emails` `{"idempotencyKey":"order-10482-confirmation-v1","templateKey":"order-confirmation","locale":"en-CA","recipientEmail":"maya@example.net","senderEmail":"orders@example.ca","senderName":"Demo Store","subject":"Order 10482","tokenPayload":{"orderNumber":"10482","customerFirstName":"Maya"},"orderReference":"10482"}`
 - **Success:** `202 {"messageId":"f4d4f7f6-0f9a-4903-965e-4bb4cd1d9e85","operationId":"1d8a7f0e-c6b5-4b65-a8de-7cb5c8c3d410","endpointId":"4fd4f7f6-0f9a-4903-965e-4bb4cd1d9e85","idempotencyKey":"order-10482-confirmation-v1","templateKey":"order-confirmation","locale":"en-CA","recipientEmail":"maya@example.net","senderEmail":"orders@example.ca","subject":"Order 10482","status":"Queued","queuedAt":"2026-09-01T17:49:37Z"}`
 - **Error Input:** The same request with malformed store email configuration.
 - **Error Output:** `422 {"error":"EMAIL_CONFIGURATION_INVALID","message":"Store email configuration is not valid JSON","statusCode":422,"timestamp":"2026-09-01T17:49:37Z"}`
@@ -834,9 +834,9 @@ SES:
 **Preservation:** FLAGGED — target delivery state records the asynchronous outcome; source sender has no durable attempt state.
 
 **Concrete Example:**
-- **API Input:** `POST /api/v1/integrations/emails` `{"idempotencyKey":"contact-20260901-001","templateKey":"contact","locale":"en-CA","recipientEmail":"store@example.ca","senderEmail":"store@example.ca","senderName":"Demo Store","subject":"Customer contact","tokenPayload":{"contactName":"Maya Chen","contactEmail":"maya@example.net","comment":"Please call me"} }`
+- **API Input:** `POST /api/v1/emails` `{"idempotencyKey":"contact-20260901-001","templateKey":"contact","locale":"en-CA","recipientEmail":"store@example.ca","senderEmail":"store@example.ca","senderName":"Demo Store","subject":"Customer contact","tokenPayload":{"contactName":"Maya Chen","contactEmail":"maya@example.net","comment":"Please call me"} }`
 - **Success:** `202 {"messageId":"a3d4f7f6-0f9a-4903-965e-4bb4cd1d9e85","operationId":"2d8a7f0e-c6b5-4b65-a8de-7cb5c8c3d410","endpointId":"4fd4f7f6-0f9a-4903-965e-4bb4cd1d9e85","idempotencyKey":"contact-20260901-001","templateKey":"contact","locale":"en-CA","recipientEmail":"store@example.ca","senderEmail":"store@example.ca","subject":"Customer contact","status":"Queued","queuedAt":"2026-09-01T17:49:37Z"}`
-- **Error Input:** `POST /api/v1/integrations/emails` `{"idempotencyKey":"contact-20260901-001","templateKey":"contact","locale":"en-CA","recipientEmail":"store@example.ca","senderEmail":"store@example.ca","senderName":"Demo Store","subject":"Customer contact","tokenPayload":{"contactName":"Maya Chen","contactEmail":"maya@example.net","comment":"Please call me"}}` with an unavailable template key.
+- **Error Input:** `POST /api/v1/emails` `{"idempotencyKey":"contact-20260901-001","templateKey":"contact","locale":"en-CA","recipientEmail":"store@example.ca","senderEmail":"store@example.ca","senderName":"Demo Store","subject":"Customer contact","tokenPayload":{"contactName":"Maya Chen","contactEmail":"maya@example.net","comment":"Please call me"}}` with an unavailable template key.
 - **Error Output:** `422 {"error":"EMAIL_CONFIGURATION_INVALID","message":"Email template 'contact' could not be rendered","statusCode":422,"timestamp":"2026-09-01T17:49:37Z"}`
 
 ### BR-INT-MS12-016: Order confirmation projection
@@ -890,9 +890,9 @@ emailService.sendHtmlEmail(merchantStore, email)
 **Preservation:** OK
 
 **Concrete Example:**
-- **API Input:** `POST /api/v1/integrations/emails` `{"idempotencyKey":"order-10482-confirmation-v1","templateKey":"order-confirmation","locale":"en-CA","recipientEmail":"maya@example.net","senderEmail":"orders@example.ca","senderName":"Demo Store","subject":"Order 10482","tokenPayload":{"orderNumber":"10482","customerFirstName":"Maya","billingAddress":"10 Queen St, Toronto, ON M5V2T6","items":[{"productName":"Canvas Tote","sku":"TOTE-01","quantity":2,"displayPrice":"CAD 24.00"}],"orderTotal":"CAD 48.00","paymentMethod":"Credit Card","shippingMethod":"UPS Ground","orderStatus":"CONFIRMED"},"orderReference":"10482"}`
+- **API Input:** `POST /api/v1/emails` `{"idempotencyKey":"order-10482-confirmation-v1","templateKey":"order-confirmation","locale":"en-CA","recipientEmail":"maya@example.net","senderEmail":"orders@example.ca","senderName":"Demo Store","subject":"Order 10482","tokenPayload":{"orderNumber":"10482","customerFirstName":"Maya","billingAddress":"10 Queen St, Toronto, ON M5V2T6","items":[{"productName":"Canvas Tote","sku":"TOTE-01","quantity":2,"displayPrice":"CAD 24.00"}],"orderTotal":"CAD 48.00","paymentMethod":"Credit Card","shippingMethod":"UPS Ground","orderStatus":"CONFIRMED"},"orderReference":"10482"}`
 - **Success:** `202 {"messageId":"f4d4f7f6-0f9a-4903-965e-4bb4cd1d9e85","operationId":"1d8a7f0e-c6b5-4b65-a8de-7cb5c8c3d410","endpointId":"4fd4f7f6-0f9a-4903-965e-4bb4cd1d9e85","idempotencyKey":"order-10482-confirmation-v1","templateKey":"order-confirmation","locale":"en-CA","recipientEmail":"maya@example.net","senderEmail":"orders@example.ca","subject":"Order 10482","status":"Queued","queuedAt":"2026-09-01T17:49:37Z"}`
-- **Error Input:** `POST /api/v1/integrations/emails` `{"idempotencyKey":"order-10482-confirmation-v1","templateKey":"order-confirmation","locale":"en-CA","recipientEmail":"maya@example.net","senderEmail":"orders@example.ca","senderName":"Demo Store","subject":"Order 10482","tokenPayload":{"orderNumber":"10482","customerFirstName":"Maya"},"orderReference":"10482"}` with an unavailable template.
+- **Error Input:** `POST /api/v1/emails` `{"idempotencyKey":"order-10482-confirmation-v1","templateKey":"order-confirmation","locale":"en-CA","recipientEmail":"maya@example.net","senderEmail":"orders@example.ca","senderName":"Demo Store","subject":"Order 10482","tokenPayload":{"orderNumber":"10482","customerFirstName":"Maya"},"orderReference":"10482"}` with an unavailable template.
 - **Error Output:** `422 {"error":"EMAIL_CONFIGURATION_INVALID","message":"Email template 'order-confirmation' could not be rendered","statusCode":422,"timestamp":"2026-09-01T17:49:37Z"}`
 
 ### BR-INT-MS12-017: Account and operational notification projection
@@ -949,9 +949,9 @@ all branches create Email with branch template and call emailService.sendHtmlEma
 **Preservation:** FLAGGED — target deliberately removes the source password token as a security correction.
 
 **Concrete Example:**
-- **API Input:** `POST /api/v1/integrations/emails` `{"idempotencyKey":"password-change-10482-v1","templateKey":"password-changed","locale":"en-CA","recipientEmail":"maya@example.net","senderEmail":"orders@example.ca","senderName":"Demo Store","subject":"Your password changed","tokenPayload":{"customerFirstName":"Maya","changedAt":"September 1, 2026"} }`
+- **API Input:** `POST /api/v1/emails` `{"idempotencyKey":"password-change-10482-v1","templateKey":"password-changed","locale":"en-CA","recipientEmail":"maya@example.net","senderEmail":"orders@example.ca","senderName":"Demo Store","subject":"Your password changed","tokenPayload":{"customerFirstName":"Maya","changedAt":"September 1, 2026"} }`
 - **Success:** `202 {"messageId":"b4d4f7f6-0f9a-4903-965e-4bb4cd1d9e85","operationId":"3d8a7f0e-c6b5-4b65-a8de-7cb5c8c3d410","endpointId":"4fd4f7f6-0f9a-4903-965e-4bb4cd1d9e85","idempotencyKey":"password-change-10482-v1","templateKey":"password-changed","locale":"en-CA","recipientEmail":"maya@example.net","senderEmail":"orders@example.ca","subject":"Your password changed","status":"Queued","queuedAt":"2026-09-01T17:49:37Z"}`
-- **Error Input:** `POST /api/v1/integrations/emails` `{"idempotencyKey":"password-change-10482-v1","templateKey":"password-changed","locale":"en-CA","recipientEmail":"","senderEmail":"orders@example.ca","senderName":"Demo Store","subject":"Your password changed","tokenPayload":{"customerFirstName":"Maya","changedAt":"September 1, 2026"}}`.
+- **Error Input:** `POST /api/v1/emails` `{"idempotencyKey":"password-change-10482-v1","templateKey":"password-changed","locale":"en-CA","recipientEmail":"","senderEmail":"orders@example.ca","senderName":"Demo Store","subject":"Your password changed","tokenPayload":{"customerFirstName":"Maya","changedAt":"September 1, 2026"}}`.
 - **Error Output:** `422 {"error":"EMAIL_CONFIGURATION_INVALID","message":"recipientEmail must be a valid email address","statusCode":422,"timestamp":"2026-09-01T17:49:37Z"}`
 
 ## Storage adapters
@@ -999,7 +999,7 @@ removeFiles(...): removeFile.removeFiles(...)
 **Preservation:** OK
 
 **Concrete Example:**
-- **API Input:** `POST /api/v1/integrations/files` `{"storeCode":"demo-ca","contentType":"Image","fileName":"hero.png","mimeType":"image/png","contentBase64":"iVBORw0KGgo=","idempotencyKey":"asset-hero-v1"}`
+- **API Input:** `POST /api/v1/files` `{"storeCode":"demo-ca","contentType":"Image","fileName":"hero.png","mimeType":"image/png","contentBase64":"iVBORw0KGgo=","idempotencyKey":"asset-hero-v1"}`
 - **Success:** `201 {"operationId":"4d8a7f0e-c6b5-4b65-a8de-7cb5c8c3d410","fileName":"hero.png","contentType":"Image","mimeType":"image/png","providerKey":"demo-ca/Image/hero.png","status":"Available","deliveryAttemptId":"5d8a7f0e-c6b5-4b65-a8de-7cb5c8c3d410"}`
 - **Error Input:** The same request with `"fileName":"../hero.png"`.
 - **Error Output:** `422 {"error":"STORAGE_KEY_INVALID","message":"fileName must not contain path traversal or path separators","statusCode":422,"timestamp":"2026-09-01T17:49:37Z"}`
@@ -1054,9 +1054,9 @@ S3/GCP:
 **Preservation:** FLAGGED — the target makes unsupported local reads explicit with `501` and records operation state.
 
 **Concrete Example:**
-- **API Input:** `GET /api/v1/integrations/files/hero.png?storeCode=demo-ca&contentType=Image`
+- **API Input:** `GET /api/v1/files/hero.png?storeCode=demo-ca&contentType=Image`
 - **Success:** `200 {"fileName":"hero.png","contentType":"Image","mimeType":"image/png","providerKey":"demo-ca/Image/hero.png","contentBase64":"iVBORw0KGgo="}`
-- **Error Input:** `GET /api/v1/integrations/files/hero.png?storeCode=demo-ca&contentType=Image` against a provider without read capability.
+- **Error Input:** `GET /api/v1/files/hero.png?storeCode=demo-ca&contentType=Image` against a provider without read capability.
 - **Error Output:** `501 {"error":"STORAGE_OPERATION_UNSUPPORTED","message":"The selected storage provider does not support file reads","statusCode":501,"timestamp":"2026-09-01T17:49:37Z"}`
 
 ### BR-INT-MS12-020: Storage folder capability handling
@@ -1107,9 +1107,9 @@ TARGET:
 **Preservation:** FLAGGED — target converts null/TODO provider behavior into explicit capability outcomes.
 
 **Concrete Example:**
-- **API Input:** `POST /api/v1/integrations/files/folders` `{"storeCode":"demo-ca","provider":"Local","folderPath":"campaigns","folderName":"2026"}`
+- **API Input:** `POST /api/v1/files/folders` `{"storeCode":"demo-ca","provider":"Local","folderPath":"campaigns","folderName":"2026"}`
 - **Success:** `201 {"path":"demo-ca/Image/campaigns/2026","provider":"Local","capability":"CreateFolder","status":"Created"}`
-- **Error Input:** `POST /api/v1/integrations/files/folders` `{"storeCode":"demo-ca","provider":"GCP","folderPath":"campaigns","folderName":"2026"}` when folder creation is not supported.
+- **Error Input:** `POST /api/v1/files/folders` `{"storeCode":"demo-ca","provider":"GCP","folderPath":"campaigns","folderName":"2026"}` when folder creation is not supported.
 - **Error Output:** `501 {"error":"STORAGE_OPERATION_UNSUPPORTED","message":"GCP does not support folder creation","statusCode":501,"timestamp":"2026-09-01T17:49:37Z"}`
 
 ## Durable delivery reliability
@@ -1157,9 +1157,9 @@ provider write uses the logical provider key; successful retry does not create a
 **Preservation:** FLAGGED — all durable idempotency and attempt behavior is target-only; the source-faithful alternative is same-key replacement with durable duplicate suppression.
 
 **Concrete Example:**
-- **API Input:** `POST /api/v1/integrations/files/batch` `{"storeCode":"demo-ca","idempotencyKey":"campaign-2026-assets-v1","files":[{"contentType":"Image","fileName":"hero.png","mimeType":"image/png","contentBase64":"iVBORw0KGgo="},{"contentType":"Pdf","fileName":"terms.pdf","mimeType":"application/pdf","contentBase64":"JVBERi0xLjQ="}]}`
+- **API Input:** `POST /api/v1/files/batch` `{"storeCode":"demo-ca","idempotencyKey":"campaign-2026-assets-v1","files":[{"contentType":"Image","fileName":"hero.png","mimeType":"image/png","contentBase64":"iVBORw0KGgo="},{"contentType":"Pdf","fileName":"terms.pdf","mimeType":"application/pdf","contentBase64":"JVBERi0xLjQ="}]}`
 - **Success:** `201 {"operationId":"4d8a7f0e-c6b5-4b65-a8de-7cb5c8c3d410","items":[{"operationId":"4d8a7f0e-c6b5-4b65-a8de-7cb5c8c3d410","fileName":"hero.png","contentType":"Image","mimeType":"image/png","providerKey":"demo-ca/Image/hero.png","status":"Available","deliveryAttemptId":"5d8a7f0e-c6b5-4b65-a8de-7cb5c8c3d410"},{"operationId":"4d8a7f0e-c6b5-4b65-a8de-7cb5c8c3d410","fileName":"terms.pdf","contentType":"Pdf","mimeType":"application/pdf","providerKey":"demo-ca/Pdf/terms.pdf","status":"Available","deliveryAttemptId":"6d8a7f0e-c6b5-4b65-a8de-7cb5c8c3d410"}],"acceptedCount":2,"failedCount":0}`
-- **Error Input:** `POST /api/v1/integrations/files/batch` `{"storeCode":"demo-ca","idempotencyKey":"campaign-2026-assets-v1","files":[{"contentType":"Image","fileName":"hero.png","mimeType":"image/png","contentBase64":"iVBORw0KGgo="},{"contentType":"Pdf","fileName":"terms.pdf","mimeType":"application/pdf","contentBase64":"JVBERi0xLjU="}]}` repeats the operation key with a changed content byte sequence.
+- **Error Input:** `POST /api/v1/files/batch` `{"storeCode":"demo-ca","idempotencyKey":"campaign-2026-assets-v1","files":[{"contentType":"Image","fileName":"hero.png","mimeType":"image/png","contentBase64":"iVBORw0KGgo="},{"contentType":"Pdf","fileName":"terms.pdf","mimeType":"application/pdf","contentBase64":"JVBERi0xLjU="}]}` repeats the operation key with a changed content byte sequence.
 - **Error Output:** `409 {"error":"IDEMPOTENCY_KEY_REUSED","message":"idempotencyKey is already associated with a different upload request","statusCode":409,"timestamp":"2026-09-01T17:49:37Z"}`
 
 ### BR-INT-MS12-022: Durable delivery retry policy
@@ -1207,9 +1207,9 @@ ELSE:
 **Preservation:** FLAGGED — bounded retry and durable states are target-only reliability requirements justified by asynchronous provider delivery.
 
 **Concrete Example:**
-- **API Input:** `GET /api/v1/integrations/delivery-attempts/5d8a7f0e-c6b5-4b65-a8de-7cb5c8c3d410`
+- **API Input:** `GET /api/v1/delivery-attempts/5d8a7f0e-c6b5-4b65-a8de-7cb5c8c3d410`
 - **Success:** `200 {"attemptId":"5d8a7f0e-c6b5-4b65-a8de-7cb5c8c3d410","operationId":"4d8a7f0e-c6b5-4b65-a8de-7cb5c8c3d410","endpointId":"4fd4f7f6-0f9a-4903-965e-4bb4cd1d9e85","operationItemKey":"hero.png","attemptNumber":2,"status":"Failed","providerErrorCode":"TIMEOUT","providerErrorMessage":"Provider did not respond within 10000 ms","nextAttemptAt":"2026-09-01T17:50:17Z","createdAt":"2026-09-01T17:49:37Z","updatedAt":"2026-09-01T17:49:37Z"}`
-- **Error Input:** `GET /api/v1/integrations/delivery-attempts/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa`
+- **Error Input:** `GET /api/v1/delivery-attempts/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa`
 - **Error Output:** `404 {"error":"DELIVERY_ATTEMPT_NOT_FOUND","message":"Delivery attempt was not found","statusCode":404,"timestamp":"2026-09-01T17:49:37Z"}`
 
 ### BR-INT-MS12-023: Outbox, replay, and dead-letter handling
@@ -1265,9 +1265,9 @@ on exhausted retry:
 **Preservation:** FLAGGED — outbox, replay, and dead-letter persistence are target-only because no equivalent durable source implementation exists.
 
 **Concrete Example:**
-- **API Input:** `POST /api/v1/integrations/delivery-attempts/5d8a7f0e-c6b5-4b65-a8de-7cb5c8c3d410/replay` `{"reason":"Provider recovered"}`
+- **API Input:** `POST /api/v1/delivery-attempts/5d8a7f0e-c6b5-4b65-a8de-7cb5c8c3d410/replay` `{"reason":"Provider recovered"}`
 - **Success:** `202 {"attemptId":"7d8a7f0e-c6b5-4b65-a8de-7cb5c8c3d410","operationId":"4d8a7f0e-c6b5-4b65-a8de-7cb5c8c3d410","endpointId":"4fd4f7f6-0f9a-4903-965e-4bb4cd1d9e85","operationItemKey":"hero.png","attemptNumber":3,"status":"Pending","replayOfAttemptId":"5d8a7f0e-c6b5-4b65-a8de-7cb5c8c3d410","createdAt":"2026-09-01T17:49:37Z","updatedAt":"2026-09-01T17:49:37Z"}`
-- **Error Input:** `POST /api/v1/integrations/delivery-attempts/8d8a7f0e-c6b5-4b65-a8de-7cb5c8c3d410/replay` `{"reason":"Retry successful delivery"}`
+- **Error Input:** `POST /api/v1/delivery-attempts/8d8a7f0e-c6b5-4b65-a8de-7cb5c8c3d410/replay` `{"reason":"Retry successful delivery"}`
 - **Error Output:** `409 {"error":"DELIVERY_REPLAY_NOT_ALLOWED","message":"Only failed or dead-lettered attempts can be replayed","statusCode":409,"timestamp":"2026-09-01T17:49:37Z"}`
 
 ## Events

@@ -17,8 +17,7 @@ public sealed class CartService(
     TaxClient tax,
     PaymentClient payments,
     EventPublisher events,
-    IConfiguration configuration,
-    ILogger<CartService> logger)
+    IConfiguration configuration)
 {
     private readonly string _defaultCurrency = configuration["CartCheckout:DefaultCurrency"] ?? "CAD";
 
@@ -113,7 +112,7 @@ public sealed class CartService(
     public async Task<CartEnvelopeDto> UpdateMultipleAsync(string code, IReadOnlyCollection<MultiCartItemRequestDto> requests, RequestContext context, CancellationToken ct)
     {
         if (requests.Count == 0) throw new DomainException("INVALID_REQUEST", "At least one cart item is required", 400);
-        var cart = await RequiredCartAsync(code, context, ct); EnsureOpen(cart);
+        var cart = await RequiredCartAsync(code, context, ct);
         foreach (var request in requests)
         {
             ValidateProductRequest(request.Product, request.Quantity, true);
@@ -254,15 +253,21 @@ public sealed class CartService(
             shippingAmount = shippingSummary.FreeShipping == true ? 0 : decimal.TryParse(shippingSummary.Shipping, out var ship) ? ship : 0;
             handlingAmount = decimal.TryParse(shippingSummary.Handling, out var handling) ? handling : 0;
         }
-        var address = customer?.Billing;
-        if (address is null) throw new DomainException("CHECKOUT_UNAVAILABLE", "A billing address is required to calculate tax", 503);
-        var taxAmount = await tax.QuoteAsync(Currency(hydrated), address, hydrated.Items, null, ct);
+        var taxAmount = customer?.Billing is { } address
+            ? await tax.QuoteAsync(Currency(hydrated), address, hydrated.Items, null, ct)
+            : 0m;
         var grand = afterPromotion + shippingAmount + handlingAmount + taxAmount;
         return new TotalSummaryDto
         {
-            CartCode = cart.Code, Currency = Currency(hydrated), SubTotal = DtoMapper.Money(subtotal), DiscountTotal = DtoMapper.Money(discount),
-            Shipping = DtoMapper.Money(shippingAmount), Handling = DtoMapper.Money(handlingAmount), Tax = DtoMapper.Money(taxAmount),
-            GrandTotal = DtoMapper.Money(grand), QuoteVersion = hydrated.Version,
+            CartCode = cart.Code,
+            Currency = Currency(hydrated),
+            SubTotal = DtoMapper.Money(subtotal),
+            DiscountTotal = DtoMapper.Money(discount),
+            Shipping = DtoMapper.Money(shippingAmount),
+            Handling = DtoMapper.Money(handlingAmount),
+            Tax = DtoMapper.Money(taxAmount),
+            GrandTotal = DtoMapper.Money(grand),
+            QuoteVersion = hydrated.Version,
             Components = [new() { Code = "order.total.subtotal", Amount = DtoMapper.Money(afterPromotion) }, new() { Code = "order.total.shipping", Amount = DtoMapper.Money(shippingAmount) }, new() { Code = "order.total.handling", Amount = DtoMapper.Money(handlingAmount) }, new() { Code = "order.total.tax", Amount = DtoMapper.Money(taxAmount) }, new() { Code = "order.total.total", Amount = DtoMapper.Money(grand) }]
         };
     }
@@ -283,7 +288,7 @@ public sealed class CartService(
         if (authenticated is not null && authenticated.Payment is null) throw new DomainException("INVALID_REQUEST", "Payment is required", 400);
         if (anonymous is not null && (anonymous.Customer is null || anonymous.Payment is null))
             throw new DomainException("INVALID_REQUEST", "Customer and payment are required", 400);
-        var cart = await RequiredCartAsync(code, context, ct); EnsureOpen(cart);
+        var cart = await RequiredCartAsync(code, context, ct);
         CustomerFact? customer = null;
         if (authenticated is not null)
         {
@@ -333,8 +338,11 @@ public sealed class CartService(
             var provider = await payments.InitializeAsync(session, request, _defaultCurrency, idempotencyKey, ct);
             var response = new PaymentInitializationResponseDto
             {
-                SubmissionId = session.ToString(), PaymentState = "Pending", ProviderReference = provider,
-                Amount = DtoMapper.Money(amount), Currency = _defaultCurrency
+                SubmissionId = session.ToString(),
+                PaymentState = "Pending",
+                ProviderReference = provider,
+                Amount = DtoMapper.Money(amount),
+                Currency = _defaultCurrency
             };
             await repository.CompletePaymentIdempotencyAsync(cart.Id, customerId, idempotencyKey, response, context, ct);
             return response;
@@ -399,7 +407,8 @@ public sealed class CartService(
         if (customer is not null && cart.CustomerId != customer.Id)
             throw new DomainException("CART_NOT_FOUND", "Cart is not available to this customer", 404);
     }
-    private static void ValidateProductRequest(string product, int quantity, bool allowZero) {
+    private static void ValidateProductRequest(string product, int quantity, bool allowZero)
+    {
         if (string.IsNullOrWhiteSpace(product)) throw new DomainException("INVALID_REQUEST", "Product is required", 400);
         if (allowZero ? quantity < 0 : quantity <= 0) throw new DomainException("INVALID_QUANTITY", allowZero ? "Quantity must be zero or greater for an update" : "Quantity must be greater than zero", 422);
     }

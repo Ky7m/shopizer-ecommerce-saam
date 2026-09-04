@@ -3,7 +3,8 @@ using Shopizer.IntegrationTests.Fixtures;
 namespace Shopizer.IntegrationTests;
 
 [Collection(ShopizerAspireCollection.Name)]
-public sealed class PlatformIntegrationsComprehensiveTests(AspireHostFixture fixture) : ComprehensiveTestBase(fixture.PlatformIntegrationsClient)
+public sealed class PlatformIntegrationsComprehensiveTests(AspireHostFixture fixture) :
+    ComprehensiveTestBase(fixture.PlatformIntegrationsClient, fixture.TestTenantAdminAccessToken, fixture.PreparePlatformRequestAsync)
 {
 
     // Source assertion 1: Contract success: POST /adapters/refresh
@@ -516,11 +517,11 @@ public sealed class PlatformIntegrationsComprehensiveTests(AspireHostFixture fix
     // @BR-ID: BR-INT-MS12-001
     [Fact(DisplayName = "047: Contract error/conformance: GET /delivery-attempts/{attemptId}")]
     [Trait("BR", "BR-INT-MS12-001")]
-    public Task Test047_GET_BASE_URL_delivery_attempts_ById_Status_400() => AssertShellAsync(
+    public Task Test047_GET_BASE_URL_delivery_attempts_ById_Status_404() => AssertShellAsync(
         Method("GET"),
         $"/delivery-attempts/{ResourceId}",
         null,
-        400,
+        404,
         requiredField: null);
 
     // Source assertion 48: Contract success: GET /files

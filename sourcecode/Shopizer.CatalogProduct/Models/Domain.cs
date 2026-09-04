@@ -179,21 +179,34 @@ public static class DtoMapper
 {
     public static AvailabilityDto Availability(AvailabilityRecord a) => new()
     {
-        Id = a.Id.ToString(), RegionCode = a.RegionCode, Quantity = a.Quantity,
-        ReservedQuantity = a.ReservedQuantity, SellableQuantity = Math.Max(0, a.Quantity - a.ReservedQuantity), Active = a.Active
+        Id = a.Id.ToString(),
+        RegionCode = a.RegionCode,
+        Quantity = a.Quantity,
+        ReservedQuantity = a.ReservedQuantity,
+        SellableQuantity = Math.Max(0, a.Quantity - a.ReservedQuantity),
+        Active = a.Active
     };
 
     public static ProductDescriptionDto Description(ProductDescriptionRecord d) => new()
     {
-        LanguageCode = d.LanguageCode, Name = d.Name, FriendlyUrl = d.FriendlyUrl,
-        Description = d.Description, Highlights = d.Highlights, Title = d.Title,
-        Keywords = d.Keywords, MetaDescription = d.MetaDescription
+        LanguageCode = d.LanguageCode,
+        Name = d.Name,
+        FriendlyUrl = d.FriendlyUrl,
+        Description = d.Description,
+        Highlights = d.Highlights,
+        Title = d.Title,
+        Keywords = d.Keywords,
+        MetaDescription = d.MetaDescription
     };
 
     public static CategoryDescriptionDto Description(CategoryDescriptionRecord d) => new()
     {
-        LanguageCode = d.LanguageCode, Name = d.Name, FriendlyUrl = d.FriendlyUrl,
-        Description = d.Description, Title = d.Title, MetaDescription = d.MetaDescription
+        LanguageCode = d.LanguageCode,
+        Name = d.Name,
+        FriendlyUrl = d.FriendlyUrl,
+        Description = d.Description,
+        Title = d.Title,
+        MetaDescription = d.MetaDescription
     };
 
     public static PriceDto Price(PriceRecord p, DateTimeOffset now)
@@ -203,10 +216,16 @@ public static class DtoMapper
                      (!p.SpecialEndAt.HasValue || now < p.SpecialEndAt.Value);
         return new()
         {
-            Id = p.Id.ToString(), Amount = p.Amount, CurrencyCode = p.CurrencyCode,
-            PriceType = p.PriceType, DefaultPrice = p.DefaultPrice, SpecialAmount = p.SpecialAmount,
-            SpecialStartAt = p.SpecialStartAt?.ToString("O"), SpecialEndAt = p.SpecialEndAt?.ToString("O"),
-            FinalAmount = active ? p.SpecialAmount : p.Amount, Discounted = active
+            Id = p.Id.ToString(),
+            Amount = p.Amount,
+            CurrencyCode = p.CurrencyCode,
+            PriceType = p.PriceType,
+            DefaultPrice = p.DefaultPrice,
+            SpecialAmount = p.SpecialAmount,
+            SpecialStartAt = p.SpecialStartAt?.ToString("O"),
+            SpecialEndAt = p.SpecialEndAt?.ToString("O"),
+            FinalAmount = active ? p.SpecialAmount : p.Amount,
+            Discounted = active
         };
     }
 }

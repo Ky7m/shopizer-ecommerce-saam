@@ -3,7 +3,8 @@ using Shopizer.IntegrationTests.Fixtures;
 namespace Shopizer.IntegrationTests;
 
 [Collection(ShopizerAspireCollection.Name)]
-public sealed class PricingPromotionsComprehensiveTests(AspireHostFixture fixture) : ComprehensiveTestBase(fixture.PricingPromotionsClient)
+public sealed class PricingPromotionsComprehensiveTests(AspireHostFixture fixture) : ComprehensiveTestBase(
+    fixture.PricingPromotionsClient, fixture.PricingAdminAccessToken, fixture.PreparePricingRequestAsync)
 {
 
     // Source assertion 1: Contract success: POST /pricing/products/{sku}/quote

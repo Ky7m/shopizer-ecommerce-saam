@@ -2,5 +2,5 @@ namespace Shopizer.CustomerIdentity.DTOs;
 
 public sealed class NewsletterSubscriptionDto
 {
-        // Marker DTO for an empty contract shape.
+    // Marker DTO for an empty contract shape.
 }

@@ -4,9 +4,9 @@ namespace Shopizer.CustomerIdentity.DTOs;
 
 public sealed class CustomerReviewListResponseDto
 {
-        [JsonPropertyName("items")]
-        public List<CustomerReviewDto> Items { get; set; } = new();
+    [JsonPropertyName("items")]
+    public List<CustomerReviewDto> Items { get; set; } = new();
 
-        [JsonPropertyName("pagination")]
-        public PaginationInfoDto Pagination { get; set; }
+    [JsonPropertyName("pagination")]
+    public PaginationInfoDto Pagination { get; set; }
 }

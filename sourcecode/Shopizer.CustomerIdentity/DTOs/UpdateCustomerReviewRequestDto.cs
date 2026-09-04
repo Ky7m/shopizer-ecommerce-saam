@@ -5,10 +5,10 @@ namespace Shopizer.CustomerIdentity.DTOs;
 
 public sealed class UpdateCustomerReviewRequestDto
 {
-        [JsonPropertyName("rating")]
-        [Range(1, 5)]
-        public decimal Rating { get; set; }
+    [JsonPropertyName("rating")]
+    [Range(1, 5)]
+    public decimal Rating { get; set; }
 
-        [JsonPropertyName("description")]
-        public string? Description { get; set; }
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
 }

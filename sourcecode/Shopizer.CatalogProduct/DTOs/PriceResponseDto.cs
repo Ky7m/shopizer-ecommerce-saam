@@ -5,25 +5,25 @@ namespace Shopizer.CatalogProduct.DTOs;
 
 public sealed class PriceResponseDto
 {
-        [JsonPropertyName("finalAmount")]
-        [Range(0, double.MaxValue)]
-        public decimal FinalAmount { get; set; }
+    [JsonPropertyName("finalAmount")]
+    [Range(0, double.MaxValue)]
+    public decimal FinalAmount { get; set; }
 
-        [JsonPropertyName("originalAmount")]
-        public decimal? OriginalAmount { get; set; }
+    [JsonPropertyName("originalAmount")]
+    public decimal? OriginalAmount { get; set; }
 
-        [JsonPropertyName("currencyCode")]
-        [Required]
-        public string CurrencyCode { get; set; }
+    [JsonPropertyName("currencyCode")]
+    [Required]
+    public string CurrencyCode { get; set; }
 
-        [JsonPropertyName("priceSource")]
-        [Required]
-        public string PriceSource { get; set; }
+    [JsonPropertyName("priceSource")]
+    [Required]
+    public string PriceSource { get; set; }
 
-        [JsonPropertyName("discounted")]
-        public bool? Discounted { get; set; }
+    [JsonPropertyName("discounted")]
+    public bool? Discounted { get; set; }
 
-        [JsonPropertyName("matchedSelections")]
-        [Range(0, double.MaxValue)]
-        public int MatchedSelections { get; set; }
+    [JsonPropertyName("matchedSelections")]
+    [Range(0, double.MaxValue)]
+    public int MatchedSelections { get; set; }
 }

@@ -27,7 +27,11 @@ public sealed class ErrorMiddleware(RequestDelegate next, ILogger<ErrorMiddlewar
         context.Response.ContentType = "application/json";
         await context.Response.WriteAsJsonAsync(new ErrorResponseDto
         {
-            Error = code, Message = message, StatusCode = status, Timestamp = DateTimeOffset.UtcNow.ToString("O"), CorrelationId = correlation
+            Error = code,
+            Message = message,
+            StatusCode = status,
+            Timestamp = DateTimeOffset.UtcNow.ToString("O"),
+            CorrelationId = correlation
         });
     }
 }

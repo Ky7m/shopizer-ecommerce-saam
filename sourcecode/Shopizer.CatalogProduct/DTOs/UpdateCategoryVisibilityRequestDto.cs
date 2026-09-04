@@ -4,6 +4,6 @@ namespace Shopizer.CatalogProduct.DTOs;
 
 public sealed class UpdateCategoryVisibilityRequestDto
 {
-        [JsonPropertyName("visible")]
-        public bool Visible { get; set; }
+    [JsonPropertyName("visible")]
+    public bool Visible { get; set; }
 }

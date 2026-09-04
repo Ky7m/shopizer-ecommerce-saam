@@ -5,17 +5,17 @@ namespace Shopizer.CartCheckout.DTOs;
 
 public sealed class TotalComponentDto
 {
-        [JsonPropertyName("code")]
-        [Required]
-        public string Code { get; set; }
+    [JsonPropertyName("code")]
+    [Required]
+    public string Code { get; set; }
 
-        [JsonPropertyName("amount")]
-        [Required]
-        public string Amount { get; set; }
+    [JsonPropertyName("amount")]
+    [Required]
+    public string Amount { get; set; }
 
-        [JsonPropertyName("title")]
-        public string? Title { get; set; }
+    [JsonPropertyName("title")]
+    public string? Title { get; set; }
 
-        [JsonPropertyName("kind")]
-        public string? Kind { get; set; }
+    [JsonPropertyName("kind")]
+    public string? Kind { get; set; }
 }

@@ -3,7 +3,10 @@ using Shopizer.IntegrationTests.Fixtures;
 namespace Shopizer.IntegrationTests;
 
 [Collection(ShopizerAspireCollection.Name)]
-public sealed class PaymentsComprehensiveTests(AspireHostFixture fixture) : ComprehensiveTestBase(fixture.PaymentsClient)
+public sealed class PaymentsComprehensiveTests(AspireHostFixture fixture) : ComprehensiveTestBase(
+    fixture.PaymentsClient,
+    fixture.TestTenantAdminAccessToken,
+    fixture.PreparePaymentRequestAsync)
 {
 
     // Source assertion 1: Contract success: POST /callbacks/{providerCode}
@@ -406,12 +409,12 @@ public sealed class PaymentsComprehensiveTests(AspireHostFixture fixture) : Comp
     // @BR-ID: BR-ORD-014
     [Fact(DisplayName = "037: Contract error/conformance: GET /payment-methods/{code}")]
     [Trait("BR", "BR-ORD-014")]
-    public Task Test037_GET_BASE_URL_payment_methods_phase4c_code_Status_401() => AssertShellAsync(
+    public Task Test037_GET_BASE_URL_payment_methods_phase4c_code_Status_200() => AssertShellAsync(
         Method("GET"),
         "/payment-methods/phase4c-code",
         null,
-        401,
-        requiredField: null);
+        200,
+        requiredField: "code");
 
     // Source assertion 38: Contract success: GET /payment-operations/{paymentOperationId}
     // @BR-ID: BR-ORD-014

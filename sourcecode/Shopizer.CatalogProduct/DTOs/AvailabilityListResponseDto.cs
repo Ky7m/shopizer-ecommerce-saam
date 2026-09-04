@@ -4,6 +4,6 @@ namespace Shopizer.CatalogProduct.DTOs;
 
 public sealed class AvailabilityListResponseDto
 {
-        [JsonPropertyName("items")]
-        public List<AvailabilityDto> Items { get; set; } = new();
+    [JsonPropertyName("items")]
+    public List<AvailabilityDto> Items { get; set; } = new();
 }

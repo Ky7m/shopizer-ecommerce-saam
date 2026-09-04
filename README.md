@@ -24,7 +24,24 @@
 | Phase 4a: Rule Validation | ✅ Complete | 2026-09-02 |
 | Phase 4b: Roadmap | ✅ Complete | 2026-09-02 |
 | Phase 4c: Test Suites | — | — |
-| Phase 5: Implementation | — | — |
+| Phase 5: Implementation | IN_PROGRESS — all 12 backend services implemented; runtime validation pending | 2026-09-04 |
+
+## Phase 5 Service Implementation Status
+
+| Service | Status | Notes |
+|---|---|---|
+| MS-01 Customer and Identity | IN_PROGRESS | Existing reference implementation; follow-up validation and lifecycle work remain. |
+| MS-02 Catalog and Product | IN_REVIEW | Existing implementation with 41 BR-IDs. |
+| MS-03 Search | IN_REVIEW | Existing implementation with 10 BR-IDs. |
+| MS-04 Cart and Checkout | IN_REVIEW | Existing implementation with 20 BR-IDs; provider-backed runtime paths remain dependent on downstream services. |
+| MS-05 Order Management | COMPLETE | Existing implementation with 23 BR-IDs and passing focused validation. |
+| MS-06 Payments | IN_REVIEW | 19 rules implemented with raw Npgsql persistence, provider boundaries, outbox events, and AppHost wiring. Aspire integration validation is blocked by the repository test-platform/runtime setup. |
+| MS-07 Pricing and Promotions | BLOCKED | 13 rules implemented with price selection, promotion evaluation, persistence, and outbox events. Aspire integration validation is blocked by the repository test-platform/runtime setup. |
+| MS-08 Tax | IN_REVIEW | 20 rules, 15 contract endpoints, raw Npgsql persistence, auth/tenancy middleware, and persisted calculation quotes implemented. Aspire integration validation is blocked by the repository test-platform/runtime setup. |
+| MS-09 Shipping | BLOCKED | 24 rules implemented with quote calculation, packaging, provider selection, persistence, and outbox events. Aspire integration validation is blocked by the repository test-platform/runtime setup. |
+| MS-10 Merchant and Store Administration | BLOCKED | 21 rules implemented with store lifecycle, branding, signup verification, persistence, and outbox events. Aspire integration validation is blocked by the repository test-platform/runtime setup. |
+| MS-11 Content and Configuration | BLOCKED | 39 rules implemented with content/file/configuration operations, persistence, and outbox events. Aspire integration validation is blocked by the repository test-platform/runtime setup. |
+| MS-12 Platform Integrations | BLOCKED | 23 rules implemented with adapter, delivery, storage, email, geolocation, and event operations. Aspire integration validation is blocked by the repository test-platform/runtime setup. |
 
 ## Phase 1 Completion Summary
 

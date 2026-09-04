@@ -5,13 +5,13 @@ namespace Shopizer.OrderManagement.DTOs;
 
 public sealed class CancellationResponseDto
 {
-        [JsonPropertyName("orderId")]
-        public long OrderId { get; set; }
+    [JsonPropertyName("orderId")]
+    public long OrderId { get; set; }
 
-        [JsonPropertyName("status")]
-        public OrderStatusDto Status { get; set; }
+    [JsonPropertyName("status")]
+    public OrderStatusDto Status { get; set; }
 
-        [JsonPropertyName("compensationState")]
-        [Required]
-        public string CompensationState { get; set; }
+    [JsonPropertyName("compensationState")]
+    [Required]
+    public string CompensationState { get; set; }
 }

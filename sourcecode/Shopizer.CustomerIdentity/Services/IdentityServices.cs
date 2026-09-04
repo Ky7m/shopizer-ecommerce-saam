@@ -61,8 +61,14 @@ public sealed class TokenService(IConfiguration configuration, IdentityRepositor
         var header = Base64Url(JsonSerializer.SerializeToUtf8Bytes(new { alg = "HS512", typ = "JWT" }));
         var payload = Base64Url(JsonSerializer.SerializeToUtf8Bytes(new
         {
-            sub = subjectId.ToString(), name = login, aud = "api", kind, tenantId = context.TenantId,
-            storeId = context.StoreId, iat = issued.ToUnixTimeSeconds(), exp = expires.ToUnixTimeSeconds(),
+            sub = subjectId.ToString(),
+            name = login,
+            aud = "api",
+            kind,
+            tenantId = context.TenantId,
+            storeId = context.StoreId,
+            iat = issued.ToUnixTimeSeconds(),
+            exp = expires.ToUnixTimeSeconds(),
             roles = roles.ToArray()
         }));
         var body = $"{header}.{payload}";
@@ -148,10 +154,18 @@ public sealed class IdentityService(
         if (request.Attributes is not null) ValidateAttributeIds(request.Attributes);
         var customer = new CustomerAccount
         {
-            Id = Guid.NewGuid(), TenantId = context.TenantId, StoreId = context.StoreId, LoginName = login,
-            EmailAddress = login, PasswordHash = passwords.Encode(request.Password), Gender = string.IsNullOrWhiteSpace(request.Gender) ? "M" : request.Gender!,
-            CompanyName = null, Provider = request.Provider, DefaultLanguageCode = string.IsNullOrWhiteSpace(request.Language) ? _defaultLanguage : request.Language!,
-            Status = "Active", Anonymous = false
+            Id = Guid.NewGuid(),
+            TenantId = context.TenantId,
+            StoreId = context.StoreId,
+            LoginName = login,
+            EmailAddress = login,
+            PasswordHash = passwords.Encode(request.Password),
+            Gender = string.IsNullOrWhiteSpace(request.Gender) ? "M" : request.Gender!,
+            CompanyName = null,
+            Provider = request.Provider,
+            DefaultLanguageCode = string.IsNullOrWhiteSpace(request.Language) ? _defaultLanguage : request.Language!,
+            Status = "Active",
+            Anonymous = false
         };
         ValidateLanguage(customer.DefaultLanguageCode);
         await repository.AddCustomerAsync(customer, request.Billing, request.Delivery, request.Attributes ?? [], context, ct);
@@ -184,8 +198,10 @@ public sealed class IdentityService(
         var roles = token.Roles;
         return new AuthenticationResponseDto
         {
-            SubjectId = token.SubjectId.ToString(), AccessToken = tokens.Create(token.SubjectId, token.Kind, token.Login, context, roles),
-            TokenType = "Bearer", ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(tokens.LifetimeMinutes).ToString("O")
+            SubjectId = token.SubjectId.ToString(),
+            AccessToken = tokens.Create(token.SubjectId, token.Kind, token.Login, context, roles),
+            TokenType = "Bearer",
+            ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(tokens.LifetimeMinutes).ToString("O")
         };
     }
 

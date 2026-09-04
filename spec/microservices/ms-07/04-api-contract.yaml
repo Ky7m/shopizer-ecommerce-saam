@@ -9,8 +9,10 @@ info:
     pricing quote consumed by checkout.
     MS-07 does not calculate tax, shipping, handling, or order grand totals.
 servers:
-  - url: http://localhost:8107/api/v1
-    description: Local development server
+  - url: http://localhost:{port}/api/v1
+    variables:
+      port:
+        default: "8107"
 
 x-service:
   serviceId: MS-07

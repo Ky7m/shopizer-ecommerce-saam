@@ -5,17 +5,17 @@ namespace Shopizer.Search.DTOs;
 
 public sealed class RebuildAcceptedResponseDto
 {
-        [JsonPropertyName("rebuildId")]
-        [Required]
-        public string RebuildId { get; set; }
+    [JsonPropertyName("rebuildId")]
+    [Required]
+    public string RebuildId { get; set; }
 
-        [JsonPropertyName("status")]
-        public RebuildStatusDto Status { get; set; }
+    [JsonPropertyName("status")]
+    public RebuildStatusDto Status { get; set; }
 
-        [JsonPropertyName("accepted")]
-        public bool Accepted { get; set; }
+    [JsonPropertyName("accepted")]
+    public bool Accepted { get; set; }
 
-        [JsonPropertyName("acceptedAt")]
-        [Required]
-        public string AcceptedAt { get; set; }
+    [JsonPropertyName("acceptedAt")]
+    [Required]
+    public string AcceptedAt { get; set; }
 }

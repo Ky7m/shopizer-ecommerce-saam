@@ -1,0 +1,37 @@
+using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
+
+namespace Shopizer.ContentConfiguration.DTOs;
+
+public sealed class ContentListResponseDto
+{
+    [JsonPropertyName("items")]
+    public List<ContentItemDto> Items { get; set; } = new();
+
+    [JsonPropertyName("page")]
+    [Range(0, double.MaxValue)]
+    public int Page { get; set; }
+
+    [JsonPropertyName("count")]
+    [Range(1, double.MaxValue)]
+    public int Count { get; set; }
+
+    [JsonPropertyName("number")]
+    [Range(0, double.MaxValue)]
+    public int Number { get; set; }
+
+    [JsonPropertyName("totalPages")]
+    [Range(0, double.MaxValue)]
+    public int TotalPages { get; set; }
+
+    [JsonPropertyName("recordsTotal")]
+    [Range(0, double.MaxValue)]
+    public long RecordsTotal { get; set; }
+
+    [JsonPropertyName("recordsFiltered")]
+    [Range(0, double.MaxValue)]
+    public long RecordsFiltered { get; set; }
+
+    [JsonPropertyName("pagination")]
+    public PaginationInfoDto? Pagination { get; set; }
+}

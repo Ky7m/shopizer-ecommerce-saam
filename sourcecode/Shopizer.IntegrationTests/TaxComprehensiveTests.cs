@@ -3,7 +3,10 @@ using Shopizer.IntegrationTests.Fixtures;
 namespace Shopizer.IntegrationTests;
 
 [Collection(ShopizerAspireCollection.Name)]
-public sealed class TaxComprehensiveTests(AspireHostFixture fixture) : ComprehensiveTestBase(fixture.TaxClient)
+public sealed class TaxComprehensiveTests(AspireHostFixture fixture) : ComprehensiveTestBase(
+    fixture.TaxClient,
+    fixture.TaxAdminAccessToken,
+    fixture.PrepareTaxRequestAsync)
 {
 
     // Source assertion 1: Contract success: POST /tax-calculations
@@ -475,7 +478,7 @@ public sealed class TaxComprehensiveTests(AspireHostFixture fixture) : Comprehen
     public Task Test043_PUT_BASE_URL_tax_configuration_Field_taxBasis_200() => AssertShellAsync(
         Method("PUT"),
         "/tax-configuration",
-        "{\"taxBasis\":\"StoreAddress\",\"collectTaxIfDifferentProvince\":true,\"differentCountryBehavior\":\"UseCustomerJurisdiction\"}",
+        "{\"taxBasis\":\"ShippingAddress\",\"collectTaxIfDifferentProvince\":true,\"differentCountryBehavior\":\"UseCustomerJurisdiction\"}",
         200,
         requiredField: "taxBasis");
 
@@ -497,7 +500,7 @@ public sealed class TaxComprehensiveTests(AspireHostFixture fixture) : Comprehen
     public Task Test045_PUT_BASE_URL_tax_rates_ById_Field_id_200() => AssertShellAsync(
         Method("PUT"),
         $"/tax-rates/{ResourceId}",
-        "{}",
+        "{\"taxClassCode\":\"phase4c-test\",\"code\":\"phase4c-test\",\"rate\":10.5,\"priority\":1,\"piggyback\":true,\"countryCode\":\"phase4c-test\",\"zoneCode\":\"phase4c-test\",\"stateProvince\":\"phase4c-test\",\"descriptions\":[{\"id\":\"00000000-0000-0000-0000-000000000001\",\"languageCode\":\"phase4c-test\",\"name\":\"phase4c-test\",\"title\":\"phase4c-test\",\"description\":\"phase4c-test\"}]}",
         200,
         requiredField: "id");
 

@@ -1,7 +1,7 @@
 # Platform Integrations — API Design
 
 **Version:** 2.0  
-**Base URL:** `/api/v1/integrations`  
+**Base URL:** `/api/v1`
 **Port:** `8112`  
 **JSON fields:** camelCase  
 **URL paths:** kebab-case  

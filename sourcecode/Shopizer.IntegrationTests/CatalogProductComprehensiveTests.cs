@@ -5,7 +5,7 @@ namespace Shopizer.IntegrationTests;
 [Collection(ShopizerAspireCollection.Name)]
 public sealed class CatalogProductComprehensiveTests(AspireHostFixture fixture) : ComprehensiveTestBase(
     fixture.CatalogProductClient,
-    fixture.AdminAccessToken,
+    fixture.TestTenantAdminAccessToken,
     fixture.PrepareCatalogRequestAsync)
 {
 

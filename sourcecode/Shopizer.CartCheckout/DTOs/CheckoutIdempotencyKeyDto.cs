@@ -5,43 +5,43 @@ namespace Shopizer.CartCheckout.DTOs;
 
 public sealed class CheckoutIdempotencyKeyDto
 {
-        [JsonPropertyName("idempotencyRecordId")]
-        [Required]
-        public string IdempotencyRecordId { get; set; }
+    [JsonPropertyName("idempotencyRecordId")]
+    [Required]
+    public string IdempotencyRecordId { get; set; }
 
-        [JsonPropertyName("tenantId")]
-        [Required]
-        public string TenantId { get; set; }
+    [JsonPropertyName("tenantId")]
+    [Required]
+    public string TenantId { get; set; }
 
-        [JsonPropertyName("storeId")]
-        [Required]
-        public string StoreId { get; set; }
+    [JsonPropertyName("storeId")]
+    [Required]
+    public string StoreId { get; set; }
 
-        [JsonPropertyName("customerId")]
-        public long? CustomerId { get; set; }
+    [JsonPropertyName("customerId")]
+    public long? CustomerId { get; set; }
 
-        [JsonPropertyName("cartId")]
-        public long CartId { get; set; }
+    [JsonPropertyName("cartId")]
+    public long CartId { get; set; }
 
-        [JsonPropertyName("operation")]
-        [Required]
-        public string Operation { get; set; }
+    [JsonPropertyName("operation")]
+    [Required]
+    public string Operation { get; set; }
 
-        [JsonPropertyName("idempotencyKey")]
-        [Required]
-        public string IdempotencyKey { get; set; }
+    [JsonPropertyName("idempotencyKey")]
+    [Required]
+    public string IdempotencyKey { get; set; }
 
-        [JsonPropertyName("requestHash")]
-        [Required]
-        public string RequestHash { get; set; }
+    [JsonPropertyName("requestHash")]
+    [Required]
+    public string RequestHash { get; set; }
 
-        [JsonPropertyName("state")]
-        [Required]
-        public string State { get; set; }
+    [JsonPropertyName("state")]
+    [Required]
+    public string State { get; set; }
 
-        [JsonPropertyName("originalStatus")]
-        public int? OriginalStatus { get; set; }
+    [JsonPropertyName("originalStatus")]
+    public int? OriginalStatus { get; set; }
 
-        [JsonPropertyName("originalResponse")]
-        public Dictionary<string, object?>? OriginalResponse { get; set; } = new();
+    [JsonPropertyName("originalResponse")]
+    public Dictionary<string, object?>? OriginalResponse { get; set; } = new();
 }

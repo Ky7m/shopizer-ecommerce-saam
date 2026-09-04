@@ -29,7 +29,9 @@ public sealed class ErrorMiddleware(RequestDelegate next, ILogger<ErrorMiddlewar
         context.Response.StatusCode = status; context.Response.ContentType = "application/json";
         await context.Response.WriteAsJsonAsync(new ErrorResponseDto
         {
-            Error = code, Message = message, StatusCode = status,
+            Error = code,
+            Message = message,
+            StatusCode = status,
             Timestamp = DateTimeOffset.UtcNow.ToString("O"),
             CorrelationId = context.Response.Headers["x-correlation-id"].FirstOrDefault()
         });

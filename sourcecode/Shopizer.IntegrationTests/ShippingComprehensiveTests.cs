@@ -3,7 +3,10 @@ using Shopizer.IntegrationTests.Fixtures;
 namespace Shopizer.IntegrationTests;
 
 [Collection(ShopizerAspireCollection.Name)]
-public sealed class ShippingComprehensiveTests(AspireHostFixture fixture) : ComprehensiveTestBase(fixture.ShippingClient)
+public sealed class ShippingComprehensiveTests(AspireHostFixture fixture) : ComprehensiveTestBase(
+    fixture.ShippingClient,
+    fixture.TestTenantAdminAccessToken,
+    fixture.PrepareShippingRequestAsync)
 {
 
     // Source assertion 1: Contract success: POST /cart/{cart}/shipping
@@ -384,12 +387,20 @@ public sealed class ShippingComprehensiveTests(AspireHostFixture fixture) : Comp
     // @BR-ID: BR-PRC-022
     [Fact(DisplayName = "035: Contract success: GET /auth/cart/{cart}/shipping")]
     [Trait("BR", "BR-PRC-022")]
-    public Task Test035_GET_BASE_URL_auth_cart_phase4c_value_shipping_Field_shipping_200() => AssertShellAsync(
-        Method("GET"),
-        "/auth/cart/phase4c-value/shipping",
-        null,
-        200,
-        requiredField: "shipping");
+    public async Task Test035_GET_BASE_URL_auth_cart_phase4c_value_shipping_Field_shipping_200()
+    {
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            "/api/v1/auth/cart/phase4c-cart-test/shipping?countryCode=CA&postalCode=H2Y1C6&address=1%20Main%20Street&city=Montreal&state=QC&zoneCode=QC");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
+            "Bearer",
+            fixture.CartCheckoutCustomerAccessToken);
+
+        using var response = await fixture.ShippingClient.SendAsync(request);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("\"shipping\"", body, StringComparison.Ordinal);
+    }
 
     // Source assertion 36: Contract error/conformance: GET /auth/cart/{cart}/shipping
     // @BR-ID: BR-PRC-022
@@ -571,11 +582,11 @@ public sealed class ShippingComprehensiveTests(AspireHostFixture fixture) : Comp
     // @BR-ID: BR-PRC-022
     [Fact(DisplayName = "052: Contract error/conformance: GET /shipping/country")]
     [Trait("BR", "BR-PRC-022")]
-    public Task Test052_GET_BASE_URL_shipping_country_Status_500() => AssertShellAsync(
+    public Task Test052_GET_BASE_URL_shipping_country_Status_200() => AssertShellAsync(
         Method("GET"),
         "/shipping/country",
         null,
-        500,
+        200,
         requiredField: null);
 
     // Source assertion 53: Contract success: PUT /private/shipping/package/{package}

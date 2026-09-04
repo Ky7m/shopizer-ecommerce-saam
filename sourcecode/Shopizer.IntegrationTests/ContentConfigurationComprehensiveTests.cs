@@ -1,1944 +1,668 @@
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 using Shopizer.IntegrationTests.Fixtures;
 
 namespace Shopizer.IntegrationTests;
 
 [Collection(ShopizerAspireCollection.Name)]
-public sealed class ContentConfigurationComprehensiveTests(AspireHostFixture fixture) : ComprehensiveTestBase(fixture.ContentConfigurationClient)
+public sealed class ContentConfigurationComprehensiveTests(AspireHostFixture fixture) : ComprehensiveTestBase(
+    fixture.ContentConfigurationClient,
+    fixture.ContentAdminAccessToken)
 {
+    private readonly HttpClient client = fixture.ContentConfigurationClient;
+    private readonly string administratorToken = fixture.ContentAdminAccessToken;
 
-    // Source assertion 1: Contract success: POST /private/configurations/payment
+    private static string Code(string prefix) => $"{prefix}-{Guid.NewGuid():N}"[..Math.Min(48, prefix.Length + 33)];
+
     // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "001: Contract success: POST /private/configurations/payment")]
+    [Fact(DisplayName = "Content codes are unique within a merchant store")]
     [Trait("BR", "BR-MER-013")]
-    public Task Test001_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task ContentCodeIsUniqueWithinStore()
+    {
+        var code = Code("unique");
+        await CreateContentAsync("page", code);
+        var duplicate = await SendJsonAsync(HttpMethod.Post, "/private/content/box",
+            ContentPayload(code, "Box"), 409, idempotencyKey: $"duplicate-{Guid.NewGuid():N}");
+        Assert.Equal("CONTENT_CODE_CONFLICT", duplicate!.RootElement.GetProperty("error").GetString());
+    }
 
-    // Source assertion 2: Contract error/conformance: POST /private/configurations/payment
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "002: Contract error/conformance: POST /private/configurations/payment")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test002_POST_BASE_URL_private_configurations_payment_Status_410() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{}",
-        410,
-        requiredField: null);
-
-    // Source assertion 3: Business rule assertion: BR-MER-013
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "003: Business rule assertion: BR-MER-013")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test003_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
-
-    // Source assertion 4: Business rule assertion: BR-MER-014
     // @BR-ID: BR-MER-014
-    [Fact(DisplayName = "004: Business rule assertion: BR-MER-014")]
+    [Fact(DisplayName = "Page and box operations assign their content type")]
     [Trait("BR", "BR-MER-014")]
-    public Task Test004_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task ContentOperationDeterminesContentType()
+    {
+        var code = Code("operation-type");
+        var page = await CreateContentAsync("page", code);
+        var pageId = page!.RootElement.GetProperty("id").GetGuid();
+        var read = await SendJsonAsync(HttpMethod.Get, $"/private/content/pages/{code}", null, 200);
+        Assert.Equal("Page", read!.RootElement.GetProperty("contentType").GetString());
+        await SendJsonAsync(HttpMethod.Delete, $"/private/content/page/{pageId}", null, 204);
+    }
 
-    // Source assertion 5: Business rule assertion: BR-MER-015
     // @BR-ID: BR-MER-015
-    [Fact(DisplayName = "005: Business rule assertion: BR-MER-015")]
+    [Fact(DisplayName = "Localized descriptions are replaced during content mutation")]
     [Trait("BR", "BR-MER-015")]
-    public Task Test005_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task ContentMutationPersistsLocalizedDescriptions()
+    {
+        var code = Code("descriptions");
+        var created = await CreateContentAsync("page", code, new[] { ("en", "English name"), ("fr", "Nom français") });
+        var id = created!.RootElement.GetProperty("id").GetGuid();
+        var updated = ContentPayload(code, "Updated", descriptions: new[] { ("en", "Updated English") });
+        await SendJsonAsync(HttpMethod.Put, $"/private/content/page/{id}", updated, 204);
+        var read = await SendJsonAsync(HttpMethod.Get, $"/private/content/pages/{code}", null, 200);
+        Assert.Equal("Updated English", read!.RootElement.GetProperty("description").GetProperty("name").GetString());
+    }
 
-    // Source assertion 6: Business rule assertion: BR-MER-016
     // @BR-ID: BR-MER-016
-    [Fact(DisplayName = "006: Business rule assertion: BR-MER-016")]
+    [Fact(DisplayName = "Localized and all-language reads use different projections")]
     [Trait("BR", "BR-MER-016")]
-    public Task Test006_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task ContentReadsHaveLocalizedAndAllLanguageProjections()
+    {
+        var code = Code("projection");
+        await CreateContentAsync("page", code, new[] { ("en", "English"), ("de", "Deutsch") });
+        var localized = await SendJsonAsync(HttpMethod.Get, $"/private/content/pages/{code}", null, 200);
+        Assert.Equal("en", localized!.RootElement.GetProperty("description").GetProperty("language").GetString());
+        var all = await SendJsonAsync(HttpMethod.Get, "/private/content/pages", null, 200);
+        var descriptions = all!.RootElement.GetProperty("items")[0].GetProperty("descriptions");
+        Assert.Equal(JsonValueKind.Array, descriptions.ValueKind);
+        Assert.Contains(all.RootElement.GetProperty("items").EnumerateArray(),
+            item => item.GetProperty("code").GetString() == code &&
+                    item.GetProperty("descriptions").GetArrayLength() == 2);
+    }
 
-    // Source assertion 7: Business rule assertion: BR-MER-017
     // @BR-ID: BR-MER-017
-    [Fact(DisplayName = "007: Business rule assertion: BR-MER-017")]
+    [Fact(DisplayName = "Friendly URL lookup exposes visible localized pages")]
     [Trait("BR", "BR-MER-017")]
-    public Task Test007_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task FriendlyUrlLookupReturnsVisiblePage()
+    {
+        var code = Code("friendly");
+        await CreateContentAsync("page", code, new[] { ("en", "Friendly") }, visible: true, friendlyUrl: $"friendly-{Guid.NewGuid():N}");
+        var friendlyUrl = (await LastCreatedDescriptionAsync(code))!;
+        var result = await SendJsonAsync(HttpMethod.Get, $"/content/pages/name/{friendlyUrl}", null, 200);
+        Assert.Equal(code, result!.RootElement.GetProperty("code").GetString());
+    }
 
-    // Source assertion 8: Business rule assertion: BR-MER-018
     // @BR-ID: BR-MER-018
-    [Fact(DisplayName = "008: Business rule assertion: BR-MER-018")]
+    [Fact(DisplayName = "Visibility and menu linkage remain independent")]
     [Trait("BR", "BR-MER-018")]
-    public Task Test008_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task VisibilityAndMenuLinkageAreIndependent()
+    {
+        var code = Code("policies");
+        var created = await CreateContentAsync("page", code, visible: false, linkToMenu: true);
+        var read = await SendJsonAsync(HttpMethod.Get, $"/private/content/pages/{code}", null, 200);
+        Assert.False(read!.RootElement.GetProperty("visible").GetBoolean());
+        Assert.True(read.RootElement.GetProperty("linkToMenu").GetBoolean());
+        await SendJsonAsync(HttpMethod.Delete, $"/private/content/page/{created!.RootElement.GetProperty("id").GetGuid()}", null, 204);
+    }
 
-    // Source assertion 9: Business rule assertion: BR-MER-019
     // @BR-ID: BR-MER-019
-    [Fact(DisplayName = "009: Business rule assertion: BR-MER-019")]
+    [Fact(DisplayName = "Content lists are typed, ordered, and paginated")]
     [Trait("BR", "BR-MER-019")]
-    public Task Test009_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task ContentListIsTypedOrderedAndPaged()
+    {
+        await CreateContentAsync("page", Code("list-a"), sortOrder: 20);
+        await CreateContentAsync("page", Code("list-b"), sortOrder: 10);
+        var list = await SendJsonAsync(HttpMethod.Get, "/private/content/pages?page=0&count=1", null, 200);
+        Assert.Equal(1, list!.RootElement.GetProperty("number").GetInt32());
+        Assert.True(list.RootElement.GetProperty("totalPages").GetInt32() >= 1);
+        Assert.Equal("Page", list.RootElement.GetProperty("items")[0].GetProperty("contentType").GetString());
+    }
 
-    // Source assertion 10: Business rule assertion: BR-MER-020
     // @BR-ID: BR-MER-020
-    [Fact(DisplayName = "010: Business rule assertion: BR-MER-020")]
+    [Fact(DisplayName = "Box localized projection applies CDATA formatting")]
     [Trait("BR", "BR-MER-020")]
-    public Task Test010_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task BoxProjectionAppliesCDataFormatting()
+    {
+        var code = Code("box-format");
+        await CreateContentAsync("box", code, new[] { ("en", "Box") }, description: "\r\nPromo\ttext");
+        var result = await SendJsonAsync(HttpMethod.Get, $"/content/boxes/{code}", null, 200);
+        Assert.Equal("<![CDATA[Promotext]]>", result!.RootElement.GetProperty("description").GetProperty("description").GetString());
+    }
 
-    // Source assertion 11: Business rule assertion: BR-MER-021
     // @BR-ID: BR-MER-021
-    [Fact(DisplayName = "011: Business rule assertion: BR-MER-021")]
+    [Fact(DisplayName = "Content deletion is restricted to the owning store")]
     [Trait("BR", "BR-MER-021")]
-    public Task Test011_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task ContentDeletionUsesOwningStore()
+    {
+        var created = await CreateContentAsync("page", Code("delete"));
+        var id = created!.RootElement.GetProperty("id").GetGuid();
+        var result = await SendJsonAsync(HttpMethod.Delete, $"/private/content/page/{id}", null, 204);
+        Assert.Null(result);
+        await SendJsonAsync(HttpMethod.Get, $"/private/content/pages/{created.RootElement.GetProperty("id").GetGuid()}", null, 404);
+    }
 
-    // Source assertion 12: Business rule assertion: BR-MER-022
     // @BR-ID: BR-MER-022
-    [Fact(DisplayName = "012: Business rule assertion: BR-MER-022")]
+    [Fact(DisplayName = "Uploaded files are classified by MIME major type")]
     [Trait("BR", "BR-MER-022")]
-    public Task Test012_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task MimeMajorTypeClassifiesUpload()
+    {
+        var name = $"{Code("mime")}.png";
+        var result = await SendMultipartAsync("/private/content/files", 201, "file", name,
+            "image/png", ("fileName", name));
+        Assert.Equal("Image", result!.RootElement.GetProperty("contentType").GetString());
+    }
 
-    // Source assertion 13: Business rule assertion: BR-MER-023
     // @BR-ID: BR-MER-023
-    [Fact(DisplayName = "013: Business rule assertion: BR-MER-023")]
+    [Fact(DisplayName = "Image upload validates the submitted filename")]
     [Trait("BR", "BR-MER-023")]
-    public Task Test013_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task ImageUploadRejectsUnsafeFilename()
+    {
+        var result = await SendMultipartAsync("/private/content/images/add", 422, "qqfile", "../unsafe.png",
+            "image/png", ("qqfilename", "../unsafe.png"));
+        Assert.False(result!.RootElement.GetProperty("success").GetBoolean());
+    }
 
-    // Source assertion 14: Business rule assertion: BR-MER-024
     // @BR-ID: BR-MER-024
-    [Fact(DisplayName = "014: Business rule assertion: BR-MER-024")]
+    [Fact(DisplayName = "Content files are isolated by content type namespace")]
     [Trait("BR", "BR-MER-024")]
-    public Task Test014_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task FilesUseContentTypeNamespace()
+    {
+        var name = $"{Code("namespace")}.bin";
+        await SendMultipartAsync("/private/content/files", 201, "file", name, "application/octet-stream",
+            ("contentType", "STATIC_FILE"), ("fileName", name));
+        var image = await SendMultipartAsync("/private/content/files", 201, "file", name, "image/png",
+            ("contentType", "IMAGE"), ("fileName", name));
+        Assert.Equal("Image", image!.RootElement.GetProperty("contentType").GetString());
+    }
 
-    // Source assertion 15: Business rule assertion: BR-MER-025
     // @BR-ID: BR-MER-025
-    [Fact(DisplayName = "015: Business rule assertion: BR-MER-025")]
+    [Fact(DisplayName = "File rename recreates the object while preserving metadata")]
     [Trait("BR", "BR-MER-025")]
-    public Task Test015_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task FileRenamePreservesMetadata()
+    {
+        var oldName = $"{Code("rename")}.txt";
+        var newName = $"{Code("renamed")}.dat";
+        await SendMultipartAsync("/private/content/files", 201, "file", oldName, "text/plain",
+            ("contentType", "STATIC_FILE"), ("fileName", oldName));
+        var renamed = await SendJsonAsync(HttpMethod.Post, "/private/content/files/rename",
+            new { fileName = oldName, newName, contentType = "STATIC_FILE", path = "/" }, 200);
+        Assert.True(renamed!.RootElement.GetProperty("success").GetBoolean());
+        var list = await SendJsonAsync(HttpMethod.Get, "/private/content/files?contentType=STATIC_FILE&path=/", null, 200);
+        Assert.Contains(list!.RootElement.GetProperty("items").EnumerateArray(),
+            item => item.GetProperty("fileName").GetString() == newName &&
+                    item.GetProperty("contentType").GetString() == "StaticFile");
+    }
 
-    // Source assertion 16: Business rule assertion: BR-MER-028
     // @BR-ID: BR-MER-028
-    [Fact(DisplayName = "016: Business rule assertion: BR-MER-028")]
+    [Fact(DisplayName = "Image listings expose store-scoped static paths")]
     [Trait("BR", "BR-MER-028")]
-    public Task Test016_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task ImageListingExposesStaticImagePath()
+    {
+        var name = $"{Code("image-list")}.jpg";
+        await SendMultipartAsync("/private/content/files", 201, "file", name, "image/jpeg",
+            ("contentType", "IMAGE"), ("fileName", name));
+        var list = await SendJsonAsync(HttpMethod.Get, "/private/content/list?parentPath=/", null, 200);
+        Assert.Contains(list!.RootElement.EnumerateArray(),
+            item => item.GetProperty("url").GetString()!.Contains("/static/images/", StringComparison.Ordinal));
+    }
 
-    // Source assertion 17: Business rule assertion: BR-CF-001
     // @BR-ID: BR-CF-001
-    [Fact(DisplayName = "017: Business rule assertion: BR-CF-001")]
+    [Fact(DisplayName = "Configuration records are keyed by store and key")]
     [Trait("BR", "BR-CF-001")]
-    public Task Test017_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task ConfigurationRecordIsStoreKeyed()
+    {
+        var key = Code("config-key");
+        var saved = await SendJsonAsync(HttpMethod.Put, $"/private/configurations/{key}",
+            new { type = "SHOP", active = true, value = new { marker = key } }, 200);
+        Assert.Equal(key, saved!.RootElement.GetProperty("key").GetString());
+        var read = await SendJsonAsync(HttpMethod.Get, $"/private/configurations/{key}", null, 200);
+        Assert.Equal("Shop", read!.RootElement.GetProperty("type").GetString());
+        Assert.Equal("Present", read.RootElement.GetProperty("valueState").GetString());
+    }
 
-    // Source assertion 18: Business rule assertion: BR-CF-002
     // @BR-ID: BR-CF-002
-    [Fact(DisplayName = "018: Business rule assertion: BR-CF-002")]
+    [Fact(DisplayName = "Merchant configuration preserves typed flags")]
     [Trait("BR", "BR-CF-002")]
-    public Task Test018_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task MerchantConfigurationPreservesTypedFlags()
+    {
+        var result = await SendJsonAsync(HttpMethod.Put, "/private/configuration",
+            new { displayCustomerSection = true, allowPurchaseItems = false, defaultSearchConfigPath = new { empty = "" } }, 200);
+        Assert.True(result!.RootElement.GetProperty("displayCustomerSection").GetBoolean());
+        Assert.False(result.RootElement.GetProperty("allowPurchaseItems").GetBoolean());
+        var searchPath = result.RootElement.GetProperty("defaultSearchConfigPath");
+        Assert.Empty(searchPath.EnumerateObject());
+    }
 
-    // Source assertion 19: Business rule assertion: BR-CF-003
     // @BR-ID: BR-CF-003
-    [Fact(DisplayName = "019: Business rule assertion: BR-CF-003")]
+    [Fact(DisplayName = "Public configuration exposes only approved fields")]
     [Trait("BR", "BR-CF-003")]
-    public Task Test019_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task PublicConfigurationIsProjected()
+    {
+        var result = await SendJsonAsync(HttpMethod.Get, "/config", null, 200, useAuthorization: false);
+        Assert.True(result!.RootElement.TryGetProperty("displayCustomerSection", out _));
+        Assert.False(result.RootElement.TryGetProperty("password", out _));
+    }
 
-    // Source assertion 20: Business rule assertion: BR-CF-004
     // @BR-ID: BR-CF-004
-    [Fact(DisplayName = "020: Business rule assertion: BR-CF-004")]
+    [Fact(DisplayName = "Public social values use named configuration keys")]
     [Trait("BR", "BR-CF-004")]
-    public Task Test020_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task PublicSocialValueUsesNamedKey()
+    {
+        var result = await SendJsonAsync(HttpMethod.Get, "/config", null, 200, useAuthorization: false);
+        Assert.Equal("https://example.com/phase4c", result!.RootElement.GetProperty("facebook").GetString());
+    }
 
-    // Source assertion 21: Business rule assertion: BR-CF-005
     // @BR-ID: BR-CF-005
-    [Fact(DisplayName = "021: Business rule assertion: BR-CF-005")]
+    [Fact(DisplayName = "Shipping display defaults to false")]
     [Trait("BR", "BR-CF-005")]
-    public Task Test021_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task ShippingDisplayDefaultsToFalse()
+    {
+        var result = await SendJsonAsync(HttpMethod.Get, "/config", null, 200, useAuthorization: false);
+        Assert.False(result!.RootElement.GetProperty("displayShipping").GetBoolean());
+    }
 
-    // Source assertion 22: Business rule assertion: BR-CF-006
     // @BR-ID: BR-CF-006
-    [Fact(DisplayName = "022: Business rule assertion: BR-CF-006")]
+    [Fact(DisplayName = "Module configuration is encrypted at rest")]
     [Trait("BR", "BR-CF-006")]
-    public Task Test022_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task ModuleConfigurationIsWriteOnly()
+    {
+        await SaveModuleAsync("phase4c-payment", active: true);
+        var result = await SendJsonAsync(HttpMethod.Get, "/private/modules/payment/phase4c-payment", null, 200);
+        Assert.False(result!.RootElement.GetProperty("integrationKeys").GetProperty("secretKey").ValueKind == JsonValueKind.String);
+        Assert.False(result.RootElement.TryGetProperty("value", out _));
+    }
 
-    // Source assertion 23: Business rule assertion: BR-CF-007
     // @BR-ID: BR-CF-007
-    [Fact(DisplayName = "023: Business rule assertion: BR-CF-007")]
+    [Fact(DisplayName = "Integration options parse without credential values")]
     [Trait("BR", "BR-CF-007")]
-    public Task Test023_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task IntegrationOptionsDoNotRequireCredentials()
+    {
+        var code = Code("options");
+        await ReplaceModuleAsync("PAYMENT", code, new { configurable = true });
+        var result = await SaveModuleAsync(code, active: false, keys: new Dictionary<string, object?>(),
+            options: new Dictionary<string, object?> { ["mode"] = "sandbox" });
+        Assert.Equal("sandbox", result!.RootElement.GetProperty("integrationOptions").GetProperty("mode").GetString());
+    }
 
-    // Source assertion 24: Business rule assertion: BR-CF-008
     // @BR-ID: BR-CF-008
-    [Fact(DisplayName = "024: Business rule assertion: BR-CF-008")]
+    [Fact(DisplayName = "Module replacement preserves metadata and environments")]
     [Trait("BR", "BR-CF-008")]
-    public Task Test024_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task ModuleReplacementReturnsPersistedMetadataStatus()
+    {
+        var code = Code("metadata");
+        var result = await ReplaceModuleAsync("PAYMENT", code, new { configurable = true },
+            new[] { new { env = "TEST", config1 = "test-url", config2 = "test-token" }, new { env = "PROD", config1 = "prod-url", config2 = "prod-token" } });
+        Assert.Equal(200, result!.RootElement.GetProperty("status").GetInt32());
+        Assert.True(result.RootElement.GetProperty("replaced").GetBoolean());
+    }
 
-    // Source assertion 25: Business rule assertion: BR-CF-009
     // @BR-ID: BR-CF-009
-    [Fact(DisplayName = "025: Business rule assertion: BR-CF-009")]
+    [Fact(DisplayName = "TEST and PROD configuration values remain distinct")]
     [Trait("BR", "BR-CF-009")]
-    public Task Test025_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task ModuleEnvironmentValuesRemainDistinct()
+    {
+        var code = Code("environments");
+        await ReplaceModuleAsync("PAYMENT", code, new { configurable = true },
+            new[] { new { env = "TEST", config1 = "test-url", config2 = "test-token" }, new { env = "PROD", config1 = "prod-url", config2 = "prod-token" } });
+        var result = await SendJsonAsync(HttpMethod.Get, $"/private/modules/payment/{code}", null, 200);
+        Assert.Equal("TEST", result!.RootElement.GetProperty("environment").GetString());
+    }
 
-    // Source assertion 26: Business rule assertion: BR-CF-010
     // @BR-ID: BR-CF-010
-    [Fact(DisplayName = "026: Business rule assertion: BR-CF-010")]
+    [Fact(DisplayName = "Module replacement is performed by code")]
     [Trait("BR", "BR-CF-010")]
-    public Task Test026_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task ModuleReplacementUsesCode()
+    {
+        var code = Code("replace-code");
+        await ReplaceModuleAsync("PAYMENT", code, new { configurable = true });
+        var result = await ReplaceModuleAsync("PAYMENT", code, new { configurable = false });
+        Assert.Equal(code, result!.RootElement.GetProperty("code").GetString());
+    }
 
-    // Source assertion 27: Business rule assertion: BR-CF-011
     // @BR-ID: BR-CF-011
-    [Fact(DisplayName = "027: Business rule assertion: BR-CF-011")]
+    [Fact(DisplayName = "Module discovery hydrates metadata")]
     [Trait("BR", "BR-CF-011")]
-    public Task Test027_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task ModuleDiscoveryReturnsSeededModule()
+    {
+        var result = await SendJsonAsync(HttpMethod.Get, "/private/modules/payment", null, 200);
+        Assert.Contains(result!.RootElement.EnumerateArray(),
+            item => item.GetProperty("code").GetString() == "phase4c-payment");
+    }
 
-    // Source assertion 28: Business rule assertion: BR-CF-012
     // @BR-ID: BR-CF-012
-    [Fact(DisplayName = "028: Business rule assertion: BR-CF-012")]
+    [Fact(DisplayName = "Module availability is filtered by store region")]
     [Trait("BR", "BR-CF-012")]
-    public Task Test028_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task ModuleAvailabilityHonorsRegion()
+    {
+        var code = Code("region");
+        await ReplaceModuleAsync("PAYMENT", code, new { configurable = true }, regions: new[] { "ZZ" });
+        await SendJsonAsync(HttpMethod.Get, $"/private/modules/payment/{code}", null, 404);
+    }
 
-    // Source assertion 29: Business rule assertion: BR-CF-013
     // @BR-ID: BR-CF-013
-    [Fact(DisplayName = "029: Business rule assertion: BR-CF-013")]
+    [Fact(DisplayName = "Provider configuration validates required keys")]
     [Trait("BR", "BR-CF-013")]
-    public Task Test029_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task ProviderConfigurationValidatesRequiredKeys()
+    {
+        var invalid = await SaveModuleAsync("phase4c-payment", active: true, keys: new Dictionary<string, object?>());
+        Assert.Equal("MODULE_CONFIGURATION_INVALID", invalid!.RootElement.GetProperty("error").GetString());
+        var valid = await SaveModuleAsync("phase4c-payment", active: true);
+        Assert.True(valid!.RootElement.GetProperty("configured").GetBoolean());
+    }
 
-    // Source assertion 30: Business rule assertion: BR-CF-014
     // @BR-ID: BR-CF-014
-    [Fact(DisplayName = "030: Business rule assertion: BR-CF-014")]
+    [Fact(DisplayName = "Module summaries distinguish configured from active")]
     [Trait("BR", "BR-CF-014")]
-    public Task Test030_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task ModuleSummaryDistinguishesConfiguredAndActive()
+    {
+        await SaveModuleAsync("phase4c-payment", active: false);
+        var result = await SendJsonAsync(HttpMethod.Get, "/private/modules/payment", null, 200);
+        var item = result!.RootElement.EnumerateArray().Single(x => x.GetProperty("code").GetString() == "phase4c-payment");
+        Assert.True(item.GetProperty("configured").GetBoolean());
+        Assert.False(item.GetProperty("active").GetBoolean());
+    }
 
-    // Source assertion 31: Business rule assertion: BR-CF-015
     // @BR-ID: BR-CF-015
-    [Fact(DisplayName = "031: Business rule assertion: BR-CF-015")]
+    [Fact(DisplayName = "Missing merchant configuration receives platform defaults")]
     [Trait("BR", "BR-CF-015")]
-    public Task Test031_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task MissingMerchantConfigurationUsesDefaults()
+    {
+        var result = await SendJsonAsync(HttpMethod.Get, "/config", null, 200, useAuthorization: false,
+            tenant: "00000000-0000-0000-0000-000000000099",
+            store: "00000000-0000-0000-0000-000000000098");
+        Assert.True(result!.RootElement.GetProperty("allowOnlinePurchase").GetBoolean());
+        Assert.True(result.RootElement.GetProperty("displaySearchBox").GetBoolean());
+    }
 
-    // Source assertion 32: Business rule assertion: BR-EXT-021
     // @BR-ID: BR-EXT-021
-    [Fact(DisplayName = "032: Business rule assertion: BR-EXT-021")]
+    [Fact(DisplayName = "Configured CMS provider handles uploads")]
     [Trait("BR", "BR-EXT-021")]
-    public Task Test032_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task ConfiguredProviderHandlesUpload()
+    {
+        var name = $"{Code("provider")}.txt";
+        var result = await SendMultipartAsync("/private/content/files", 201, "file", name, "text/plain",
+            ("contentType", "STATIC_FILE"), ("fileName", name));
+        Assert.Equal("default", result!.RootElement.GetProperty("provider").GetString());
+    }
 
-    // Source assertion 33: Business rule assertion: BR-EXT-022
     // @BR-ID: BR-EXT-022
-    [Fact(DisplayName = "033: Business rule assertion: BR-EXT-022")]
+    [Fact(DisplayName = "Provider keys preserve store and content namespaces")]
     [Trait("BR", "BR-EXT-022")]
-    public Task Test033_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task ProviderNamespaceIsReturnedByDownloadProjection()
+    {
+        var name = $"{Code("provider-key")}.txt";
+        var result = await SendMultipartAsync("/private/content/files", 201, "file", name, "text/plain",
+            ("contentType", "STATIC_FILE"), ("fileName", name));
+        Assert.Contains("/private/content/files/", result!.RootElement.GetProperty("downloadPath").GetString());
+        Assert.Contains("contentType=STATIC_FILE", result.RootElement.GetProperty("downloadPath").GetString());
+    }
 
-    // Source assertion 34: Business rule assertion: BR-EXT-023
     // @BR-ID: BR-EXT-023
-    [Fact(DisplayName = "034: Business rule assertion: BR-EXT-023")]
+    [Fact(DisplayName = "Missing provider objects are explicit not-found results")]
     [Trait("BR", "BR-EXT-023")]
-    public Task Test034_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task MissingFileIsNotSuccessful()
+    {
+        var result = await SendJsonAsync(HttpMethod.Get,
+            "/private/content/files/missing-file.txt/download?contentType=STATIC_FILE&path=/", null, 404);
+        Assert.Equal("FILE_NOT_FOUND", result!.RootElement.GetProperty("error").GetString());
+    }
 
-    // Source assertion 35: Business rule assertion: BR-EXT-024
     // @BR-ID: BR-EXT-024
-    [Fact(DisplayName = "035: Business rule assertion: BR-EXT-024")]
+    [Fact(DisplayName = "Payment discovery includes runtime metadata")]
     [Trait("BR", "BR-EXT-024")]
-    public Task Test035_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task PaymentDiscoveryIncludesRuntimeModule()
+    {
+        var result = await SendJsonAsync(HttpMethod.Get, "/private/modules/payment", null, 200);
+        Assert.Contains(result!.RootElement.EnumerateArray(),
+            x => x.GetProperty("code").GetString() == "phase4c-payment");
+    }
 
-    // Source assertion 36: Business rule assertion: BR-EXT-025
     // @BR-ID: BR-EXT-025
-    [Fact(DisplayName = "036: Business rule assertion: BR-EXT-025")]
+    [Fact(DisplayName = "Module state is persisted separately from provider execution")]
     [Trait("BR", "BR-EXT-025")]
-    public Task Test036_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task ModuleStateIsPersisted()
+    {
+        var result = await SaveModuleAsync("phase4c-payment", active: true);
+        Assert.True(result!.RootElement.GetProperty("configured").GetBoolean());
+        Assert.True(result.RootElement.GetProperty("secretsPresent").GetBoolean());
+    }
 
-    // Source assertion 37: Business rule assertion: BR-EXT-026
     // @BR-ID: BR-EXT-026
-    [Fact(DisplayName = "037: Business rule assertion: BR-EXT-026")]
+    [Fact(DisplayName = "Module replacement invalidates discovery cache")]
     [Trait("BR", "BR-EXT-026")]
-    public Task Test037_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task ModuleReplacementInvalidatesDiscoveryCache()
+    {
+        var code = Code("cache");
+        await SendJsonAsync(HttpMethod.Get, "/private/modules/payment", null, 200);
+        await ReplaceModuleAsync("PAYMENT", code, new { configurable = true });
+        var result = await SendJsonAsync(HttpMethod.Get, "/private/modules/payment", null, 200);
+        Assert.Contains(result!.RootElement.EnumerateArray(), x => x.GetProperty("code").GetString() == code);
+    }
 
-    // Source assertion 38: Business rule assertion: BR-EXT-027
     // @BR-ID: BR-EXT-027
-    [Fact(DisplayName = "038: Business rule assertion: BR-EXT-027")]
+    [Fact(DisplayName = "Module detail redacts encrypted merchant values")]
     [Trait("BR", "BR-EXT-027")]
-    public Task Test038_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task ModuleDetailRedactsSecrets()
+    {
+        await SaveModuleAsync("phase4c-payment", active: true);
+        var result = await SendJsonAsync(HttpMethod.Get, "/private/modules/payment/phase4c-payment", null, 200);
+        Assert.DoesNotContain("secret-value", result!.RootElement.GetRawText(), StringComparison.Ordinal);
+        Assert.False(result.RootElement.TryGetProperty("value", out _));
+    }
 
-    // Source assertion 39: Business rule assertion: BR-EXT-028
     // @BR-ID: BR-EXT-028
-    [Fact(DisplayName = "039: Business rule assertion: BR-EXT-028")]
+    [Fact(DisplayName = "Module definitions retain wildcard environment metadata")]
     [Trait("BR", "BR-EXT-028")]
-    public Task Test039_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task ModuleDefinitionRetainsEnvironmentMetadata()
+    {
+        var code = Code("wildcard");
+        var result = await ReplaceModuleAsync("PAYMENT", code, new { configurable = true },
+            new[] { new { env = "TEST", scheme = "https", host = "wildcard.example", port = "443", uri = "https://wildcard.example", config1 = "one", config2 = "two" } },
+            regions: new[] { "*" });
+        Assert.True(result!.RootElement.GetProperty("cacheInvalidated").GetBoolean());
+    }
 
-    // Source assertion 40: Business rule assertion: BR-EXT-029
     // @BR-ID: BR-EXT-029
-    [Fact(DisplayName = "040: Business rule assertion: BR-EXT-029")]
+    [Fact(DisplayName = "File rename preserves MIME metadata across names")]
     [Trait("BR", "BR-EXT-029")]
-    public Task Test040_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
+    public async Task FileRenamePreservesMimeMetadata()
+    {
+        var oldName = $"{Code("mime-rename")}.png";
+        var newName = $"{Code("mime-renamed")}.bin";
+        await SendMultipartAsync("/private/content/files", 201, "file", oldName, "image/png",
+            ("contentType", "IMAGE"), ("fileName", oldName));
+        await SendJsonAsync(HttpMethod.Post, "/private/content/files/rename",
+            new { fileName = oldName, newName, contentType = "IMAGE", path = "/" }, 200);
+        var list = await SendJsonAsync(HttpMethod.Get, "/private/content/files?contentType=IMAGE&path=/", null, 200);
+        var item = list!.RootElement.GetProperty("items").EnumerateArray()
+            .Single(x => x.GetProperty("fileName").GetString() == newName);
+        Assert.Equal("image/png", item.GetProperty("mimeType").GetString());
+    }
 
-    // Source assertion 41: Business rule assertion: BR-EXT-030
     // @BR-ID: BR-EXT-030
-    [Fact(DisplayName = "041: Business rule assertion: BR-EXT-030")]
+    [Fact(DisplayName = "File deletion is scoped and idempotent")]
     [Trait("BR", "BR-EXT-030")]
-    public Task Test041_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
-
-    // Source assertion 42: Contract success: POST /private/configurations/shipping
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "042: Contract success: POST /private/configurations/shipping")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test042_POST_BASE_URL_private_configurations_shipping_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/shipping",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
-
-    // Source assertion 43: Contract error/conformance: POST /private/configurations/shipping
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "043: Contract error/conformance: POST /private/configurations/shipping")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test043_POST_BASE_URL_private_configurations_shipping_Status_410() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/shipping",
-        "{}",
-        410,
-        requiredField: null);
-
-    // Source assertion 44: Contract success: POST /private/content/box
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "044: Contract success: POST /private/content/box")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test044_POST_BASE_URL_private_content_box_Field_id_201() => AssertShellAsync(
-        Method("POST"),
-        "/private/content/box",
-        "{\"code\":\"phase4c-test\",\"visible\":true,\"sortOrder\":1,\"contentPosition\":\"Left\",\"productGroup\":\"phase4c-test\",\"descriptions\":[{\"language\":\"phase4c-test\",\"name\":\"phase4c-test\",\"title\":\"phase4c-test\",\"description\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"metaKeywords\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
-        201,
-        requiredField: "id");
-
-    // Source assertion 45: Contract error/conformance: POST /private/content/box
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "045: Contract error/conformance: POST /private/content/box")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test045_POST_BASE_URL_private_content_box_Status_400() => AssertShellAsync(
-        Method("POST"),
-        "/private/content/box",
-        "{}",
-        400,
-        requiredField: null);
-
-    // Source assertion 46: Contract success: POST /private/content/files
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "046: Contract success: POST /private/content/files")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test046_POST_BASE_URL_private_content_files_Field_id_201() => AssertShellAsync(
-        Method("POST"),
-        "/private/content/files",
-        "{\"file\":\"phase4c-test\",\"fileName\":\"phase4c-test\",\"contentType\":{},\"path\":\"phase4c-test\"}",
-        201,
-        requiredField: "id");
-
-    // Source assertion 47: Contract error/conformance: POST /private/content/files
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "047: Contract error/conformance: POST /private/content/files")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test047_POST_BASE_URL_private_content_files_Status_400() => AssertShellAsync(
-        Method("POST"),
-        "/private/content/files",
-        "{}",
-        400,
-        requiredField: null);
-
-    // Source assertion 48: Contract success: POST /private/content/files/rename
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "048: Contract success: POST /private/content/files/rename")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test048_POST_BASE_URL_private_content_files_rename_Field_success_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/content/files/rename",
-        "{\"fileName\":\"phase4c-test\",\"newName\":\"phase4c-test\",\"contentType\":{},\"path\":\"phase4c-test\"}",
-        200,
-        requiredField: "success");
-
-    // Source assertion 49: Contract error/conformance: POST /private/content/files/rename
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "049: Contract error/conformance: POST /private/content/files/rename")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test049_POST_BASE_URL_private_content_files_rename_Status_400() => AssertShellAsync(
-        Method("POST"),
-        "/private/content/files/rename",
-        "{}",
-        400,
-        requiredField: null);
-
-    // Source assertion 50: Contract success: POST /private/content/folders
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "050: Contract success: POST /private/content/folders")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test050_POST_BASE_URL_private_content_folders_Field_path_201() => AssertShellAsync(
-        Method("POST"),
-        "/private/content/folders",
-        "{\"path\":\"phase4c-test\",\"folderName\":\"phase4c-test\"}",
-        201,
-        requiredField: "path");
-
-    // Source assertion 51: Contract error/conformance: POST /private/content/folders
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "051: Contract error/conformance: POST /private/content/folders")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test051_POST_BASE_URL_private_content_folders_Status_400() => AssertShellAsync(
-        Method("POST"),
-        "/private/content/folders",
-        "{}",
-        400,
-        requiredField: null);
-
-    // Source assertion 52: Contract success: POST /private/content/images/add
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "052: Contract success: POST /private/content/images/add")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test052_POST_BASE_URL_private_content_images_add_Field_success_201() => AssertShellAsync(
-        Method("POST"),
-        "/private/content/images/add",
-        "{\"qqfile\":\"phase4c-test\",\"qquuid\":\"00000000-0000-0000-0000-000000000001\",\"qqfilename\":\"phase4c-test\",\"qqtotalfilesize\":1,\"parentPath\":\"phase4c-test\",\"qqpartindex\":1,\"qqtotalparts\":1}",
-        201,
-        requiredField: "success");
-
-    // Source assertion 53: Contract error/conformance: POST /private/content/images/add
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "053: Contract error/conformance: POST /private/content/images/add")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test053_POST_BASE_URL_private_content_images_add_Status_400() => AssertShellAsync(
-        Method("POST"),
-        "/private/content/images/add",
-        "{}",
-        400,
-        requiredField: null);
-
-    // Source assertion 54: Contract success: POST /private/content/images/rename
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "054: Contract success: POST /private/content/images/rename")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test054_POST_BASE_URL_private_content_images_rename_Field_success_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/content/images/rename",
-        "{\"path\":\"phase4c-test\",\"newName\":\"phase4c-test\"}",
-        200,
-        requiredField: "success");
-
-    // Source assertion 55: Contract error/conformance: POST /private/content/images/rename
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "055: Contract error/conformance: POST /private/content/images/rename")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test055_POST_BASE_URL_private_content_images_rename_Status_400() => AssertShellAsync(
-        Method("POST"),
-        "/private/content/images/rename",
-        "{}",
-        400,
-        requiredField: null);
-
-    // Source assertion 56: Contract success: POST /private/content/page
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "056: Contract success: POST /private/content/page")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test056_POST_BASE_URL_private_content_page_Field_id_201() => AssertShellAsync(
-        Method("POST"),
-        "/private/content/page",
-        "{\"code\":\"phase4c-test\",\"visible\":true,\"linkToMenu\":true,\"sortOrder\":1,\"contentPosition\":\"Left\",\"productGroup\":\"phase4c-test\",\"descriptions\":[{\"language\":\"phase4c-test\",\"name\":\"phase4c-test\",\"title\":\"phase4c-test\",\"description\":\"phase4c-test\",\"friendlyUrl\":\"https://example.com/phase4c\",\"metaKeywords\":\"phase4c-test\",\"metaDescription\":\"phase4c-test\"}]}",
-        201,
-        requiredField: "id");
-
-    // Source assertion 57: Contract error/conformance: POST /private/content/page
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "057: Contract error/conformance: POST /private/content/page")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test057_POST_BASE_URL_private_content_page_Status_400() => AssertShellAsync(
-        Method("POST"),
-        "/private/content/page",
-        "{}",
-        400,
-        requiredField: null);
-
-    // Source assertion 58: Contract success: POST /private/file
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "058: Contract success: POST /private/file")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test058_POST_BASE_URL_private_file_Field_id_201() => AssertShellAsync(
-        Method("POST"),
-        "/private/file",
-        "{\"file\":\"phase4c-test\"}",
-        201,
-        requiredField: "id");
-
-    // Source assertion 59: Contract error/conformance: POST /private/file
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "059: Contract error/conformance: POST /private/file")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test059_POST_BASE_URL_private_file_Status_400() => AssertShellAsync(
-        Method("POST"),
-        "/private/file",
-        "{}",
-        400,
-        requiredField: null);
-
-    // Source assertion 60: Contract success: POST /private/files
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "060: Contract success: POST /private/files")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test060_POST_BASE_URL_private_files_Field_items_201() => AssertShellAsync(
-        Method("POST"),
-        "/private/files",
-        "{\"file\":[\"phase4c-test\"]}",
-        201,
-        requiredField: "items");
-
-    // Source assertion 61: Contract error/conformance: POST /private/files
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "061: Contract error/conformance: POST /private/files")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test061_POST_BASE_URL_private_files_Status_400() => AssertShellAsync(
-        Method("POST"),
-        "/private/files",
-        "{}",
-        400,
-        requiredField: null);
-
-    // Source assertion 62: Contract success: POST /services/private/system/module
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "062: Contract success: POST /services/private/system/module")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test062_POST_BASE_URL_services_private_system_module_Field_status_200() => AssertShellAsync(
-        Method("POST"),
-        "/services/private/system/module",
-        "{\"module\":\"phase4c-test\",\"code\":\"phase4c-test\",\"type\":\"phase4c-test\",\"image\":\"phase4c-test\",\"customModule\":true,\"regions\":[\"phase4c-test\"],\"details\":{},\"configuration\":[{\"env\":\"Test\",\"scheme\":\"phase4c-test\",\"host\":\"phase4c-test\",\"port\":\"phase4c-test\",\"uri\":\"phase4c-test\",\"config1\":\"phase4c-test\",\"config2\":\"phase4c-test\"}]}",
-        200,
-        requiredField: "status");
-
-    // Source assertion 63: Contract error/conformance: POST /services/private/system/module
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "063: Contract error/conformance: POST /services/private/system/module")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test063_POST_BASE_URL_services_private_system_module_Status_400() => AssertShellAsync(
-        Method("POST"),
-        "/services/private/system/module",
-        "{}",
-        400,
-        requiredField: null);
-
-    // Source assertion 64: Contract success: POST /services/private/system/optin
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "064: Contract success: POST /services/private/system/optin")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test064_POST_BASE_URL_services_private_system_optin_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/services/private/system/optin",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
-
-    // Source assertion 65: Contract error/conformance: POST /services/private/system/optin
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "065: Contract error/conformance: POST /services/private/system/optin")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test065_POST_BASE_URL_services_private_system_optin_Status_410() => AssertShellAsync(
-        Method("POST"),
-        "/services/private/system/optin",
-        "{}",
-        410,
-        requiredField: null);
-
-    // Source assertion 66: Contract success: POST /services/private/system/optin/{code}/customer
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "066: Contract success: POST /services/private/system/optin/{code}/customer")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test066_POST_BASE_URL_services_private_system_optin_phase4c_code_customer_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/services/private/system/optin/phase4c-code/customer",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
-
-    // Source assertion 67: Contract error/conformance: POST /services/private/system/optin/{code}/customer
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "067: Contract error/conformance: POST /services/private/system/optin/{code}/customer")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test067_POST_BASE_URL_services_private_system_optin_phase4c_code_customer_Status_410() => AssertShellAsync(
-        Method("POST"),
-        "/services/private/system/optin/phase4c-code/customer",
-        "{}",
-        410,
-        requiredField: null);
-
-    // Source assertion 68: Contract success: GET /config
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "068: Contract success: GET /config")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test068_GET_BASE_URL_config_Field_facebook_200() => AssertShellAsync(
-        Method("GET"),
-        "/config",
-        null,
-        200,
-        requiredField: "facebook");
-
-    // Source assertion 69: Contract error/conformance: GET /config
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "069: Contract error/conformance: GET /config")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test069_GET_BASE_URL_config_Status_400() => AssertShellAsync(
-        Method("GET"),
-        "/config",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 70: Contract success: GET /content/boxes
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "070: Contract success: GET /content/boxes")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test070_GET_BASE_URL_content_boxes_Field_items_200() => AssertShellAsync(
-        Method("GET"),
-        "/content/boxes",
-        null,
-        200,
-        requiredField: "items");
-
-    // Source assertion 71: Contract error/conformance: GET /content/boxes
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "071: Contract error/conformance: GET /content/boxes")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test071_GET_BASE_URL_content_boxes_Status_400() => AssertShellAsync(
-        Method("GET"),
-        "/content/boxes",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 72: Contract success: GET /content/boxes/{code}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "072: Contract success: GET /content/boxes/{code}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test072_GET_BASE_URL_content_boxes_phase4c_code_Field_id_200() => AssertShellAsync(
-        Method("GET"),
-        "/content/boxes/phase4c-code",
-        null,
-        200,
-        requiredField: "id");
-
-    // Source assertion 73: Contract error/conformance: GET /content/boxes/{code}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "073: Contract error/conformance: GET /content/boxes/{code}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test073_GET_BASE_URL_content_boxes_phase4c_code_Status_400() => AssertShellAsync(
-        Method("GET"),
-        "/content/boxes/phase4c-code",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 74: Contract success: GET /content/images/download
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "074: Contract success: GET /content/images/download")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test074_GET_BASE_URL_content_images_download_Status_200() => AssertShellAsync(
-        Method("GET"),
-        "/content/images/download",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 75: Contract error/conformance: GET /content/images/download
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "075: Contract error/conformance: GET /content/images/download")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test075_GET_BASE_URL_content_images_download_Status_400() => AssertShellAsync(
-        Method("GET"),
-        "/content/images/download",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 76: Contract success: GET /content/pages
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "076: Contract success: GET /content/pages")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test076_GET_BASE_URL_content_pages_Field_items_200() => AssertShellAsync(
-        Method("GET"),
-        "/content/pages",
-        null,
-        200,
-        requiredField: "items");
-
-    // Source assertion 77: Contract error/conformance: GET /content/pages
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "077: Contract error/conformance: GET /content/pages")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test077_GET_BASE_URL_content_pages_Status_400() => AssertShellAsync(
-        Method("GET"),
-        "/content/pages",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 78: Contract success: GET /content/pages/name/{name}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "078: Contract success: GET /content/pages/name/{name}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test078_GET_BASE_URL_content_pages_name_phase4c_value_Field_id_200() => AssertShellAsync(
-        Method("GET"),
-        "/content/pages/name/phase4c-value",
-        null,
-        200,
-        requiredField: "id");
-
-    // Source assertion 79: Contract error/conformance: GET /content/pages/name/{name}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "079: Contract error/conformance: GET /content/pages/name/{name}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test079_GET_BASE_URL_content_pages_name_phase4c_value_Status_400() => AssertShellAsync(
-        Method("GET"),
-        "/content/pages/name/phase4c-value",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 80: Contract success: GET /content/pages/{code}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "080: Contract success: GET /content/pages/{code}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test080_GET_BASE_URL_content_pages_phase4c_code_Field_id_200() => AssertShellAsync(
-        Method("GET"),
-        "/content/pages/phase4c-code",
-        null,
-        200,
-        requiredField: "id");
-
-    // Source assertion 81: Contract error/conformance: GET /content/pages/{code}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "081: Contract error/conformance: GET /content/pages/{code}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test081_GET_BASE_URL_content_pages_phase4c_code_Status_400() => AssertShellAsync(
-        Method("GET"),
-        "/content/pages/phase4c-code",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 82: Contract success: GET /content/summary
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "082: Contract success: GET /content/summary")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test082_GET_BASE_URL_content_summary_Status_200() => AssertShellAsync(
-        Method("GET"),
-        "/content/summary",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 83: Contract error/conformance: GET /content/summary
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "083: Contract error/conformance: GET /content/summary")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test083_GET_BASE_URL_content_summary_Status_410() => AssertShellAsync(
-        Method("GET"),
-        "/content/summary",
-        null,
-        410,
-        requiredField: null);
-
-    // Source assertion 84: Contract success: GET /private/configuration
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "084: Contract success: GET /private/configuration")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test084_GET_BASE_URL_private_configuration_Field_displayCustomerSection_200() => AssertShellAsync(
-        Method("GET"),
-        "/private/configuration",
-        null,
-        200,
-        requiredField: "displayCustomerSection");
-
-    // Source assertion 85: Contract error/conformance: GET /private/configuration
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "085: Contract error/conformance: GET /private/configuration")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test085_GET_BASE_URL_private_configuration_Status_400() => AssertShellAsync(
-        Method("GET"),
-        "/private/configuration",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 86: Contract success: GET /private/configurations/payment
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "086: Contract success: GET /private/configurations/payment")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test086_GET_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("GET"),
-        "/private/configurations/payment",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 87: Contract error/conformance: GET /private/configurations/payment
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "087: Contract error/conformance: GET /private/configurations/payment")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test087_GET_BASE_URL_private_configurations_payment_Status_410() => AssertShellAsync(
-        Method("GET"),
-        "/private/configurations/payment",
-        null,
-        410,
-        requiredField: null);
-
-    // Source assertion 88: Contract success: GET /private/configurations/shipping
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "088: Contract success: GET /private/configurations/shipping")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test088_GET_BASE_URL_private_configurations_shipping_Status_200() => AssertShellAsync(
-        Method("GET"),
-        "/private/configurations/shipping",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 89: Contract error/conformance: GET /private/configurations/shipping
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "089: Contract error/conformance: GET /private/configurations/shipping")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test089_GET_BASE_URL_private_configurations_shipping_Status_410() => AssertShellAsync(
-        Method("GET"),
-        "/private/configurations/shipping",
-        null,
-        410,
-        requiredField: null);
-
-    // Source assertion 90: Contract success: GET /private/configurations/{key}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "090: Contract success: GET /private/configurations/{key}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test090_GET_BASE_URL_private_configurations_phase4c_value_Field_id_200() => AssertShellAsync(
-        Method("GET"),
-        "/private/configurations/phase4c-value",
-        null,
-        200,
-        requiredField: "id");
-
-    // Source assertion 91: Contract error/conformance: GET /private/configurations/{key}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "091: Contract error/conformance: GET /private/configurations/{key}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test091_GET_BASE_URL_private_configurations_phase4c_value_Status_400() => AssertShellAsync(
-        Method("GET"),
-        "/private/configurations/phase4c-value",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 92: Contract success: GET /private/content/any/{code}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "092: Contract success: GET /private/content/any/{code}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test092_GET_BASE_URL_private_content_any_phase4c_code_Field_id_200() => AssertShellAsync(
-        Method("GET"),
-        "/private/content/any/phase4c-code",
-        null,
-        200,
-        requiredField: "id");
-
-    // Source assertion 93: Contract error/conformance: GET /private/content/any/{code}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "093: Contract error/conformance: GET /private/content/any/{code}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test093_GET_BASE_URL_private_content_any_phase4c_code_Status_400() => AssertShellAsync(
-        Method("GET"),
-        "/private/content/any/phase4c-code",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 94: Contract success: GET /private/content/box/{code}/exists
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "094: Contract success: GET /private/content/box/{code}/exists")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test094_GET_BASE_URL_private_content_box_phase4c_code_exists_Field_exists_200() => AssertShellAsync(
-        Method("GET"),
-        "/private/content/box/phase4c-code/exists",
-        null,
-        200,
-        requiredField: "exists");
-
-    // Source assertion 95: Contract error/conformance: GET /private/content/box/{code}/exists
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "095: Contract error/conformance: GET /private/content/box/{code}/exists")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test095_GET_BASE_URL_private_content_box_phase4c_code_exists_Status_400() => AssertShellAsync(
-        Method("GET"),
-        "/private/content/box/phase4c-code/exists",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 96: Contract success: GET /private/content/boxes
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "096: Contract success: GET /private/content/boxes")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test096_GET_BASE_URL_private_content_boxes_Field_items_200() => AssertShellAsync(
-        Method("GET"),
-        "/private/content/boxes",
-        null,
-        200,
-        requiredField: "items");
-
-    // Source assertion 97: Contract error/conformance: GET /private/content/boxes
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "097: Contract error/conformance: GET /private/content/boxes")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test097_GET_BASE_URL_private_content_boxes_Status_400() => AssertShellAsync(
-        Method("GET"),
-        "/private/content/boxes",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 98: Contract success: GET /private/content/boxes/{code}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "098: Contract success: GET /private/content/boxes/{code}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test098_GET_BASE_URL_private_content_boxes_phase4c_code_Field_id_200() => AssertShellAsync(
-        Method("GET"),
-        "/private/content/boxes/phase4c-code",
-        null,
-        200,
-        requiredField: "id");
-
-    // Source assertion 99: Contract error/conformance: GET /private/content/boxes/{code}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "099: Contract error/conformance: GET /private/content/boxes/{code}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test099_GET_BASE_URL_private_content_boxes_phase4c_code_Status_400() => AssertShellAsync(
-        Method("GET"),
-        "/private/content/boxes/phase4c-code",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 100: Contract success: GET /private/content/files
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "100: Contract success: GET /private/content/files")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test100_GET_BASE_URL_private_content_files_Field_items_200() => AssertShellAsync(
-        Method("GET"),
-        "/private/content/files",
-        null,
-        200,
-        requiredField: "items");
-
-    // Source assertion 101: Contract error/conformance: GET /private/content/files
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "101: Contract error/conformance: GET /private/content/files")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test101_GET_BASE_URL_private_content_files_Status_400() => AssertShellAsync(
-        Method("GET"),
-        "/private/content/files",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 102: Contract success: GET /private/content/files/{fileName}/download
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "102: Contract success: GET /private/content/files/{fileName}/download")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test102_GET_BASE_URL_private_content_files_phase4c_value_download_Status_200() => AssertShellAsync(
-        Method("GET"),
-        "/private/content/files/phase4c-value/download",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 103: Contract error/conformance: GET /private/content/files/{fileName}/download
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "103: Contract error/conformance: GET /private/content/files/{fileName}/download")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test103_GET_BASE_URL_private_content_files_phase4c_value_download_Status_400() => AssertShellAsync(
-        Method("GET"),
-        "/private/content/files/phase4c-value/download",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 104: Contract success: GET /private/content/folder
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "104: Contract success: GET /private/content/folder")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test104_GET_BASE_URL_private_content_folder_Field_path_200() => AssertShellAsync(
-        Method("GET"),
-        "/private/content/folder",
-        null,
-        200,
-        requiredField: "path");
-
-    // Source assertion 105: Contract error/conformance: GET /private/content/folder
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "105: Contract error/conformance: GET /private/content/folder")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test105_GET_BASE_URL_private_content_folder_Status_400() => AssertShellAsync(
-        Method("GET"),
-        "/private/content/folder",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 106: Contract success: GET /private/content/folders
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "106: Contract success: GET /private/content/folders")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test106_GET_BASE_URL_private_content_folders_Field_path_200() => AssertShellAsync(
-        Method("GET"),
-        "/private/content/folders",
-        null,
-        200,
-        requiredField: "path");
-
-    // Source assertion 107: Contract error/conformance: GET /private/content/folders
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "107: Contract error/conformance: GET /private/content/folders")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test107_GET_BASE_URL_private_content_folders_Status_400() => AssertShellAsync(
-        Method("GET"),
-        "/private/content/folders",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 108: Contract success: GET /private/content/list
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "108: Contract success: GET /private/content/list")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test108_GET_BASE_URL_private_content_list_Status_200() => AssertShellAsync(
-        Method("GET"),
-        "/private/content/list",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 109: Contract error/conformance: GET /private/content/list
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "109: Contract error/conformance: GET /private/content/list")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test109_GET_BASE_URL_private_content_list_Status_400() => AssertShellAsync(
-        Method("GET"),
-        "/private/content/list",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 110: Contract success: GET /private/content/page/{code}/exists
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "110: Contract success: GET /private/content/page/{code}/exists")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test110_GET_BASE_URL_private_content_page_phase4c_code_exists_Field_exists_200() => AssertShellAsync(
-        Method("GET"),
-        "/private/content/page/phase4c-code/exists",
-        null,
-        200,
-        requiredField: "exists");
-
-    // Source assertion 111: Contract error/conformance: GET /private/content/page/{code}/exists
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "111: Contract error/conformance: GET /private/content/page/{code}/exists")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test111_GET_BASE_URL_private_content_page_phase4c_code_exists_Status_400() => AssertShellAsync(
-        Method("GET"),
-        "/private/content/page/phase4c-code/exists",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 112: Contract success: GET /private/content/pages
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "112: Contract success: GET /private/content/pages")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test112_GET_BASE_URL_private_content_pages_Field_items_200() => AssertShellAsync(
-        Method("GET"),
-        "/private/content/pages",
-        null,
-        200,
-        requiredField: "items");
-
-    // Source assertion 113: Contract error/conformance: GET /private/content/pages
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "113: Contract error/conformance: GET /private/content/pages")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test113_GET_BASE_URL_private_content_pages_Status_400() => AssertShellAsync(
-        Method("GET"),
-        "/private/content/pages",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 114: Contract success: GET /private/content/pages/{code}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "114: Contract success: GET /private/content/pages/{code}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test114_GET_BASE_URL_private_content_pages_phase4c_code_Field_id_200() => AssertShellAsync(
-        Method("GET"),
-        "/private/content/pages/phase4c-code",
-        null,
-        200,
-        requiredField: "id");
-
-    // Source assertion 115: Contract error/conformance: GET /private/content/pages/{code}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "115: Contract error/conformance: GET /private/content/pages/{code}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test115_GET_BASE_URL_private_content_pages_phase4c_code_Status_400() => AssertShellAsync(
-        Method("GET"),
-        "/private/content/pages/phase4c-code",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 116: Contract success: GET /private/contents/any
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "116: Contract success: GET /private/contents/any")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test116_GET_BASE_URL_private_contents_any_Status_200() => AssertShellAsync(
-        Method("GET"),
-        "/private/contents/any",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 117: Contract error/conformance: GET /private/contents/any
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "117: Contract error/conformance: GET /private/contents/any")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test117_GET_BASE_URL_private_contents_any_Status_400() => AssertShellAsync(
-        Method("GET"),
-        "/private/contents/any",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 118: Contract success: GET /private/modules/payment
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "118: Contract success: GET /private/modules/payment")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test118_GET_BASE_URL_private_modules_payment_Status_200() => AssertShellAsync(
-        Method("GET"),
-        "/private/modules/payment",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 119: Contract error/conformance: GET /private/modules/payment
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "119: Contract error/conformance: GET /private/modules/payment")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test119_GET_BASE_URL_private_modules_payment_Status_400() => AssertShellAsync(
-        Method("GET"),
-        "/private/modules/payment",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 120: Contract success: GET /private/modules/payment/{code}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "120: Contract success: GET /private/modules/payment/{code}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test120_GET_BASE_URL_private_modules_payment_phase4c_code_Field_code_200() => AssertShellAsync(
-        Method("GET"),
-        "/private/modules/payment/phase4c-code",
-        null,
-        200,
-        requiredField: "code");
-
-    // Source assertion 121: Contract error/conformance: GET /private/modules/payment/{code}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "121: Contract error/conformance: GET /private/modules/payment/{code}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test121_GET_BASE_URL_private_modules_payment_phase4c_code_Status_400() => AssertShellAsync(
-        Method("GET"),
-        "/private/modules/payment/phase4c-code",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 122: Contract success: GET /private/modules/shipping
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "122: Contract success: GET /private/modules/shipping")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test122_GET_BASE_URL_private_modules_shipping_Status_200() => AssertShellAsync(
-        Method("GET"),
-        "/private/modules/shipping",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 123: Contract error/conformance: GET /private/modules/shipping
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "123: Contract error/conformance: GET /private/modules/shipping")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test123_GET_BASE_URL_private_modules_shipping_Status_400() => AssertShellAsync(
-        Method("GET"),
-        "/private/modules/shipping",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 124: Contract success: GET /private/modules/shipping/{code}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "124: Contract success: GET /private/modules/shipping/{code}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test124_GET_BASE_URL_private_modules_shipping_phase4c_code_Status_200() => AssertShellAsync(
-        Method("GET"),
-        "/private/modules/shipping/phase4c-code",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 125: Contract error/conformance: GET /private/modules/shipping/{code}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "125: Contract error/conformance: GET /private/modules/shipping/{code}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test125_GET_BASE_URL_private_modules_shipping_phase4c_code_Status_400() => AssertShellAsync(
-        Method("GET"),
-        "/private/modules/shipping/phase4c-code",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 126: Contract success: PUT /private/configuration
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "126: Contract success: PUT /private/configuration")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test126_PUT_BASE_URL_private_configuration_Field_displayCustomerSection_200() => AssertShellAsync(
-        Method("PUT"),
-        "/private/configuration",
-        "{\"displayCustomerSection\":true,\"displayContactUs\":true,\"displayStoreAddress\":true,\"displayAddToCartOnFeaturedItems\":true,\"displayCustomerAgreement\":true,\"displayPagesMenu\":true,\"allowPurchaseItems\":true,\"displaySearchBox\":true,\"testMode\":true,\"debugMode\":true,\"useDefaultSearchConfig\":{},\"defaultSearchConfigPath\":{},\"socialValues\":{}}",
-        200,
-        requiredField: "displayCustomerSection");
-
-    // Source assertion 127: Contract error/conformance: PUT /private/configuration
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "127: Contract error/conformance: PUT /private/configuration")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test127_PUT_BASE_URL_private_configuration_Status_400() => AssertShellAsync(
-        Method("PUT"),
-        "/private/configuration",
-        "{}",
-        400,
-        requiredField: null);
-
-    // Source assertion 128: Contract success: PUT /private/configurations/{key}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "128: Contract success: PUT /private/configurations/{key}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test128_PUT_BASE_URL_private_configurations_phase4c_value_Field_id_200() => AssertShellAsync(
-        Method("PUT"),
-        "/private/configurations/phase4c-value",
-        "{\"type\":{},\"active\":true,\"value\":{}}",
-        200,
-        requiredField: "id");
-
-    // Source assertion 129: Contract error/conformance: PUT /private/configurations/{key}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "129: Contract error/conformance: PUT /private/configurations/{key}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test129_PUT_BASE_URL_private_configurations_phase4c_value_Status_400() => AssertShellAsync(
-        Method("PUT"),
-        "/private/configurations/phase4c-value",
-        "{}",
-        400,
-        requiredField: null);
-
-    // Source assertion 130: Contract success: PUT /private/content/box/{contentId}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "130: Contract success: PUT /private/content/box/{contentId}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test130_PUT_BASE_URL_private_content_box_ById_Status_204() => AssertShellAsync(
-        Method("PUT"),
-        $"/private/content/box/{ResourceId}",
-        "{}",
-        204,
-        requiredField: null);
-
-    // Source assertion 131: Contract error/conformance: PUT /private/content/box/{contentId}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "131: Contract error/conformance: PUT /private/content/box/{contentId}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test131_PUT_BASE_URL_private_content_box_ById_Status_400() => AssertShellAsync(
-        Method("PUT"),
-        $"/private/content/box/{ResourceId}",
-        "{}",
-        400,
-        requiredField: null);
-
-    // Source assertion 132: Contract success: PUT /private/content/page/{contentId}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "132: Contract success: PUT /private/content/page/{contentId}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test132_PUT_BASE_URL_private_content_page_ById_Status_204() => AssertShellAsync(
-        Method("PUT"),
-        $"/private/content/page/{ResourceId}",
-        "{}",
-        204,
-        requiredField: null);
-
-    // Source assertion 133: Contract error/conformance: PUT /private/content/page/{contentId}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "133: Contract error/conformance: PUT /private/content/page/{contentId}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test133_PUT_BASE_URL_private_content_page_ById_Status_400() => AssertShellAsync(
-        Method("PUT"),
-        $"/private/content/page/{ResourceId}",
-        "{}",
-        400,
-        requiredField: null);
-
-    // Source assertion 134: Contract success: PUT /private/content/{contentId}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "134: Contract success: PUT /private/content/{contentId}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test134_PUT_BASE_URL_private_content_ById_Status_200() => AssertShellAsync(
-        Method("PUT"),
-        $"/private/content/{ResourceId}",
-        "{\"legacyOperation\":\"phase4c-test\"}",
-        200,
-        requiredField: null);
-
-    // Source assertion 135: Contract error/conformance: PUT /private/content/{contentId}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "135: Contract error/conformance: PUT /private/content/{contentId}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test135_PUT_BASE_URL_private_content_ById_Status_410() => AssertShellAsync(
-        Method("PUT"),
-        $"/private/content/{ResourceId}",
-        "{}",
-        410,
-        requiredField: null);
-
-    // Source assertion 136: Contract success: PUT /private/modules/payment/{code}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "136: Contract success: PUT /private/modules/payment/{code}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test136_PUT_BASE_URL_private_modules_payment_phase4c_code_Field_code_200() => AssertShellAsync(
-        Method("PUT"),
-        "/private/modules/payment/phase4c-code",
-        "{\"active\":true,\"defaultSelected\":true,\"integrationKeys\":{},\"integrationOptions\":{},\"environment\":\"Test\"}",
-        200,
-        requiredField: "code");
-
-    // Source assertion 137: Contract error/conformance: PUT /private/modules/payment/{code}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "137: Contract error/conformance: PUT /private/modules/payment/{code}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test137_PUT_BASE_URL_private_modules_payment_phase4c_code_Status_400() => AssertShellAsync(
-        Method("PUT"),
-        "/private/modules/payment/phase4c-code",
-        "{}",
-        400,
-        requiredField: null);
-
-    // Source assertion 138: Contract success: PUT /private/modules/shipping/{code}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "138: Contract success: PUT /private/modules/shipping/{code}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test138_PUT_BASE_URL_private_modules_shipping_phase4c_code_Status_200() => AssertShellAsync(
-        Method("PUT"),
-        "/private/modules/shipping/phase4c-code",
-        "{\"active\":true,\"defaultSelected\":true,\"integrationKeys\":{},\"integrationOptions\":{},\"environment\":\"Test\"}",
-        200,
-        requiredField: null);
-
-    // Source assertion 139: Contract error/conformance: PUT /private/modules/shipping/{code}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "139: Contract error/conformance: PUT /private/modules/shipping/{code}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test139_PUT_BASE_URL_private_modules_shipping_phase4c_code_Status_400() => AssertShellAsync(
-        Method("PUT"),
-        "/private/modules/shipping/phase4c-code",
-        "{}",
-        400,
-        requiredField: null);
-
-    // Source assertion 140: Contract success: DELETE /content/folder
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "140: Contract success: DELETE /content/folder")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test140_DELETE_BASE_URL_content_folder_Status_200() => AssertShellAsync(
-        Method("DELETE"),
-        "/content/folder",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 141: Contract error/conformance: DELETE /content/folder
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "141: Contract error/conformance: DELETE /content/folder")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test141_DELETE_BASE_URL_content_folder_Status_410() => AssertShellAsync(
-        Method("DELETE"),
-        "/content/folder",
-        null,
-        410,
-        requiredField: null);
-
-    // Source assertion 142: Contract success: DELETE /private/content/box/{contentId}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "142: Contract success: DELETE /private/content/box/{contentId}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test142_DELETE_BASE_URL_private_content_box_ById_Status_204() => AssertShellAsync(
-        Method("DELETE"),
-        $"/private/content/box/{ResourceId}",
-        null,
-        204,
-        requiredField: null);
-
-    // Source assertion 143: Contract error/conformance: DELETE /private/content/box/{contentId}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "143: Contract error/conformance: DELETE /private/content/box/{contentId}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test143_DELETE_BASE_URL_private_content_box_ById_Status_400() => AssertShellAsync(
-        Method("DELETE"),
-        $"/private/content/box/{ResourceId}",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 144: Contract success: DELETE /private/content/files/{fileName}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "144: Contract success: DELETE /private/content/files/{fileName}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test144_DELETE_BASE_URL_private_content_files_phase4c_value_Status_204() => AssertShellAsync(
-        Method("DELETE"),
-        "/private/content/files/phase4c-value",
-        null,
-        204,
-        requiredField: null);
-
-    // Source assertion 145: Contract error/conformance: DELETE /private/content/files/{fileName}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "145: Contract error/conformance: DELETE /private/content/files/{fileName}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test145_DELETE_BASE_URL_private_content_files_phase4c_value_Status_400() => AssertShellAsync(
-        Method("DELETE"),
-        "/private/content/files/phase4c-value",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 146: Contract success: DELETE /private/content/folders
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "146: Contract success: DELETE /private/content/folders")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test146_DELETE_BASE_URL_private_content_folders_Status_204() => AssertShellAsync(
-        Method("DELETE"),
-        "/private/content/folders",
-        null,
-        204,
-        requiredField: null);
-
-    // Source assertion 147: Contract error/conformance: DELETE /private/content/folders
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "147: Contract error/conformance: DELETE /private/content/folders")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test147_DELETE_BASE_URL_private_content_folders_Status_400() => AssertShellAsync(
-        Method("DELETE"),
-        "/private/content/folders",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 148: Contract success: DELETE /private/content/images/remove
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "148: Contract success: DELETE /private/content/images/remove")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test148_DELETE_BASE_URL_private_content_images_remove_Status_204() => AssertShellAsync(
-        Method("DELETE"),
-        "/private/content/images/remove",
-        null,
-        204,
-        requiredField: null);
-
-    // Source assertion 149: Contract error/conformance: DELETE /private/content/images/remove
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "149: Contract error/conformance: DELETE /private/content/images/remove")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test149_DELETE_BASE_URL_private_content_images_remove_Status_400() => AssertShellAsync(
-        Method("DELETE"),
-        "/private/content/images/remove",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 150: Contract success: DELETE /private/content/page/{contentId}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "150: Contract success: DELETE /private/content/page/{contentId}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test150_DELETE_BASE_URL_private_content_page_ById_Status_204() => AssertShellAsync(
-        Method("DELETE"),
-        $"/private/content/page/{ResourceId}",
-        null,
-        204,
-        requiredField: null);
-
-    // Source assertion 151: Contract error/conformance: DELETE /private/content/page/{contentId}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "151: Contract error/conformance: DELETE /private/content/page/{contentId}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test151_DELETE_BASE_URL_private_content_page_ById_Status_400() => AssertShellAsync(
-        Method("DELETE"),
-        $"/private/content/page/{ResourceId}",
-        null,
-        400,
-        requiredField: null);
-
-    // Source assertion 152: Contract success: DELETE /private/content/{contentId}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "152: Contract success: DELETE /private/content/{contentId}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test152_DELETE_BASE_URL_private_content_ById_Status_200() => AssertShellAsync(
-        Method("DELETE"),
-        $"/private/content/{ResourceId}",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 153: Contract error/conformance: DELETE /private/content/{contentId}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "153: Contract error/conformance: DELETE /private/content/{contentId}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test153_DELETE_BASE_URL_private_content_ById_Status_410() => AssertShellAsync(
-        Method("DELETE"),
-        $"/private/content/{ResourceId}",
-        null,
-        410,
-        requiredField: null);
-
-    // Source assertion 154: Contract success: DELETE /services/private/system/optin/{code}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "154: Contract success: DELETE /services/private/system/optin/{code}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test154_DELETE_BASE_URL_services_private_system_optin_phase4c_code_Status_200() => AssertShellAsync(
-        Method("DELETE"),
-        "/services/private/system/optin/phase4c-code",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 155: Contract error/conformance: DELETE /services/private/system/optin/{code}
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "155: Contract error/conformance: DELETE /services/private/system/optin/{code}")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test155_DELETE_BASE_URL_services_private_system_optin_phase4c_code_Status_410() => AssertShellAsync(
-        Method("DELETE"),
-        "/services/private/system/optin/phase4c-code",
-        null,
-        410,
-        requiredField: null);
-
-    // Source assertion 156: Extension point EXT-CMS-021 - configured behavior
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "156: Extension point EXT-CMS-021 - configured behavior")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test156_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 157: Extension point EXT-CMS-021 - default when unconfigured
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "157: Extension point EXT-CMS-021 - default when unconfigured")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test157_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 158: Extension point EXT-CMS-021 - metadata round-trip
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "158: Extension point EXT-CMS-021 - metadata round-trip")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test158_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 159: Extension point EXT-PAY-024 - configured behavior
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "159: Extension point EXT-PAY-024 - configured behavior")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test159_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 160: Extension point EXT-PAY-024 - default when unconfigured
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "160: Extension point EXT-PAY-024 - default when unconfigured")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test160_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 161: Extension point EXT-PAY-024 - metadata round-trip
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "161: Extension point EXT-PAY-024 - metadata round-trip")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test161_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 162: Extension point EXT-PROVIDER-025 - configured behavior
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "162: Extension point EXT-PROVIDER-025 - configured behavior")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test162_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 163: Extension point EXT-PROVIDER-025 - default when unconfigured
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "163: Extension point EXT-PROVIDER-025 - default when unconfigured")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test163_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 164: Extension point EXT-PROVIDER-025 - metadata round-trip
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "164: Extension point EXT-PROVIDER-025 - metadata round-trip")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test164_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 165: Extension point EXT-MODULE-CACHE-026 - configured behavior
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "165: Extension point EXT-MODULE-CACHE-026 - configured behavior")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test165_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 166: Extension point EXT-MODULE-CACHE-026 - default when unconfigured
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "166: Extension point EXT-MODULE-CACHE-026 - default when unconfigured")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test166_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 167: Extension point EXT-MODULE-CACHE-026 - metadata round-trip
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "167: Extension point EXT-MODULE-CACHE-026 - metadata round-trip")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test167_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 168: Extension point EXT-CONFIG-027 - configured behavior
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "168: Extension point EXT-CONFIG-027 - configured behavior")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test168_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 169: Extension point EXT-CONFIG-027 - default when unconfigured
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "169: Extension point EXT-CONFIG-027 - default when unconfigured")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test169_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 170: Extension point EXT-CONFIG-027 - metadata round-trip
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "170: Extension point EXT-CONFIG-027 - metadata round-trip")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test170_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 171: Extension point EXT-MODULE-METADATA-028 - configured behavior
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "171: Extension point EXT-MODULE-METADATA-028 - configured behavior")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test171_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 172: Extension point EXT-MODULE-METADATA-028 - default when unconfigured
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "172: Extension point EXT-MODULE-METADATA-028 - default when unconfigured")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test172_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 173: Extension point EXT-MODULE-METADATA-028 - metadata round-trip
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "173: Extension point EXT-MODULE-METADATA-028 - metadata round-trip")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test173_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 174: Extension point EXT-CMS-DELETE-030 - configured behavior
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "174: Extension point EXT-CMS-DELETE-030 - configured behavior")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test174_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 175: Extension point EXT-CMS-DELETE-030 - default when unconfigured
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "175: Extension point EXT-CMS-DELETE-030 - default when unconfigured")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test175_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        null,
-        200,
-        requiredField: null);
-
-    // Source assertion 176: Extension point EXT-CMS-DELETE-030 - metadata round-trip
-    // @BR-ID: BR-MER-013
-    [Fact(DisplayName = "176: Extension point EXT-CMS-DELETE-030 - metadata round-trip")]
-    [Trait("BR", "BR-MER-013")]
-    public Task Test176_POST_BASE_URL_private_configurations_payment_Status_200() => AssertShellAsync(
-        Method("POST"),
-        "/private/configurations/payment",
-        null,
-        200,
-        requiredField: null);
+    public async Task FileDeletionIsIdempotent()
+    {
+        var name = $"{Code("delete-file")}.txt";
+        await SendMultipartAsync("/private/content/files", 201, "file", name, "text/plain",
+            ("contentType", "STATIC_FILE"), ("fileName", name));
+        await SendJsonAsync(HttpMethod.Delete, $"/private/content/files/{name}?contentType=STATIC_FILE&path=/", null, 204);
+        await SendJsonAsync(HttpMethod.Delete, $"/private/content/files/{name}?contentType=STATIC_FILE&path=/", null, 204);
+    }
+
+    // Contract retirement assertions intentionally expect 410, not a successful legacy response.
+    [Fact(DisplayName = "Retired legacy content and module operations return 410")]
+    public async Task RetiredOperationsReturnGone()
+    {
+        foreach (var (method, path) in new[]
+        {
+            (HttpMethod.Get, "/content/summary"),
+            (HttpMethod.Get, "/private/configurations/payment"),
+            (HttpMethod.Post, "/private/configurations/shipping"),
+            (HttpMethod.Delete, "/content/folder"),
+            (HttpMethod.Post, "/services/private/system/optin")
+        })
+        {
+            var result = await SendJsonAsync(method, path, null, 410);
+            Assert.Equal("LEGACY_OPERATION_RETIRED", result!.RootElement.GetProperty("error").GetString());
+        }
+    }
+
+    private async Task<JsonDocument?> CreateContentAsync(
+        string type,
+        string code,
+        (string Language, string Name)[]? descriptions = null,
+        bool visible = true,
+        bool linkToMenu = false,
+        int sortOrder = 1,
+        string? description = null,
+        string? friendlyUrl = null)
+    {
+        var path = type.Equals("box", StringComparison.OrdinalIgnoreCase) ? "/private/content/box" : "/private/content/page";
+        return await SendJsonAsync(HttpMethod.Post, path,
+            ContentPayload(code, type, descriptions, visible, linkToMenu, sortOrder, description, friendlyUrl), 201);
+    }
+
+    private static object ContentPayload(
+        string code,
+        string type,
+        (string Language, string Name)[]? descriptions = null,
+        bool visible = true,
+        bool linkToMenu = false,
+        int sortOrder = 1,
+        string? description = null,
+        string? friendlyUrl = null) =>
+        new
+        {
+            code,
+            visible,
+            linkToMenu,
+            sortOrder,
+            contentPosition = type.Equals("box", StringComparison.OrdinalIgnoreCase) ? "LEFT" : (string?)null,
+            descriptions = (descriptions ?? new[] { ("en", code) })
+                .Select(x => new
+                {
+                    language = x.Language,
+                    name = x.Name,
+                    title = x.Name,
+                    description = description ?? x.Name,
+                    friendlyUrl = friendlyUrl ?? $"{code}-url",
+                    metaKeywords = "phase4c",
+                    metaTitle = x.Name,
+                    metaDescription = x.Name
+                }).ToArray()
+        };
+
+    private async Task<string?> LastCreatedDescriptionAsync(string code)
+    {
+        var result = await SendJsonAsync(HttpMethod.Get, $"/private/content/pages/{code}", null, 200);
+        return result!.RootElement.GetProperty("description").GetProperty("friendlyUrl").GetString();
+    }
+
+    private async Task<JsonDocument?> SaveModuleAsync(
+        string code,
+        bool active,
+        Dictionary<string, object?>? keys = null,
+        Dictionary<string, object?>? options = null) =>
+        await SendJsonAsync(HttpMethod.Put, $"/private/modules/payment/{code}", new
+        {
+            active,
+            defaultSelected = false,
+            environment = "TEST",
+            integrationKeys = keys ?? new Dictionary<string, object?>
+            {
+                ["secretKey"] = "secret-value",
+                ["publishableKey"] = "publishable-value"
+            },
+            integrationOptions = options ?? new Dictionary<string, object?> { ["mode"] = "test" }
+        }, code == "phase4c-payment" && keys is not null && keys.Count == 0 ? 422 : 200);
+
+    private async Task<JsonDocument?> ReplaceModuleAsync(
+        string family,
+        string code,
+        object details,
+        object[]? configuration = null,
+        string[]? regions = null)
+    {
+        var payload = new
+        {
+            module = family,
+            code,
+            type = family.ToLowerInvariant(),
+            image = $"{code}.png",
+            customModule = true,
+            regions = regions ?? new[] { "*" },
+            details,
+            configuration = configuration ?? new object[]
+            {
+                new { env = "TEST", scheme = "https", host = "test.example", port = "443", uri = "https://test.example", config1 = "test", config2 = "token" }
+            }
+        };
+        return await SendJsonAsync(HttpMethod.Post, "/services/private/system/module", payload, 200);
+    }
+
+    private async Task<JsonDocument?> SendMultipartAsync(
+        string path,
+        int expectedStatus,
+        string fileField,
+        string fileName,
+        string mimeType,
+        params (string Name, string Value)[] fields)
+    {
+        using var form = new MultipartFormDataContent();
+        var bytes = new ByteArrayContent(Encoding.UTF8.GetBytes("phase4c content"));
+        bytes.Headers.ContentType = new MediaTypeHeaderValue(mimeType);
+        form.Add(bytes, fileField, fileName);
+        foreach (var (name, value) in fields) form.Add(new StringContent(value), name);
+        return await SendAsync(HttpMethod.Post, path, form, expectedStatus);
+    }
+
+    private async Task<JsonDocument?> SendJsonAsync(
+        HttpMethod method,
+        string path,
+        object? payload,
+        int expectedStatus,
+        bool useAuthorization = true,
+        string? language = "en",
+        string? tenant = null,
+        string? store = null,
+        string? idempotencyKey = null)
+    {
+        using var content = payload is null
+            ? null
+            : new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+        return await SendAsync(method, path, content, expectedStatus, useAuthorization, language, tenant, store, idempotencyKey);
+    }
+
+    private async Task<JsonDocument?> SendAsync(
+        HttpMethod method,
+        string path,
+        HttpContent? content,
+        int expectedStatus,
+        bool useAuthorization = true,
+        string? language = "en",
+        string? tenant = null,
+        string? store = null,
+        string? idempotencyKey = null)
+    {
+        path = NormalizeApiPath(path);
+        using var request = new HttpRequestMessage(method, path) { Content = content };
+        if (useAuthorization) request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", administratorToken);
+        request.Headers.Remove("x-language");
+        if (language is not null) request.Headers.TryAddWithoutValidation("x-language", language);
+        if (tenant is not null)
+        {
+            request.Headers.Remove("x-tenant-id");
+            request.Headers.TryAddWithoutValidation("x-tenant-id", tenant);
+        }
+        if (store is not null)
+        {
+            request.Headers.Remove("x-store-id");
+            request.Headers.TryAddWithoutValidation("x-store-id", store);
+        }
+        if (idempotencyKey is not null)
+        {
+            request.Headers.Remove("Idempotency-Key");
+            request.Headers.TryAddWithoutValidation("Idempotency-Key", idempotencyKey);
+        }
+
+        using var response = await client.SendAsync(request);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.True((int)response.StatusCode == expectedStatus,
+            $"Expected HTTP {expectedStatus}, got {(int)response.StatusCode} for {method} {path}. Body: {body}");
+        if (response.StatusCode == HttpStatusCode.NoContent || string.IsNullOrWhiteSpace(body)) return null;
+        return JsonDocument.Parse(body);
+    }
 }

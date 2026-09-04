@@ -253,9 +253,13 @@ public sealed class SearchRepository(NpgsqlDataSource dataSource, IConfiguration
         await transaction.CommitAsync(ct);
         return (new SearchRebuildJob
         {
-            Id = jobId, SearchIndexId = index.Id, TenantId = context.TenantId,
-            StoreId = context.StoreId, RequestedBy = requestedBy,
-            IdempotencyKey = idempotencyKey, State = "Requested",
+            Id = jobId,
+            SearchIndexId = index.Id,
+            TenantId = context.TenantId,
+            StoreId = context.StoreId,
+            RequestedBy = requestedBy,
+            IdempotencyKey = idempotencyKey,
+            State = "Requested",
             RequestedAt = DateTimeOffset.UtcNow
         }, true);
     }
@@ -321,11 +325,17 @@ public sealed class SearchRepository(NpgsqlDataSource dataSource, IConfiguration
         Add(command, "correlation", context.CorrelationId);
         AddJson(command, "payload", new
         {
-            eventId, eventType = "SearchIndexingFailed.v1", eventVersion = 1,
-            occurredAt = DateTimeOffset.UtcNow, tenantId = context.TenantId,
-            storeId = context.StoreId, correlationId = context.CorrelationId,
-            productId = productId.ToString(), rebuildId = (Guid?)null,
-            sourceVersion, failureCode = code
+            eventId,
+            eventType = "SearchIndexingFailed.v1",
+            eventVersion = 1,
+            occurredAt = DateTimeOffset.UtcNow,
+            tenantId = context.TenantId,
+            storeId = context.StoreId,
+            correlationId = context.CorrelationId,
+            productId = productId.ToString(),
+            rebuildId = (Guid?)null,
+            sourceVersion,
+            failureCode = code
         });
         await command.ExecuteNonQueryAsync(ct);
         await transaction.CommitAsync(ct);
@@ -479,16 +489,28 @@ public sealed class SearchRepository(NpgsqlDataSource dataSource, IConfiguration
             object payload = state == "Succeeded"
                 ? new
                 {
-                    eventId, eventType, eventVersion = 1, occurredAt = DateTimeOffset.UtcNow,
-                    tenantId = context.TenantId, storeId = context.StoreId,
-                    correlationId = context.CorrelationId, rebuildId = jobId, status = "Succeeded"
+                    eventId,
+                    eventType,
+                    eventVersion = 1,
+                    occurredAt = DateTimeOffset.UtcNow,
+                    tenantId = context.TenantId,
+                    storeId = context.StoreId,
+                    correlationId = context.CorrelationId,
+                    rebuildId = jobId,
+                    status = "Succeeded"
                 }
                 : new
                 {
-                    eventId, eventType, eventVersion = 1, occurredAt = DateTimeOffset.UtcNow,
-                    tenantId = context.TenantId, storeId = context.StoreId,
-                    correlationId = context.CorrelationId, productId = (string?)null,
-                    rebuildId = jobId, failureCode = errorCode ?? "REBUILD_FAILED"
+                    eventId,
+                    eventType,
+                    eventVersion = 1,
+                    occurredAt = DateTimeOffset.UtcNow,
+                    tenantId = context.TenantId,
+                    storeId = context.StoreId,
+                    correlationId = context.CorrelationId,
+                    productId = (string?)null,
+                    rebuildId = jobId,
+                    failureCode = errorCode ?? "REBUILD_FAILED"
                 };
             AddJson(outbox, "payload", payload);
             await outbox.ExecuteNonQueryAsync(ct);
@@ -604,21 +626,29 @@ public sealed class SearchRepository(NpgsqlDataSource dataSource, IConfiguration
 
     private static SearchIndex ReadIndex(NpgsqlDataReader reader) => new()
     {
-        Id = reader.GetGuid(0), TenantId = reader.GetGuid(1).ToString(),
-        StoreId = reader.GetString(2), ProviderName = reader.GetString(3),
+        Id = reader.GetGuid(0),
+        TenantId = reader.GetGuid(1).ToString(),
+        StoreId = reader.GetString(2),
+        ProviderName = reader.GetString(3),
         ConfiguredLocales = reader.GetFieldValue<string[]>(4),
-        ConfigurationVersion = reader.GetInt64(5), State = reader.GetString(6)
+        ConfigurationVersion = reader.GetInt64(5),
+        State = reader.GetString(6)
     };
 
     private static SearchRebuildJob ReadJob(NpgsqlDataReader reader) => new()
     {
-        Id = reader.GetGuid(0), SearchIndexId = reader.GetGuid(1),
-        TenantId = reader.GetGuid(2).ToString(), StoreId = reader.GetString(3),
-        RequestedBy = reader.GetString(4), IdempotencyKey = reader.GetString(5),
-        State = reader.GetString(6), RequestedAt = reader.GetFieldValue<DateTimeOffset>(7),
+        Id = reader.GetGuid(0),
+        SearchIndexId = reader.GetGuid(1),
+        TenantId = reader.GetGuid(2).ToString(),
+        StoreId = reader.GetString(3),
+        RequestedBy = reader.GetString(4),
+        IdempotencyKey = reader.GetString(5),
+        State = reader.GetString(6),
+        RequestedAt = reader.GetFieldValue<DateTimeOffset>(7),
         StartedAt = reader.IsDBNull(8) ? null : reader.GetFieldValue<DateTimeOffset>(8),
         CompletedAt = reader.IsDBNull(9) ? null : reader.GetFieldValue<DateTimeOffset>(9),
-        IndexedDocumentCount = reader.GetInt64(10), FailedDocumentCount = reader.GetInt64(11),
+        IndexedDocumentCount = reader.GetInt64(10),
+        FailedDocumentCount = reader.GetInt64(11),
         ErrorCode = reader.IsDBNull(12) ? null : reader.GetString(12)
     };
 

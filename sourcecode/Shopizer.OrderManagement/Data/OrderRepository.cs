@@ -150,9 +150,17 @@ public sealed class OrderRepository(NpgsqlDataSource dataSource)
             await InsertHistoryAsync(connection, transaction, orderId, "ORDERED", null, null, "SUBMISSION", null, ct);
             var payload = new
             {
-                eventId = Guid.NewGuid(), eventType = "OrderAccepted", eventVersion = 1, occurredAt = DateTimeOffset.UtcNow,
-                tenantId = context.TenantId, storeId = context.StoreId, correlationId = context.CorrelationId,
-                orderId, status = "Ordered", currency = submission.Currency, total = submission.Total,
+                eventId = Guid.NewGuid(),
+                eventType = "OrderAccepted",
+                eventVersion = 1,
+                occurredAt = DateTimeOffset.UtcNow,
+                tenantId = context.TenantId,
+                storeId = context.StoreId,
+                correlationId = context.CorrelationId,
+                orderId,
+                status = "Ordered",
+                currency = submission.Currency,
+                total = submission.Total,
                 lines = submission.Lines.Select(x => new { sku = x.Sku, productName = x.ProductName, quantity = x.Quantity, unitPrice = x.UnitPrice, attributes = x.Attributes }).ToArray()
             };
             await InsertOutboxAsync(connection, transaction, context, orderId, "OrderAccepted", payload, ct);
@@ -378,7 +386,8 @@ public sealed class OrderRepository(NpgsqlDataSource dataSource)
         if (!order.Lines.Any() || order.Lines.All(x => x.IsDigital)) throw new DomainException("FULFILLMENT_ORDER_NOT_READY", "Fulfillment requires at least one physical purchased line.", 409);
         await using var select = new NpgsqlCommand("SELECT fulfillment_order_id,status,carrier_reference,last_updated_at FROM order_management.fulfillment_orders WHERE tenant_id=@tenant AND store_id=@store AND order_id=@order", connection, tx);
         Add(select, "tenant", context.TenantId); Add(select, "store", context.StoreNumber); Add(select, "order", id); await using var reader = await select.ExecuteReaderAsync(ct);
-        if (await reader.ReadAsync(ct)) { var f = ReadFulfillment(reader); await reader.DisposeAsync(); await tx.CommitAsync(ct); return f; } await reader.DisposeAsync();
+        if (await reader.ReadAsync(ct)) { var f = ReadFulfillment(reader); await reader.DisposeAsync(); await tx.CommitAsync(ct); return f; }
+        await reader.DisposeAsync();
         var fulfillmentId = Guid.NewGuid();
         await using var insert = new NpgsqlCommand("INSERT INTO order_management.fulfillment_orders(fulfillment_order_id,order_id,tenant_id,store_id) VALUES(@id,@order,@tenant,@store)", connection, tx);
         Add(insert, "id", fulfillmentId); Add(insert, "order", id); Add(insert, "tenant", context.TenantId); Add(insert, "store", context.StoreNumber); await insert.ExecuteNonQueryAsync(ct);
@@ -424,7 +433,8 @@ public sealed class OrderRepository(NpgsqlDataSource dataSource)
         await LoadChildrenAsync(connection, order, ct);
         if (order.Totals.Count == 0) throw new DomainException("INVOICE_SNAPSHOT_INCOMPLETE", "An invoice requires accepted order totals.", 422);
         await using var existing = new NpgsqlCommand("SELECT request_id,status,artifact_url,generated_at FROM order_management.invoice_requests WHERE order_id=@order AND tenant_id=@tenant AND store_id=@store", connection, tx); Add(existing, "order", id); Add(existing, "tenant", context.TenantId); Add(existing, "store", context.StoreNumber); await using var er = await existing.ExecuteReaderAsync(ct);
-        if (await er.ReadAsync(ct)) { var result = new InvoiceState(id, er.GetString(0), er.GetString(1), er.IsDBNull(2) ? null : er.GetString(2), er.IsDBNull(3) ? null : er.GetFieldValue<DateTimeOffset>(3)); await er.DisposeAsync(); await tx.CommitAsync(ct); return result; } await er.DisposeAsync();
+        if (await er.ReadAsync(ct)) { var result = new InvoiceState(id, er.GetString(0), er.GetString(1), er.IsDBNull(2) ? null : er.GetString(2), er.IsDBNull(3) ? null : er.GetFieldValue<DateTimeOffset>(3)); await er.DisposeAsync(); await tx.CommitAsync(ct); return result; }
+        await er.DisposeAsync();
         var requestId = $"inv-{id}-{Guid.NewGuid():N}";
         await using var insert = new NpgsqlCommand("INSERT INTO order_management.invoice_requests(request_id,tenant_id,store_id,order_id) VALUES(@request,@tenant,@store,@order)", connection, tx); Add(insert, "request", requestId); Add(insert, "tenant", context.TenantId); Add(insert, "store", context.StoreNumber); Add(insert, "order", id); await insert.ExecuteNonQueryAsync(ct);
         await InsertOutboxAsync(connection, tx, context, id, "InvoiceGenerationRequested", new { eventId = Guid.NewGuid(), eventType = "InvoiceGenerationRequested", eventVersion = 1, occurredAt = DateTimeOffset.UtcNow, tenantId = context.TenantId, storeId = context.StoreId, correlationId = context.CorrelationId, orderId = id, requestId, orderDate = order.DatePurchased, billingSnapshot = order.BillingAddress, lines = order.Lines, acceptedTotals = order.Totals, currency = order.CurrencyCode }, ct);
@@ -467,10 +477,17 @@ public sealed class OrderRepository(NpgsqlDataSource dataSource)
         await using var transaction = await connection.BeginTransactionAsync(ct);
         await InsertOutboxAsync(connection, transaction, context, 0, "OrderProcessingFailed", new
         {
-            eventId = Guid.NewGuid(), eventType = "OrderProcessingFailed", eventVersion = 1,
-            occurredAt = DateTimeOffset.UtcNow, tenantId = context.TenantId, storeId = context.StoreId,
-            correlationId = context.CorrelationId, orderId = (long?)null, submissionId,
-            failureCode = "ORDER_PROCESSING_FAILED", message = reason
+            eventId = Guid.NewGuid(),
+            eventType = "OrderProcessingFailed",
+            eventVersion = 1,
+            occurredAt = DateTimeOffset.UtcNow,
+            tenantId = context.TenantId,
+            storeId = context.StoreId,
+            correlationId = context.CorrelationId,
+            orderId = (long?)null,
+            submissionId,
+            failureCode = "ORDER_PROCESSING_FAILED",
+            message = reason
         }, ct);
         await transaction.CommitAsync(ct);
     }

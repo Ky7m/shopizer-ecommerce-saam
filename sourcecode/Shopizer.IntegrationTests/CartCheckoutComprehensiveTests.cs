@@ -370,6 +370,7 @@ public sealed class CartCheckoutComprehensiveTests(AspireHostFixture fixture)
 
     private async Task<string> ArrangeCartAsync(int quantity = 1)
     {
+        await fixture.ResetCartCheckoutDataAsync();
         var payload = $$"""{"product":"{{ProductSku}}","quantity":{{quantity}},"attributes":[]}""";
         using var response = await SendAsync(HttpMethod.Post, "/api/v1/cart", payload);
         var root = await AssertCartEnvelopeAsync(response, 201, quantity);
@@ -615,9 +616,17 @@ public sealed class CartCheckoutComprehensiveTests(AspireHostFixture fixture)
 
     private async Task AssertDownstreamFailureDoesNotBecomeLocalSuccessAsync()
     {
-        using var response = await SendAsync(HttpMethod.Post, "/api/v1/cart", Payloads.AddCartItem);
-        await AssertErrorResponseAsync(response, 503, "CHECKOUT_UNAVAILABLE");
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        await fixture.DisableCartPricingAsync();
+        try
+        {
+            using var response = await SendAsync(HttpMethod.Post, "/api/v1/cart", Payloads.AddCartItem);
+            await AssertErrorResponseAsync(response, 503, "CHECKOUT_UNAVAILABLE");
+            Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        }
+        finally
+        {
+            await fixture.RestoreCartPricingAsync();
+        }
     }
 
     private async Task AssertAuthenticatedPaymentContractAsync()
@@ -847,7 +856,9 @@ public sealed class CartCheckoutComprehensiveTests(AspireHostFixture fixture)
     private static async Task<JsonNode> AssertResponseAsync(HttpResponseMessage response, int expectedStatus)
     {
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Equal(expectedStatus, (int)response.StatusCode);
+        Assert.True(
+            expectedStatus == (int)response.StatusCode,
+            $"Expected HTTP {expectedStatus}, received {(int)response.StatusCode}: {body}");
         Assert.Contains("application/json", response.Content.Headers.ContentType?.MediaType ?? "", StringComparison.OrdinalIgnoreCase);
         var root = JsonNode.Parse(body);
         Assert.NotNull(root);
@@ -919,7 +930,13 @@ public sealed class CartCheckoutComprehensiveTests(AspireHostFixture fixture)
 
     private static string RequiredString(JsonNode? node, string field)
     {
-        var value = node?[field]?.GetValue<string>();
+        var jsonValue = node?[field];
+        var value = jsonValue switch
+        {
+            JsonValue valueNode when valueNode.TryGetValue<string>(out var stringValue) => stringValue,
+            JsonValue => jsonValue.ToJsonString(),
+            _ => null
+        };
         Assert.False(string.IsNullOrWhiteSpace(value), $"Expected non-empty JSON field '{field}'.");
         return value!;
     }
