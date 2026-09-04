@@ -1,6 +1,6 @@
 using System.Net;
 using System.Text.Json;
-using Shopizer.Services.Ms04.Contracts;
+using Shopizer.CartCheckout.DTOs;
 using Shopizer.CartCheckout.Models;
 
 namespace Shopizer.CartCheckout.Services;

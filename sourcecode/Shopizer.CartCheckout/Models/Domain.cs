@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using System.Globalization;
 using System.Text.Json;
-using Shopizer.Services.Ms04.Contracts;
+using Shopizer.CartCheckout.DTOs;
 
 namespace Shopizer.CartCheckout.Models;
 

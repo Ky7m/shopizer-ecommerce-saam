@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using Shopizer.Services.Ms04.Contracts;
+using Shopizer.CartCheckout.DTOs;
 using Shopizer.CartCheckout.Models;
 
 namespace Shopizer.CartCheckout.Middleware;

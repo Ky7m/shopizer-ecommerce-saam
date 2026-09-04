@@ -2,7 +2,7 @@ using System.Data;
 using System.Text.Json;
 using Npgsql;
 using NpgsqlTypes;
-using Shopizer.Services.Ms04.Contracts;
+using Shopizer.CartCheckout.DTOs;
 using Shopizer.CartCheckout.Models;
 
 namespace Shopizer.CartCheckout.Data;

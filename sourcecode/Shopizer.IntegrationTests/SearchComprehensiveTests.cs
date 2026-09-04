@@ -22,7 +22,7 @@ public sealed class SearchComprehensiveTests(AspireHostFixture fixture)
         var productId = await SeedProductAsync(key, "Blue Ceramic Mug");
         using var response = await SendAsync(HttpMethod.Post, "/api/v1/search",
             $$"""{"query":"{{key}}","count":10,"start":0}""");
-        var body = await response.Content.ReadAsStringAsync();
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.True(body.Contains("Blue Ceramic Mug", StringComparison.Ordinal), body);
@@ -37,7 +37,7 @@ public sealed class SearchComprehensiveTests(AspireHostFixture fixture)
         await SeedProductAsync("localized-product", includeFrench: true);
         using var response = await SendAsync(HttpMethod.Post, "/api/v1/search",
             """{"query":"produit localise","count":10,"start":0}""", language: "fr");
-        var body = await response.Content.ReadAsStringAsync();
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("Produit Localise", body);
@@ -52,7 +52,7 @@ public sealed class SearchComprehensiveTests(AspireHostFixture fixture)
         await SeedProductAsync("projected-fields");
         using var response = await SendAsync(HttpMethod.Post, "/api/v1/search",
             """{"query":"projected-fields"}""");
-        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         var item = document.RootElement.GetProperty("items")[0];
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -75,7 +75,7 @@ public sealed class SearchComprehensiveTests(AspireHostFixture fixture)
         command.Parameters.AddWithValue("tenant", TenantKey(Tenant));
         command.Parameters.AddWithValue("store", Store);
         command.Parameters.AddWithValue("product", productId);
-        await command.ExecuteNonQueryAsync();
+        await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);
 
         await using var verify = new NpgsqlCommand("""
             SELECT state FROM search.search_document
@@ -84,7 +84,7 @@ public sealed class SearchComprehensiveTests(AspireHostFixture fixture)
         verify.Parameters.AddWithValue("tenant", TenantKey(Tenant));
         verify.Parameters.AddWithValue("store", Store);
         verify.Parameters.AddWithValue("product", productId);
-        Assert.Equal("Removed", (string?)await verify.ExecuteScalarAsync());
+        Assert.Equal("Removed", (string?)await verify.ExecuteScalarAsync(TestContext.Current.CancellationToken));
     }
 
     // @BR-ID: BR-CAT-024
@@ -99,7 +99,7 @@ public sealed class SearchComprehensiveTests(AspireHostFixture fixture)
 
         using var response = await SendAsync(HttpMethod.Post, "/api/v1/search/autocomplete",
             """{"query":"Blue Suggestion"}""");
-        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.InRange(document.RootElement.GetProperty("suggestions").GetArrayLength(), 0, 15);
@@ -122,7 +122,7 @@ public sealed class SearchComprehensiveTests(AspireHostFixture fixture)
     {
         using var response = await SendAsync(HttpMethod.Post, "/api/v1/search",
             """{"query":"provider-boundary"}""");
-        var body = await response.Content.ReadAsStringAsync();
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("\"items\"", body);
@@ -137,7 +137,7 @@ public sealed class SearchComprehensiveTests(AspireHostFixture fixture)
         var key = $"rebuild-{Guid.NewGuid():N}";
         using var response = await SendAsync(HttpMethod.Post, "/api/v1/private/system/search/index",
             null, fixture.AdminAccessToken, key);
-        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         var rebuildId = Guid.Parse(document.RootElement.GetProperty("rebuildId").GetString()!);
 
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
@@ -150,21 +150,21 @@ public sealed class SearchComprehensiveTests(AspireHostFixture fixture)
             await using var status = new NpgsqlCommand(
                 "SELECT state FROM search.search_rebuild_job WHERE rebuild_job_id=@id", connection);
             status.Parameters.AddWithValue("id", rebuildId);
-            var state = (string?)await status.ExecuteScalarAsync();
+            var state = (string?)await status.ExecuteScalarAsync(TestContext.Current.CancellationToken);
             if (state is "Succeeded" or "Failed" or "Cancelled")
             {
                 Assert.Equal("Succeeded", state);
                 break;
             }
 
-            await Task.Delay(100);
+            await Task.Delay(100, TestContext.Current.CancellationToken);
         }
 
         await using var outbox = new NpgsqlCommand(
             "SELECT COUNT(*) FROM search.event_outbox WHERE event_type='SearchRebuildCompleted.v1' AND payload->>'rebuildId'=@id",
             connection);
         outbox.Parameters.AddWithValue("id", rebuildId.ToString());
-        Assert.Equal(1L, (long)(await outbox.ExecuteScalarAsync() ?? 0L));
+        Assert.Equal(1L, (long)(await outbox.ExecuteScalarAsync(TestContext.Current.CancellationToken) ?? 0L));
     }
 
     // @BR-ID: BR-CAT-033
@@ -183,11 +183,11 @@ public sealed class SearchComprehensiveTests(AspireHostFixture fixture)
         command.Parameters.AddWithValue("tenant", TenantKey(Tenant));
         command.Parameters.AddWithValue("store", Store);
         command.Parameters.AddWithValue("product", productId);
-        Assert.Equal(1, await command.ExecuteNonQueryAsync());
+        Assert.Equal(1, await command.ExecuteNonQueryAsync(TestContext.Current.CancellationToken));
 
         using var response = await SendAsync(HttpMethod.Post, "/api/v1/search",
             """{"query":"component-merge"}""");
-        Assert.Contains("/images/updated.jpg", await response.Content.ReadAsStringAsync());
+        Assert.Contains("/images/updated.jpg", await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
     }
 
     // @BR-ID: BR-CAT-034
@@ -202,7 +202,7 @@ public sealed class SearchComprehensiveTests(AspireHostFixture fixture)
 
         using var response = await SendAsync(HttpMethod.Post, "/api/v1/search",
             """{"query":"Pagination Product","count":1,"start":1}""");
-        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         var pagination = document.RootElement.GetProperty("pagination");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -219,7 +219,7 @@ public sealed class SearchComprehensiveTests(AspireHostFixture fixture)
         using var response = await SendAsync(HttpMethod.Post,
             "/api/v1/private/system/search/index", null, fixture.AdminAccessToken,
             $"legacy-contract-{Guid.NewGuid():N}");
-        var body = await response.Content.ReadAsStringAsync();
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
         Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
         Assert.Contains("\"rebuildId\"", body);
     }

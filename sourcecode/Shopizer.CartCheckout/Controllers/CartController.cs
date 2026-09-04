@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using Shopizer.Services.Ms04.Contracts;
+using Shopizer.CartCheckout.DTOs;
 using Shopizer.CartCheckout.Middleware;
 using Shopizer.CartCheckout.Models;
 using Shopizer.CartCheckout.Services;

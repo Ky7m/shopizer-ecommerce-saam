@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Globalization;
 using Shopizer.CartCheckout.Data;
-using Shopizer.Services.Ms04.Contracts;
+using Shopizer.CartCheckout.DTOs;
 using Shopizer.CartCheckout.Models;
 
 namespace Shopizer.CartCheckout.Services;

@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 
-namespace Shopizer.Services.Ms04.Contracts;
+namespace Shopizer.CartCheckout.DTOs;
 
 public sealed class CartQuoteReferenceDto
 {
