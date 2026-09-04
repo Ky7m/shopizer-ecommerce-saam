@@ -7,6 +7,7 @@ public sealed class SchemaInitializer(NpgsqlDataSource dataSource, ILogger<Schem
     public async Task InitializeAsync(CancellationToken cancellationToken)
     {
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        await EnsurePgCryptoAsync(connection, cancellationToken);
         await using (var command = new NpgsqlCommand(SchemaSql, connection))
         {
             await command.ExecuteNonQueryAsync(cancellationToken);
@@ -20,8 +21,19 @@ public sealed class SchemaInitializer(NpgsqlDataSource dataSource, ILogger<Schem
         logger.LogInformation("Search PostgreSQL schema is ready.");
     }
 
+    private static async Task EnsurePgCryptoAsync(NpgsqlConnection connection, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var command = new NpgsqlCommand("CREATE EXTENSION IF NOT EXISTS pgcrypto", connection);
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation && ex.ConstraintName == "pg_extension_name_index")
+        {
+        }
+    }
+
     public const string SchemaSql = """
-        CREATE EXTENSION IF NOT EXISTS pgcrypto;
         CREATE SCHEMA IF NOT EXISTS search;
 
         CREATE TABLE IF NOT EXISTS search.search_index (

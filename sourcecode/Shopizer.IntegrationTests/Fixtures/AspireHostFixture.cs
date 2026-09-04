@@ -44,7 +44,7 @@ public sealed class AspireHostFixture : IAsyncLifetime
             ["catalog-product"] = (client => CatalogProductClient = client, "test-tenant-001", "test-store-001", "11111111-1111-4111-8111-111111111111", false, null, "phase4c-test"),
             ["search"] = (client => SearchClient = client, "tenant-demo", "default", "corr-ms03-0001", false, null, null),
             ["cart-checkout"] = (client => CartCheckoutClient = client, "test-tenant-001", "test-store-001", "00000000-0000-0000-0000-000000000001", false, null, null),
-            ["order-management"] = (client => OrderManagementClient = client, "tenant-a", "store-12", "corr-ms05-001", true, null, null),
+            ["order-management"] = (client => OrderManagementClient = client, "tenant-demo", "default", "corr-ms05-001", true, null, null),
             ["payments"] = (client => PaymentsClient = client, "test-tenant-001", "test-store-001", "corr-ms06-001", true, null, null),
             ["pricing-promotions"] = (client => PricingPromotionsClient = client, "2e6d7b63-5b1d-4f8a-8e12-8cf43c9f2001", "store-us-east", "corr-20260901-000184", false, null, null),
             ["tax"] = (client => TaxClient = client, "tenant-001", "store-001", "corr-001", true, null, null),

@@ -11,6 +11,7 @@ public sealed class SchemaInitializer(NpgsqlDataSource dataSource, ILogger<Schem
             try
             {
                 await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+                await EnsurePgCryptoAsync(connection, cancellationToken);
                 await using (var schema = new NpgsqlCommand(SchemaSql, connection))
                     await schema.ExecuteNonQueryAsync(cancellationToken);
                 await using (var migration = new NpgsqlCommand(MigrationSql, connection))
@@ -25,8 +26,19 @@ public sealed class SchemaInitializer(NpgsqlDataSource dataSource, ILogger<Schem
         }
     }
 
+    private static async Task EnsurePgCryptoAsync(NpgsqlConnection connection, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var command = new NpgsqlCommand("CREATE EXTENSION IF NOT EXISTS pgcrypto", connection);
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation && ex.ConstraintName == "pg_extension_name_index")
+        {
+        }
+    }
+
     private const string SchemaSql = """
-        CREATE EXTENSION IF NOT EXISTS pgcrypto;
         CREATE SCHEMA IF NOT EXISTS catalog_product;
         CREATE TABLE IF NOT EXISTS catalog_product.product (
           id uuid PRIMARY KEY DEFAULT gen_random_uuid(), tenant_id text NOT NULL, store_id text NOT NULL,

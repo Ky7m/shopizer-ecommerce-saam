@@ -7,6 +7,7 @@ public sealed class SchemaInitializer(NpgsqlDataSource dataSource, ILogger<Schem
     public async Task InitializeAsync(CancellationToken cancellationToken)
     {
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        await EnsurePgCryptoAsync(connection, cancellationToken);
         await using var command = new NpgsqlCommand(SchemaSql, connection);
         await command.ExecuteNonQueryAsync(cancellationToken);
         await using var migration = new NpgsqlCommand(MigrationSql, connection);
@@ -14,9 +15,20 @@ public sealed class SchemaInitializer(NpgsqlDataSource dataSource, ILogger<Schem
         logger.LogInformation("Customer identity PostgreSQL schema is ready.");
     }
 
+    private static async Task EnsurePgCryptoAsync(NpgsqlConnection connection, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var command = new NpgsqlCommand("CREATE EXTENSION IF NOT EXISTS pgcrypto", connection);
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation && ex.ConstraintName == "pg_extension_name_index")
+        {
+        }
+    }
+
     private const string SchemaSql = """
         CREATE SCHEMA IF NOT EXISTS customer_identity;
-        CREATE EXTENSION IF NOT EXISTS pgcrypto;
         DO $$ BEGIN
           CREATE TYPE customer_identity.customer_status AS ENUM ('Active','Suspended','Deleted');
         EXCEPTION WHEN duplicate_object THEN NULL; END $$;

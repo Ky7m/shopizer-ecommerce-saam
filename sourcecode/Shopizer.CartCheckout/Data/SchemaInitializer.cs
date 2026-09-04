@@ -7,6 +7,7 @@ public sealed class SchemaInitializer(NpgsqlDataSource dataSource, ILogger<Schem
     public async Task InitializeAsync(CancellationToken ct)
     {
         await using var connection = await dataSource.OpenConnectionAsync(ct);
+        await EnsurePgCryptoAsync(connection, ct);
         await using var schema = new NpgsqlCommand(SchemaSql, connection);
         await schema.ExecuteNonQueryAsync(ct);
         await using var migration = new NpgsqlCommand(MigrationSql, connection);
@@ -14,9 +15,20 @@ public sealed class SchemaInitializer(NpgsqlDataSource dataSource, ILogger<Schem
         logger.LogInformation("Cart and checkout PostgreSQL schema is ready.");
     }
 
+    private static async Task EnsurePgCryptoAsync(NpgsqlConnection connection, CancellationToken ct)
+    {
+        try
+        {
+            await using var command = new NpgsqlCommand("CREATE EXTENSION IF NOT EXISTS pgcrypto", connection);
+            await command.ExecuteNonQueryAsync(ct);
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation && ex.ConstraintName == "pg_extension_name_index")
+        {
+        }
+    }
+
     private const string SchemaSql = """
         CREATE SCHEMA IF NOT EXISTS cart_checkout_schema;
-        CREATE EXTENSION IF NOT EXISTS pgcrypto;
         DO $$ BEGIN CREATE TYPE cart_checkout_schema.cart_status AS ENUM ('OPEN','COMPLETED','OBSOLETE'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
         DO $$ BEGIN CREATE TYPE cart_checkout_schema.checkout_state AS ENUM ('OPEN','QUOTED','FROZEN','SUBMITTED','FAILED','EXPIRED'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
         DO $$ BEGIN CREATE TYPE cart_checkout_schema.quote_kind AS ENUM ('PRICING','PROMOTION','TAX','SHIPPING'); EXCEPTION WHEN duplicate_object THEN NULL; END $$;
